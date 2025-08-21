@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Mobile-friendly defaults */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #fff;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Safe area support */
+.safe-bottom {
+  height: env(safe-area-inset-bottom);
+}
