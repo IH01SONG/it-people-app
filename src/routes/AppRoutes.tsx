@@ -5,15 +5,13 @@ import RouteFallbackSkeleton from "../components/RouteFallbackSkeleton";
 import ProtectedRoute from "../auth/ProtectedRoute";
 
 const Home = lazy(() => import("../pages/Home"));
-const Map = lazy(() => import("../pages/Map"));
-const NewPost = lazy(() => import("../pages/NewPost"));
+const Search = lazy(() => import("../pages/Search"));
 const Chat = lazy(() => import("../pages/Chat"));
 const My = lazy(() => import("../pages/My"));
 const Login = lazy(() => import("../pages/Login"));
-const PostDetail = lazy(() => import("../pages/home/PostDetail"));
-const PlaceDetail = lazy(() => import("../pages/map/PlaceDetail"));
 const Step1 = lazy(() => import("../pages/new/Step1"));
 const Step2 = lazy(() => import("../pages/new/Step2"));
+const FeedbackResult = lazy(() => import("../pages/FeedbackResult"));
 const ChatRoom = lazy(() => import("../pages/chat/ChatRoom"));
 const Settings = lazy(() => import("../pages/my/Settings"));
 
@@ -24,23 +22,25 @@ export default function AppRoutes() {
         <Routes>
           <Route element={<RootLayout />}>
             {/* Home */}
-            <Route path="/">
-              <Route index element={<Home />} />
-              <Route path="post/:postId" element={<PostDetail />} />
-            </Route>
+            <Route path="/" element={<Home />} />
+
+            {/* Search */}
+            <Route path="/search" element={<Search />} />
 
             {/* Map with nested example */}
             <Route path="/map">
-              <Route index element={<Map />} />
-              <Route path="place/:placeId" element={<PlaceDetail />} />
+              <Route index element={<div>MAP PAGE</div>} />
             </Route>
 
-            {/* New Post flow (could have steps) */}
+            {/* New Post flow */}
             <Route path="/new">
-              <Route index element={<NewPost />} />
-              <Route path="step/1" element={<Step1 />} />
-              <Route path="step/2" element={<Step2 />} />
+              <Route index element={<div>NEW POST</div>} />
+              <Route path="step1" element={<Step1 />} />
+              <Route path="step2" element={<Step2 />} />
             </Route>
+
+            {/* Feedback Result */}
+            <Route path="/feedback-result" element={<FeedbackResult />} />
 
             {/* Chat requires auth */}
             <Route path="/chat">
