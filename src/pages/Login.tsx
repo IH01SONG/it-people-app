@@ -43,7 +43,15 @@ export default function Login() {
   return (
     <ThemeProvider theme={theme}>
       <Box className="flex flex-col items-center justify-center min-h-screen p-5 bg-white"> {/* Background color from image */}
-        <img src={reactLogo} className="w-24 h-24 mb-10" alt="잇플 로고" /> {/* Replaced Typography with img */}
+        <Typography variant="h4" className="text-gray-700 font-bold mb-6">
+          It People !
+        </Typography>
+        <Box className="flex items-center mb-14">
+          <img src={reactLogo} className="w-24 h-24" alt="잇플 로고" />
+          <Typography variant="h2" className="font-bold ml-4" style={{ color: theme.palette.primary.main }}>
+            잇플
+          </Typography>
+        </Box>
 
         <Stack spacing={2} className="w-full max-w-sm p-6 bg-white rounded-lg shadow-md mb-5">
           <TextField
