@@ -31,15 +31,50 @@ export default function AppRoutes() {
 
             {/* Map with nested example */}
             <Route path="/map">
-              <Route index element={<Map />} />
-              <Route path="place/:placeId" element={<PlaceDetail />} />
+              <Route
+                index
+                element={
+                  <ProtectedRoute>
+                    <Map />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="place/:placeId"
+                element={
+                  <ProtectedRoute>
+                    <PlaceDetail />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* New Post flow (could have steps) */}
             <Route path="/new">
-              <Route index element={<NewPost />} />
-              <Route path="step/1" element={<Step1 />} />
-              <Route path="step/2" element={<Step2 />} />
+              <Route
+                index
+                element={
+                  <ProtectedRoute>
+                    <NewPost />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="step/1"
+                element={
+                  <ProtectedRoute>
+                    <Step1 />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="step/2"
+                element={
+                  <ProtectedRoute>
+                    <Step2 />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* Chat requires auth */}

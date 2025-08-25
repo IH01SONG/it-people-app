@@ -4,11 +4,10 @@ import type { ReactElement } from "react";
 
 export default function ProtectedRoute({
   children,
-}: {
-  children: ReactElement;
-}) {
+}: { children: ReactElement }) {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
