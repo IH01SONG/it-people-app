@@ -16,6 +16,7 @@ const Step1 = lazy(() => import("../pages/new/Step1"));
 const Step2 = lazy(() => import("../pages/new/Step2"));
 const ChatRoom = lazy(() => import("../pages/chat/ChatRoom"));
 const Settings = lazy(() => import("../pages/my/Settings"));
+const SignUp = lazy(() => import("../pages/SignUp"));
 
 export default function AppRoutes() {
   return (
@@ -119,6 +120,7 @@ export default function AppRoutes() {
 
             {/* Auth */}
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

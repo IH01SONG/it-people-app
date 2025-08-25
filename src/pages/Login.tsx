@@ -36,8 +36,8 @@ export default function Login() {
   };
 
   const handleSignUpClick = () => {
-    alert("회원가입 페이지로 이동합니다."); // Placeholder for navigation to signup
-    // navigate("/signup"); 
+    // Assuming a signup page exists or will be created at /signup
+    navigate("/signup"); 
   };
 
   return (
