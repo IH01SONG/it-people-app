@@ -53,7 +53,7 @@ export default function Login() {
           </Typography>
         </Box>
 
-        <Stack spacing={2} className="w-full max-w-sm p-6 bg-white rounded-lg shadow-md mb-5">
+        <Stack spacing={2} className="w-full max-w-sm p-6 bg-white rounded-lg" sx={{ boxShadow: 6, border: '1px solid rgba(0, 0, 0, 0.12)' }}>
           <TextField
             label="이메일"
             variant="outlined"
@@ -61,6 +61,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mb-2"
+            sx={{ '& .MuiOutlinedInput-root': { fieldset: { borderColor: 'rgba(0, 0, 0, 0.23)' } } }}
           />
           <TextField
             label="비밀번호"
@@ -70,6 +71,7 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mb-4"
+            sx={{ '& .MuiOutlinedInput-root': { fieldset: { borderColor: 'rgba(0, 0, 0, 0.23)' } } }}
           />
           <Button
             variant="contained"
@@ -77,6 +79,7 @@ export default function Login() {
             fullWidth
             onClick={handleLogin}
             className="py-3 text-lg"
+            sx={{ boxShadow: 3 }}
           >
             로그인
           </Button>
@@ -86,6 +89,7 @@ export default function Login() {
             fullWidth
             onClick={handleSignUpClick}
             className="py-3 text-lg"
+            sx={{ boxShadow: 3 }}
           >
             회원가입
           </Button>
@@ -94,7 +98,7 @@ export default function Login() {
         <Button
           variant="text"
           className="text-blue-600 mb-5"
-          onClick={() => alert("아이디/비밀번호 찾기 페이지")}
+          onClick={() => navigate('/find-credentials')}
         >
           아이디 / 비밀번호 찾기
         </Button>

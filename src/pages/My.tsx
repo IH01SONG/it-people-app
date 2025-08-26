@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Avatar } from "@mui/material";
+import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Avatar, TextField } from "@mui/material";
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import EditIcon from '@mui/icons-material/Edit';
 
@@ -82,22 +82,33 @@ const My: React.FC = () => {
         {/* Nickname Section */}
         <Box className="flex items-center mb-10">
           {isEditingNickname ? (
-            <TextField
-              variant="outlined"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              onBlur={handleNicknameSave} // Save on blur
-              autoFocus
-              size="small"
-            />
+            <>
+              <TextField
+                variant="outlined"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                autoFocus
+                size="small"
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleNicknameSave}
+                sx={{ ml: 1 }}
+              >
+                저장
+              </Button>
+            </>
           ) : (
-            <Typography variant="h5" className="font-bold mr-2">
+            <Typography variant="h5" className="font-bold mr-2" onClick={handleNicknameEdit} sx={{ cursor: 'pointer' }}>
               {nickname}
             </Typography>
           )}
-          <IconButton size="small" onClick={handleNicknameEdit}>
-            <EditIcon />
-          </IconButton>
+          {!isEditingNickname && (
+            <IconButton size="small" onClick={handleNicknameEdit}>
+              <EditIcon />
+            </IconButton>
+          )}
         </Box>
 
         {/* Action Buttons */}
@@ -122,7 +133,7 @@ const My: React.FC = () => {
             variant="outlined"
             fullWidth
             className="py-3 text-lg"
-            onClick={() => alert('약관')}
+            onClick={() => navigate('/my/terms')}
           >
             약관
           </Button>
@@ -130,7 +141,7 @@ const My: React.FC = () => {
             variant="outlined"
             fullWidth
             className="py-3 text-lg"
-            onClick={() => alert('계정관리')}
+            onClick={() => navigate('/my/account-management')}
           >
             계정관리
           </Button>

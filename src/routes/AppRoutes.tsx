@@ -19,6 +19,11 @@ const Settings = lazy(() => import("../pages/my/Settings"));
 const SignUp = lazy(() => import("../pages/SignUp"));
 const MyActivity = lazy(() => import("../pages/my/MyActivity")); // Add MyActivity import
 const Inquiry = lazy(() => import("../pages/Inquiry")); // Add Inquiry import
+const TermsAndConditions = lazy(() => import("../pages/my/TermsAndConditions")); // Add TermsAndConditions import
+const AccountManagement = lazy(() => import("../pages/my/AccountManagement")); // Add AccountManagement import
+const PersonalInformationEdit = lazy(() => import("../pages/my/PersonalInformationEdit")); // Add PersonalInformationEdit import
+const LocationPermissionSettings = lazy(() => import("../pages/my/LocationPermissionSettings")); // Add LocationPermissionSettings import
+const NotificationSettings = lazy(() => import("../pages/my/NotificationSettings")); // Add NotificationSettings import
 
 export default function AppRoutes() {
   return (
@@ -123,6 +128,46 @@ export default function AppRoutes() {
                 element={
                   <ProtectedRoute>
                     <MyActivity />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="terms"
+                element={
+                  <ProtectedRoute>
+                    <TermsAndConditions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="account-management"
+                element={
+                  <ProtectedRoute>
+                    <AccountManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="personal-info-edit"
+                element={
+                  <ProtectedRoute>
+                    <PersonalInformationEdit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="location-permission-settings"
+                element={
+                  <ProtectedRoute>
+                    <LocationPermissionSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="notification-settings"
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
                   </ProtectedRoute>
                 }
               />

@@ -26,9 +26,87 @@ const SignUp: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const navigate = useNavigate();
 
+  const validateEmail = (email: string) => {
+    const re = /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    return re.test(String(email).toLowerCase());
+  };
+
+  const validatePassword = (password: string) => {
+    // Password must be 8-20 characters and include at least one letter, one number, and one special character.
+    const re = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,20}$/;
+    return re.test(password);
+  };
+
+  const handleEmailVerification = () => {
+    if (!validateEmail(email)) {
+      setEmailError('유효한 이메일 주소를 입력해주세요.');
+      return;
+    }
+    setEmailError('');
+    // Simulate sending verification email
+    alert(`인증 이메일이 ${email}으로 전송되었습니다.`);
+    setIsEmailVerified(true);
+  };
+
   const handleSignUp = () => {
+    let isValid = true;
+
+    // Email validation
+    if (!email) {
+      setEmailError('이메일 주소를 입력해주세요.');
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      setEmailError('유효한 이메일 주소를 입력해주세요.');
+      isValid = false;
+    } else if (!isEmailVerified) {
+      setEmailError('이메일 인증을 완료해주세요.');
+      isValid = false;
+    } else {
+      setEmailError('');
+    }
+
+    // Password validation
+    if (!password) {
+      setPasswordError('비밀번호를 입력해주세요.');
+      isValid = false;
+    } else if (!validatePassword(password)) {
+      setPasswordError('비밀번호는 문자, 숫자, 특수문자 포함 8~20자여야 합니다.');
+      isValid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    // Confirm password validation
+    if (!confirmPassword) {
+      setConfirmPasswordError('비밀번호를 재입력해주세요.');
+      isValid = false;
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError('비밀번호가 일치하지 않습니다.');
+      isValid = false;
+    } else {
+      setConfirmPasswordError('');
+    }
+
+    // Name validation
+    if (!name) {
+      setNameError('이름을 입력해주세요.');
+      isValid = false;
+    } else {
+      setNameError('');
+    }
+
+    if (!isValid) {
+      alert('입력한 정보를 다시 확인해주세요.');
+      return;
+    }
+
     // Implement sign up logic here
     console.log('Sign Up clicked', { email, password, confirmPassword, name, dateOfBirth });
     alert('회원가입이 완료되었습니다.');
@@ -54,43 +132,59 @@ const SignUp: React.FC = () => {
         </Box>
 
         <Stack spacing={2} className="w-full max-w-sm p-6 bg-white rounded-lg shadow-md mt-5">
-          <Typography variant="subtitle2" color="textSecondary">이메일</Typography>
-          <TextField
-            label="이메일"
-            variant="outlined"
-            fullWidth
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mb-2"
-          />
+          <Typography variant="subtitle2" color="textSecondary">이메일 주소</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TextField
+              label="이메일 주소 입력"
+              variant="outlined"
+              fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={!!emailError}
+              helperText={emailError}
+              type="email"
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleEmailVerification}
+              disabled={isEmailVerified}
+              sx={{ whiteSpace: 'nowrap', px: 2 }}
+            >
+              {isEmailVerified ? '인증 완료' : '이메일 인증'}
+            </Button>
+          </Box>
           <Typography variant="subtitle2" color="textSecondary">비밀번호</Typography>
           <TextField
-            label="비밀번호"
+            label="비밀번호 입력(문자, 숫자, 특수문자 포함 8~20자)"
             type="password"
             variant="outlined"
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-2"
+            error={!!passwordError}
+            helperText={passwordError}
           />
           <Typography variant="subtitle2" color="textSecondary">비밀번호 확인</Typography>
           <TextField
-            label="비밀번호 확인"
+            label="비밀번호 재입력"
             type="password"
             variant="outlined"
             fullWidth
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mb-2"
+            error={!!confirmPasswordError}
+            helperText={confirmPasswordError}
           />
           <Typography variant="subtitle2" color="textSecondary">이름</Typography>
           <TextField
-            label="이름"
+            label="이름을 입력해주세요"
             variant="outlined"
             fullWidth
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mb-2"
+            error={!!nameError}
+            helperText={nameError}
           />
           <Typography variant="subtitle2" color="textSecondary">생년월일</Typography>
           <TextField
