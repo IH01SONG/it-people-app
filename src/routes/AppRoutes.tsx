@@ -24,6 +24,8 @@ const AccountManagement = lazy(() => import("../pages/my/AccountManagement")); /
 const PersonalInformationEdit = lazy(() => import("../pages/my/PersonalInformationEdit")); // Add PersonalInformationEdit import
 const LocationPermissionSettings = lazy(() => import("../pages/my/LocationPermissionSettings")); // Add LocationPermissionSettings import
 const NotificationSettings = lazy(() => import("../pages/my/NotificationSettings")); // Add NotificationSettings import
+const FindCredentials = lazy(() => import("../pages/FindCredentials")); // Add FindCredentials import
+
 
 export default function AppRoutes() {
   return (
@@ -192,6 +194,8 @@ export default function AppRoutes() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+          {/* Find Credentials page (not protected) */}
+          <Route path="/find-credentials" element={<FindCredentials />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

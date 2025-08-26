@@ -25,11 +25,13 @@ const SignUp: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [nickname, setNickname] = useState(''); // New state for nickname
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [nameError, setNameError] = useState('');
+  const [nicknameError, setNicknameError] = useState(''); // New state for nickname error
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const navigate = useNavigate();
 
@@ -102,13 +104,21 @@ const SignUp: React.FC = () => {
       setNameError('');
     }
 
+    // Nickname validation
+    if (!nickname) {
+      setNicknameError('닉네임을 입력해주세요.');
+      isValid = false;
+    } else {
+      setNicknameError('');
+    }
+
     if (!isValid) {
       alert('입력한 정보를 다시 확인해주세요.');
       return;
     }
 
     // Implement sign up logic here
-    console.log('Sign Up clicked', { email, password, confirmPassword, name, dateOfBirth });
+    console.log('Sign Up clicked', { email, password, confirmPassword, name, nickname, dateOfBirth });
     alert('회원가입이 완료되었습니다.');
     navigate('/login');
   };
@@ -154,6 +164,16 @@ const SignUp: React.FC = () => {
               {isEmailVerified ? '인증 완료' : '이메일 인증'}
             </Button>
           </Box>
+          <Typography variant="subtitle2" color="textSecondary">닉네임</Typography>
+          <TextField
+            label="닉네임을 입력해주세요"
+            variant="outlined"
+            fullWidth
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            error={!!nicknameError}
+            helperText={nicknameError}
+          />
           <Typography variant="subtitle2" color="textSecondary">비밀번호</Typography>
           <TextField
             label="비밀번호 입력(문자, 숫자, 특수문자 포함 8~20자)"

@@ -100,7 +100,7 @@ export default function Login() {
           className="text-blue-600 mb-5"
           onClick={() => navigate('/find-credentials')}
         >
-          아이디 / 비밀번호 찾기
+          이메일 / 비밀번호 찾기
         </Button>
 
         <Stack spacing={2} className="w-full max-w-sm">
