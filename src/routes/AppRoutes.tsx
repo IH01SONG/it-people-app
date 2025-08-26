@@ -44,19 +44,11 @@ export default function AppRoutes() {
             <Route path="/map">
               <Route
                 index
-                element={
-                  <ProtectedRoute>
-                    <Map />
-                  </ProtectedRoute>
-                }
+                element={<Map />}
               />
               <Route
                 path="place/:placeId"
-                element={
-                  <ProtectedRoute>
-                    <PlaceDetail />
-                  </ProtectedRoute>
-                }
+                element={<PlaceDetail />}
               />
             </Route>
 
