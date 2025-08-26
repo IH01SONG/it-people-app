@@ -18,6 +18,7 @@ const ChatRoom = lazy(() => import("../pages/chat/ChatRoom"));
 const Settings = lazy(() => import("../pages/my/Settings"));
 const SignUp = lazy(() => import("../pages/SignUp"));
 const MyActivity = lazy(() => import("../pages/my/MyActivity")); // Add MyActivity import
+const Inquiry = lazy(() => import("../pages/Inquiry")); // Add Inquiry import
 
 export default function AppRoutes() {
   return (
@@ -122,6 +123,18 @@ export default function AppRoutes() {
                 element={
                   <ProtectedRoute>
                     <MyActivity />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+            {/* Inquiry page */}
+            <Route path="/inquiry">
+              <Route
+                index
+                element={
+                  <ProtectedRoute>
+                    <Inquiry />
                   </ProtectedRoute>
                 }
               />

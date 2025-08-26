@@ -114,7 +114,7 @@ const My: React.FC = () => {
             variant="outlined"
             fullWidth
             className="py-3 text-lg"
-            onClick={() => alert('고객문의')}
+            onClick={() => navigate('/inquiry')}
           >
             고객문의
           </Button>
