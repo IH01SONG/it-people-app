@@ -18,6 +18,14 @@ const ChatRoom = lazy(() => import("../pages/chat/ChatRoom"));
 const Settings = lazy(() => import("../pages/my/Settings"));
 const SignUp = lazy(() => import("../pages/SignUp"));
 const MyActivity = lazy(() => import("../pages/my/MyActivity")); // Add MyActivity import
+const Inquiry = lazy(() => import("../pages/Inquiry")); // Add Inquiry import
+const TermsAndConditions = lazy(() => import("../pages/my/TermsAndConditions")); // Add TermsAndConditions import
+const AccountManagement = lazy(() => import("../pages/my/AccountManagement")); // Add AccountManagement import
+const PersonalInformationEdit = lazy(() => import("../pages/my/PersonalInformationEdit")); // Add PersonalInformationEdit import
+const LocationPermissionSettings = lazy(() => import("../pages/my/LocationPermissionSettings")); // Add LocationPermissionSettings import
+const NotificationSettings = lazy(() => import("../pages/my/NotificationSettings")); // Add NotificationSettings import
+const FindCredentials = lazy(() => import("../pages/FindCredentials")); // Add FindCredentials import
+
 
 export default function AppRoutes() {
   return (
@@ -125,6 +133,58 @@ export default function AppRoutes() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="terms"
+                element={
+                  <ProtectedRoute>
+                    <TermsAndConditions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="account-management"
+                element={
+                  <ProtectedRoute>
+                    <AccountManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="personal-info-edit"
+                element={
+                  <ProtectedRoute>
+                    <PersonalInformationEdit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="location-permission-settings"
+                element={
+                  <ProtectedRoute>
+                    <LocationPermissionSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="notification-settings"
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+            {/* Inquiry page */}
+            <Route path="/inquiry">
+              <Route
+                index
+                element={
+                  <ProtectedRoute>
+                    <Inquiry />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
 
             {/* Auth */}
@@ -134,6 +194,8 @@ export default function AppRoutes() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+          {/* Find Credentials page (not protected) */}
+          <Route path="/find-credentials" element={<FindCredentials />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
