@@ -5,26 +5,27 @@ import RouteFallbackSkeleton from "../components/RouteFallbackSkeleton";
 import ProtectedRoute from "../auth/ProtectedRoute";
 
 const Home = lazy(() => import("../pages/Home"));
-const Map = lazy(() => import("../pages/Map"));
-const NewPost = lazy(() => import("../pages/NewPost"));
+const Search = lazy(() => import("../pages/Search"));
 const Chat = lazy(() => import("../pages/Chat"));
 const My = lazy(() => import("../pages/My"));
 const Login = lazy(() => import("../pages/Login"));
-const PostDetail = lazy(() => import("../pages/home/PostDetail"));
-const PlaceDetail = lazy(() => import("../pages/map/PlaceDetail"));
+const Map = lazy(() => import("../pages/Map"));
+const NewPost = lazy(() => import("../pages/NewPost"));
 const Step1 = lazy(() => import("../pages/new/Step1"));
 const Step2 = lazy(() => import("../pages/new/Step2"));
+const FeedbackResult = lazy(() => import("../pages/FeedbackResult"));
 const ChatRoom = lazy(() => import("../pages/chat/ChatRoom"));
 const Settings = lazy(() => import("../pages/my/Settings"));
 const SignUp = lazy(() => import("../pages/SignUp"));
-const MyActivity = lazy(() => import("../pages/my/MyActivity")); // Add MyActivity import
-const Inquiry = lazy(() => import("../pages/Inquiry")); // Add Inquiry import
-const TermsAndConditions = lazy(() => import("../pages/my/TermsAndConditions")); // Add TermsAndConditions import
-const AccountManagement = lazy(() => import("../pages/my/AccountManagement")); // Add AccountManagement import
-const PersonalInformationEdit = lazy(() => import("../pages/my/PersonalInformationEdit")); // Add PersonalInformationEdit import
-const LocationPermissionSettings = lazy(() => import("../pages/my/LocationPermissionSettings")); // Add LocationPermissionSettings import
-const NotificationSettings = lazy(() => import("../pages/my/NotificationSettings")); // Add NotificationSettings import
-const FindCredentials = lazy(() => import("../pages/FindCredentials")); // Add FindCredentials import
+const MyActivity = lazy(() => import("../pages/my/MyActivity"));
+const Inquiry = lazy(() => import("../pages/Inquiry"));
+const TermsAndConditions = lazy(() => import("../pages/my/TermsAndConditions"));
+const AccountManagement = lazy(() => import("../pages/my/AccountManagement"));
+const PersonalInformationEdit = lazy(() => import("../pages/my/PersonalInformationEdit"));
+const LocationPermissionSettings = lazy(() => import("../pages/my/LocationPermissionSettings"));
+const NotificationSettings = lazy(() => import("../pages/my/NotificationSettings"));
+const FindCredentials = lazy(() => import("../pages/FindCredentials"));
+const PlaceDetail = lazy(() => import("../pages/map/PlaceDetail"));
 
 
 export default function AppRoutes() {
@@ -34,10 +35,10 @@ export default function AppRoutes() {
         <Routes>
           <Route element={<RootLayout />}>
             {/* Home */}
-            <Route path="/">
-              <Route index element={<Home />} />
-              <Route path="post/:postId" element={<PostDetail />} />
-            </Route>
+            <Route path="/" element={<Home />} />
+
+            {/* Search */}
+            <Route path="/search" element={<Search />} />
 
             {/* Map with nested example */}
             <Route path="/map">
@@ -59,7 +60,7 @@ export default function AppRoutes() {
               />
             </Route>
 
-            {/* New Post flow (could have steps) */}
+            {/* New Post flow */}
             <Route path="/new">
               <Route
                 index
@@ -70,7 +71,7 @@ export default function AppRoutes() {
                 }
               />
               <Route
-                path="step/1"
+                path="step1"
                 element={
                   <ProtectedRoute>
                     <Step1 />
@@ -78,7 +79,7 @@ export default function AppRoutes() {
                 }
               />
               <Route
-                path="step/2"
+                path="step2"
                 element={
                   <ProtectedRoute>
                     <Step2 />
@@ -86,6 +87,9 @@ export default function AppRoutes() {
                 }
               />
             </Route>
+
+            {/* Feedback Result */}
+            <Route path="/feedback-result" element={<FeedbackResult />} />
 
             {/* Chat requires auth */}
             <Route path="/chat">
