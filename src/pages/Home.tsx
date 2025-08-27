@@ -14,7 +14,6 @@ import type { Post, Notification, Activity } from "../types/home.types";
 export default function Home() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [currentLocation, setCurrentLocation] = useState("홍대입구");
   
   const availableLocations = ["홍대입구", "강남", "신촌", "이태원", "명동", "건대입구"];
@@ -56,8 +55,6 @@ export default function Home() {
     },
   ];
 
-  const recentSearches = ["운동", "스터디", "독서 모임"];
-  const trendingTags = ["운동", "개발", "스터디", "취미", "자기계발"];
 
   const myActivities: Activity[] = [
     {
@@ -251,10 +248,6 @@ export default function Home() {
         <SearchModal
           open={searchOpen}
           onClose={() => setSearchOpen(false)}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          recentSearches={recentSearches}
-          trendingTags={trendingTags}
         />
 
         <NotificationModal

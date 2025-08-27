@@ -1,6 +1,8 @@
 // MUI 아이콘
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+
+// 로고 이미지
+import logoSvg from "../assets/logo.png";
 
 // MUI 컴포넌트
 import {
@@ -141,10 +143,18 @@ export default function PostCard({ post, onJoinRequest }: PostCardProps) {
               boxShadow: "0 2px 8px rgba(233, 30, 99, 0.3)",
             }}
             startIcon={
-              <FavoriteIcon sx={{ fontSize: "14px !important" }} />
+              <img 
+                src={logoSvg} 
+                alt="잇플 로고" 
+                style={{ 
+                  width: "14px", 
+                  height: "14px",
+                  filter: "brightness(0) invert(1)"
+                }} 
+              />
             }
           >
-            같이할래요
+            잇플!
           </Button>
         </Box>
       </Box>
