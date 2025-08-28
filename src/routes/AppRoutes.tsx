@@ -6,6 +6,7 @@ import ProtectedRoute from "../auth/ProtectedRoute";
 
 const Home = lazy(() => import("../pages/Home"));
 const Search = lazy(() => import("../pages/Search"));
+const SearchResults = lazy(() => import("../pages/SearchResults"));
 const Chat = lazy(() => import("../pages/Chat"));
 const My = lazy(() => import("../pages/My"));
 const Login = lazy(() => import("../pages/Login"));
@@ -33,6 +34,9 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallbackSkeleton />}>
         <Routes>
+          {/* Search Results - without bottom navigation */}
+          <Route path="/search-results" element={<SearchResults />} />
+          
           <Route element={<RootLayout />}>
             {/* Home */}
             <Route path="/" element={<Home />} />
