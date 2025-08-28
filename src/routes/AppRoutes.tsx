@@ -34,11 +34,8 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallbackSkeleton />}>
         <Routes>
-<<<<<<< HEAD
-          {/* Search Results - without bottom navigation */}
-          <Route path="/search-results" element={<SearchResults />} />
-=======
           {/* Pages without bottom navigation */}
+          <Route path="/search-results" element={<SearchResults />} />
           <Route path="/new" element={
             <ProtectedRoute>
               <NewPost />
@@ -54,7 +51,6 @@ export default function AppRoutes() {
               <Step2 />
             </ProtectedRoute>
           } />
->>>>>>> feature/new-post
           
           <Route element={<RootLayout />}>
             {/* Home */}
