@@ -136,7 +136,7 @@ export default function FeedbackResult() {
           textAlign: 'center'
         }}
       >
-        <div className="text-4xl mb-2">🎉</div>
+        <div className="text-2xl mb-2 font-bold text-green-600">완료!</div>
         <Typography variant="h6" color="white" fontWeight={700} mb={1}>
           모임 만들기 완료!
         </Typography>
@@ -163,7 +163,7 @@ export default function FeedbackResult() {
         </Typography>
         
         <Typography variant="body2" color="text.secondary" mb={2}>
-          📍 {submissionData.venue} • {submissionData.category}
+          장소: {submissionData.venue} • {submissionData.category}
         </Typography>
         
         {submissionData.tags.length > 0 && (

@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 
 // 로고 이미지
 import logoSvg from "../assets/logo.png";
+import { api } from "../utils/api";
 
 export default function NewPost() {
   const navigate = useNavigate();
@@ -30,45 +31,70 @@ export default function NewPost() {
     category: "",
     location: "홍대입구",
     venue: "",
-    maxParticipants: 4
+    maxParticipants: 4,
+    meetingDate: "",
+    tags: [] as string[]
   });
 
   const [image, setImage] = useState<string | null>(null);
 
   const categories = [
-    { value: "식사", emoji: "🍕", label: "식사" },
-    { value: "카페", emoji: "☕", label: "카페" },
-    { value: "쇼핑", emoji: "🛍️", label: "쇼핑" },
-    { value: "운동", emoji: "🏃‍♂️", label: "운동" },
-    { value: "스터디", emoji: "📚", label: "스터디" },
-    { value: "문화생활", emoji: "🎬", label: "문화생활" }
+    { value: "식사", label: "식사" },
+    { value: "카페", label: "카페" },
+    { value: "쇼핑", label: "쇼핑" },
+    { value: "운동", label: "운동" },
+    { value: "스터디", label: "스터디" },
+    { value: "문화생활", label: "문화생활" }
   ];
 
   const locations = ["홍대입구", "강남", "신촌", "이태원", "명동", "건대입구"];
   const participantOptions = [2, 3, 4, 5, 6, 8, 10];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (formData.title.trim() && formData.content.trim() && formData.category) {
-      // 새 게시글 데이터 생성
+      // 위치 정보 가져오기 (기본으로 홍대 좌표)
+      const locationData = {
+        type: 'Point' as const,
+        coordinates: [126.9235, 37.5502], // 홍대입구역 좌표
+        address: `${formData.location} 근처`
+      };
+
+      // 새 게시글 데이터 생성 (백엔드 모델과 일치)
       const newPost = {
         id: `new-${Date.now()}`,
         title: formData.title,
         content: formData.content,
         author: "나",
-        location: `${formData.location} 근처`,
+        authorId: "current-user-id",
+        location: locationData,
         venue: formData.venue || `${formData.location} 모임장소`,
         category: formData.category,
-        image: image,
-        participants: 1,
+        tags: formData.tags,
+        image: image || undefined,
+        participants: ["current-user-id"],
         maxParticipants: formData.maxParticipants,
+        meetingDate: formData.meetingDate ? new Date(formData.meetingDate) : undefined,
+        status: 'active' as const,
+        chatRoom: `chat-new-${Date.now()}`,
+        viewCount: 0,
         createdAt: new Date().toISOString(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24시간 후 만료
+        updatedAt: new Date().toISOString(),
         isLiked: false,
-        isActive: true,
       };
       
-      // 홈으로 이동 (실제로는 게시글 목록에 추가하는 로직이 필요)
-      navigate('/');
+      try {
+        // 백엔드에 게시글 생성 요청
+        const response = await api.posts.create(newPost);
+        if (response.success) {
+          console.log('게시글 생성 성공:', response.data);
+          // 성공 시 홈으로 이동
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('게시글 생성 실패:', error);
+        // TODO: 에러 알림 표시
+        alert('게시글 생성에 실패했습니다. 다시 시도해주세요.');
+      }
     }
   };
 
@@ -80,6 +106,25 @@ export default function NewPost() {
       "https://picsum.photos/seed/study1/400/300"
     ];
     setImage(dummyImages[Math.floor(Math.random() * dummyImages.length)]);
+  };
+
+  const [newTag, setNewTag] = useState("");
+  
+  const handleAddTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData({
+        ...formData,
+        tags: [...formData.tags, newTag.trim()]
+      });
+      setNewTag("");
+    }
+  };
+  
+  const handleRemoveTag = (tagToRemove: string) => {
+    setFormData({
+      ...formData,
+      tags: formData.tags.filter(tag => tag !== tagToRemove)
+    });
   };
 
   const isFormValid = formData.title.trim().length > 0 && 
@@ -273,7 +318,7 @@ export default function NewPost() {
             {categories.map((cat) => (
               <Chip
                 key={cat.value}
-                label={`${cat.emoji} ${cat.label}`}
+                label={cat.label}
                 onClick={() => setFormData({...formData, category: cat.value})}
                 sx={{
                   cursor: "pointer",
@@ -345,11 +390,92 @@ export default function NewPost() {
             onChange={(e) => setFormData({...formData, venue: e.target.value})}
             variant="outlined"
             sx={{ 
+              mb: 3,
               '& .MuiOutlinedInput-root': {
                 borderRadius: 3,
               }
             }}
           />
+
+          {/* 모임 날짜/시간 */}
+          <TextField
+            fullWidth
+            label="모임 날짜/시간"
+            type="datetime-local"
+            value={formData.meetingDate}
+            onChange={(e) => setFormData({...formData, meetingDate: e.target.value})}
+            variant="outlined"
+            InputLabelProps={{ shrink: true }}
+            sx={{ 
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 3,
+              }
+            }}
+          />
+
+          {/* 태그 입력 */}
+          <Box mb={2}>
+            <Typography variant="subtitle2" fontWeight={600} mb={2} color="#666">
+              관련 태그
+            </Typography>
+            <Box display="flex" gap={1} mb={2}>
+              <TextField
+                size="small"
+                placeholder="태그 추가 (Enter로 입력)"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+                sx={{ 
+                  flexGrow: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 3,
+                  }
+                }}
+              />
+              <Button 
+                variant="outlined" 
+                onClick={handleAddTag}
+                disabled={!newTag.trim()}
+                size="small"
+                sx={{
+                  borderColor: '#E762A9',
+                  color: '#E762A9',
+                  '&:hover': {
+                    borderColor: '#D554A0',
+                    bgcolor: 'rgba(231, 98, 169, 0.04)'
+                  }
+                }}
+              >
+                추가
+              </Button>
+            </Box>
+            <Box display="flex" flexWrap="wrap" gap={1}>
+              {formData.tags.map((tag, index) => (
+                <Chip
+                  key={index}
+                  label={`#${tag}`}
+                  onDelete={() => handleRemoveTag(tag)}
+                  size="small"
+                  sx={{ 
+                    bgcolor: '#E762A9', 
+                    color: 'white',
+                    '& .MuiChip-deleteIcon': {
+                      color: 'rgba(255,255,255,0.7)',
+                      '&:hover': {
+                        color: 'white'
+                      }
+                    }
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
         </Card>
 
         {/* 작성 완료 버튼 */}
@@ -391,7 +517,7 @@ export default function NewPost() {
             mb: 2
           }}
         >
-          잇플 모임 만들기! 🎉
+          잇플 모임 만들기
         </Button>
 
         <Typography variant="body2" color="text.secondary" textAlign="center">

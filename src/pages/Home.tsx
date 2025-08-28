@@ -10,6 +10,7 @@ import PostCard from "../components/PostCard";
 import SearchModal from "../components/SearchModal";
 import NotificationModal from "../components/NotificationModal";
 import type { Post, Notification, Activity } from "../types/home.types";
+import { api } from "../utils/api";
 
 export default function Home() {
   const [searchOpen, setSearchOpen] = useState(false);
@@ -36,22 +37,31 @@ export default function Home() {
 
   const notifications: Notification[] = [
     {
-      id: 1,
-      title: "새로운 모임 신청",
-      content: "홍대 피자 모임에 참여 신청이 왔어요",
-      time: "5분 전",
-      read: false,
+      id: "1",
+      userId: "current-user",
       type: "join_request",
-      chatRoomId: "room1",
+      title: "새로운 모임 신청",
+      message: "홍대 피자 모임에 참여 신청이 왔어요",
+      data: {
+        postId: "post1",
+        requestId: "request1",
+        chatRoomId: "room1",
+      },
+      read: false,
+      createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
     },
     {
-      id: 2,
-      title: "모임 확정",
-      content: "스타벅스 코딩 모임이 확정되었어요",
-      time: "1시간 전",
+      id: "2",
+      userId: "current-user",
+      type: "request_accepted",
+      title: "모임 참여 승인",
+      message: "스타벅스 코딩 모임에 참여가 승인되었어요",
+      data: {
+        postId: "post2",
+        chatRoomId: "room2",
+      },
       read: false,
-      type: "confirmed",
-      chatRoomId: "room2",
+      createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
     },
   ];
 
@@ -64,7 +74,7 @@ export default function Home() {
       time: "오늘 15:00",
       members: 2,
       maxMembers: 4,
-      category: "☕ 카페",
+      category: "카페",
       role: "참여자",
       createdAt: "2024-01-15T15:00:00",
     },
@@ -98,7 +108,28 @@ export default function Home() {
 
       setLoading(true);
       
-      // 실제 API 호출을 시뮬레이션 (1초 대기)
+      try {
+        // 실제 API 호출 (개발 중에는 목 데이터 사용)
+        const response = await api.posts.getAll({
+          page: pageNum,
+          limit: pageNum === 1 ? 3 : 2,
+          location: currentLocation
+        });
+        
+        if (response.success && response.data) {
+          const { posts: apiPosts, hasMore: apiHasMore } = response.data;
+          setPosts((prevPosts) =>
+            pageNum === 1 ? apiPosts : [...prevPosts, ...apiPosts]
+          );
+          setHasMore(apiHasMore);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.warn('API 호출 실패, 목 데이터 사용:', error);
+      }
+      
+      // API 호출 실패 시 목 데이터 사용
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const now = Date.now();
@@ -110,7 +141,7 @@ export default function Home() {
           // 모임 타입별 템플릿
           const posts = [
             {
-              title: "🍕 저녁 같이 먹을 사람?",
+              title: "저녁 같이 먹을 사람?",
               content: "혼밥 싫어서 같이 드실 분 구해요! 맛있는 피자 같이 먹어요",
               location: `${currentLocation} 근처`,
               venue: `${currentLocation} 피자집`,
@@ -119,7 +150,7 @@ export default function Home() {
               expiresAt: now + 2 * 60 * 60 * 1000, // 2시간 후 만료
             },
             {
-              title: "☕ 카페에서 수다떨어요",
+              title: "카페에서 수다떨어요",
               content: "근처 카페에서 커피 마시며 대화해요. 디저트도 같이!",
               location: `${currentLocation} 동네`,
               venue: `${currentLocation} 카페`,
@@ -128,7 +159,7 @@ export default function Home() {
               expiresAt: now + 1 * 60 * 60 * 1000, // 1시간 후 만료
             },
             {
-              title: "🛍️ 쇼핑 같이 해요",
+              title: "쇼핑 같이 해요",
               content: "쇼핑하면서 구경하실 분! 같이 다녀요",
               location: `${currentLocation} 상권`,
               venue: `${currentLocation} 쇼핑몰`,
@@ -141,24 +172,38 @@ export default function Home() {
           const selectedPost = posts[i] || posts[0];
           const createdAt = now - Math.random() * 12 * 60 * 60 * 1000; // 12시간 이내 랜덤하게 생성
 
+          const participantIds = Array.from(
+            { length: Math.floor(Math.random() * 2) + 1 },
+            (_, idx) => `user${pageNum}${i}${idx}`
+          );
+          
           return {
             id: `${pageNum}-${i}`,
             title: selectedPost.title,
             content: selectedPost.content,
             author: `사용자${pageNum}${i}`,
-            location: selectedPost.location,
+            authorId: `user${pageNum}${i}`,
+            location: {
+              type: 'Point' as const,
+              coordinates: [126.9235 + Math.random() * 0.01, 37.5502 + Math.random() * 0.01], // 홍대 근처
+              address: selectedPost.location,
+            },
             venue: selectedPost.venue,
             category: selectedPost.category,
+            tags: ['혼밥탈출', '새친구', selectedPost.category].filter(Boolean),
             image: selectedPost.image,
-            participants: Math.floor(Math.random() * 2) + 1, // 1-2명
+            participants: participantIds,
             maxParticipants: Math.floor(Math.random() * 2) + 3, // 3-4명
+            meetingDate: new Date(selectedPost.expiresAt),
+            status: (selectedPost.expiresAt > now ? 'active' : 'completed') as 'active' | 'full' | 'completed' | 'cancelled',
+            chatRoom: `chat-${pageNum}-${i}`,
+            viewCount: Math.floor(Math.random() * 50) + 1,
             createdAt: new Date(createdAt).toISOString(),
-            expiresAt: selectedPost.expiresAt,
+            updatedAt: new Date(createdAt).toISOString(),
             isLiked: false,
-            isActive: selectedPost.expiresAt > now, // 만료되지 않은 것만 활성화
           };
         }
-      ).filter((post) => post.isActive); // 활성화된 게시글만 필터링
+      ).filter((post) => post.status === 'active'); // 활성화된 게시글만 필터링
 
       // 첫 페이지면 새로 설정, 아니면 기존 데이터에 추가
       setPosts((prevPosts) =>
@@ -174,8 +219,17 @@ export default function Home() {
     loadPosts(page);
   }, [page, loadPosts]);
 
-  const handleJoinRequest = (postId: string) => {
-    console.log("참여 신청:", postId);
+  const handleJoinRequest = async (postId: string) => {
+    try {
+      const response = await api.joinRequests.create(postId);
+      if (response.success) {
+        console.log("참여 신청 성공:", postId);
+        // TODO: 성공 알림 표시 또는 UI 업데이트
+      }
+    } catch (error) {
+      console.error("참여 신청 실패:", error);
+      // TODO: 에러 알림 표시
+    }
   };
 
 
@@ -201,7 +255,7 @@ export default function Home() {
             {currentLocation} 동네 모임
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            {currentLocation} 근처에서 함께할 사람들을 찾아보세요 📍
+            {currentLocation} 근처에서 함께할 사람들을 찾아보세요
           </Typography>
         </Box>
 
@@ -240,7 +294,7 @@ export default function Home() {
         {!hasMore && posts.length > 0 && (
           <Box textAlign="center" py={4}>
             <Typography variant="body2" color="text.secondary">
-              모든 모임을 확인했어요! 🎉
+              모든 모임을 확인했어요!
             </Typography>
           </Box>
         )}

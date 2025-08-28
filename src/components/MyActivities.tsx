@@ -151,7 +151,7 @@ export default function MyActivities({ activities }: MyActivitiesProps) {
                   </Box>
 
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
-                    <span className="text-xs text-gray-500">👥</span>
+                    <span className="text-xs text-gray-500">인원</span>
                     <Typography variant="caption" color="text.secondary">
                       {item.members}/{item.maxMembers}명
                     </Typography>

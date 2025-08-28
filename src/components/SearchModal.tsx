@@ -107,37 +107,37 @@ export default function SearchModal({
     
     const postTemplates = [
       {
-        title: "🍕 저녁 같이 먹을 사람?",
+        title: "저녁 같이 먹을 사람?",
         content: "혼밥 싫어서 같이 드실 분 구해요! 맛있는 피자 같이 먹어요",
         category: "식사",
         expiresAt: now + 2 * 60 * 60 * 1000,
       },
       {
-        title: "☕ 카페에서 수다떨어요",
+        title: "카페에서 수다떨어요",
         content: "근처 카페에서 커피 마시며 대화해요. 디저트도 같이!",
         category: "카페",
         expiresAt: now + 1 * 60 * 60 * 1000,
       },
       {
-        title: "🛍️ 쇼핑 같이 해요",
+        title: "쇼핑 같이 해요",
         content: "쇼핑하면서 구경하실 분! 같이 다녀요",
         category: "쇼핑",
         expiresAt: now + 3 * 60 * 60 * 1000,
       },
       {
-        title: "🏃‍♂️ 운동 메이트 구해요",
+        title: "운동 메이트 구해요",
         content: "함께 운동할 분 찾아요! 헬스장이나 런닝 같이해요",
         category: "운동",
         expiresAt: now + 4 * 60 * 60 * 1000,
       },
       {
-        title: "📚 스터디 모임",
+        title: "스터디 모임",
         content: "공부 같이 할 사람 모집! 조용한 카페에서 각자 공부해요",
         category: "스터디",
         expiresAt: now + 5 * 60 * 60 * 1000,
       },
       {
-        title: "🎬 영화 보러 갈래요?",
+        title: "영화 보러 갈래요?",
         content: "새로 나온 영화 같이 보실 분! 영화 후 맛집도 가요",
         category: "문화생활",
         expiresAt: now + 3 * 60 * 60 * 1000,
@@ -389,11 +389,11 @@ export default function SearchModal({
                           }}
                         />
                         <Typography variant="caption" color="text.secondary">
-                          👥 {post.participants}/{post.maxParticipants}명
+                          인원 {post.participants}/{post.maxParticipants}명
                         </Typography>
                       </Box>
                       <Typography variant="caption" color="text.secondary">
-                        📍 {post.location}
+                        위치: {post.location}
                       </Typography>
                     </Card>
                   ))}

@@ -75,15 +75,22 @@ export default function PostCard({ post, onJoinRequest }: PostCardProps) {
                 color="#E91E63"
                 fontWeight={500}
               >
-                {post.location}
+                {post.location.address || `${post.location.coordinates[1].toFixed(3)}, ${post.location.coordinates[0].toFixed(3)}`}
               </Typography>
             </Box>
           </Box>
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700`}
-          >
-            {post.category}
-          </span>
+          <Box display="flex" gap={0.5} alignItems="center">
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700`}
+            >
+              {post.category}
+            </span>
+            {post.status === 'full' && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
+                마감
+              </span>
+            )}
+          </Box>
         </Box>
 
         <Typography
@@ -98,11 +105,25 @@ export default function PostCard({ post, onJoinRequest }: PostCardProps) {
         <Typography
           variant="body2"
           color="text.secondary"
-          mb={2}
+          mb={1}
           lineHeight={1.5}
         >
           {post.content}
         </Typography>
+        
+        {/* 태그 표시 */}
+        {post.tags && post.tags.length > 0 && (
+          <Box display="flex" flexWrap="wrap" gap={0.5} mb={2}>
+            {post.tags.map((tag, index) => (
+              <span
+                key={index}
+                className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600"
+              >
+                #{tag}
+              </span>
+            ))}
+          </Box>
+        )}
 
         <Box
           display="flex"
@@ -111,17 +132,23 @@ export default function PostCard({ post, onJoinRequest }: PostCardProps) {
         >
           <Box display="flex" alignItems="center" gap={2}>
             <Box display="flex" alignItems="center" gap={0.5}>
-              <span className="text-xs text-gray-500">👥</span>
+              <span className="text-xs text-gray-500">인원</span>
               <Typography variant="caption" color="text.secondary">
-                {post.participants}/{post.maxParticipants}명
+                {post.participants.length}/{post.maxParticipants}명
               </Typography>
             </Box>
-            <Typography variant="caption" color="text.secondary">
-              {new Date(post.createdAt).toLocaleDateString("ko-KR", {
-                month: "short",
-                day: "numeric",
-              })}
-            </Typography>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="caption" color="text.secondary">
+                조회 {post.viewCount}
+              </Typography>
+              <span className="text-xs text-gray-400">•</span>
+              <Typography variant="caption" color="text.secondary">
+                {new Date(post.createdAt).toLocaleDateString("ko-KR", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </Typography>
+            </Box>
           </Box>
 
           <Button
@@ -154,7 +181,7 @@ export default function PostCard({ post, onJoinRequest }: PostCardProps) {
               />
             }
           >
-            잇플!
+            잇플
           </Button>
         </Box>
       </Box>

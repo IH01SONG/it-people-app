@@ -24,7 +24,9 @@ export default function Step1() {
     venue: "",
     location: "",
     category: "",
-    content: ""
+    content: "",
+    meetingDate: "",
+    tags: [] as string[]
   });
 
   const hongdaeVenues = [
@@ -53,7 +55,12 @@ export default function Step1() {
 
   const handleSubmit = () => {
     if (formData.title.trim() && formData.venue && formData.category) {
-      navigate('/new/step2', { state: formData });
+      // 위치 정보 추가
+      const formDataWithLocation = {
+        ...formData,
+        location: formData.venue ? `홍대입구역 ${formData.venue.split(' ')[0]}` : "홍대입구"
+      };
+      navigate('/new/step2', { state: formDataWithLocation });
     }
   };
 
@@ -98,7 +105,7 @@ export default function Step1() {
         }}
       >
         <Box mb={3}>
-          <div className="text-3xl mb-2 text-center">🤝</div>
+          <div className="text-xl mb-2 text-center font-bold">모임 생성</div>
           <Typography variant="h6" fontWeight={600} textAlign="center" mb={1}>
             어떤 모임을 만들고 싶으신가요?
           </Typography>
@@ -129,8 +136,7 @@ export default function Step1() {
                 const venue = e.target.value;
                 setFormData({
                   ...formData, 
-                  venue,
-                  location: venue ? `홍대입구역 ${venue.split(' ')[0]}` : ""
+                  venue
                 });
               }}
             >
@@ -182,7 +188,7 @@ export default function Step1() {
         }}
       >
         <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <div className="text-lg">💡</div>
+          <div className="text-lg font-bold">예시</div>
           <Typography variant="subtitle1" fontWeight={600}>
             모임 예시
           </Typography>

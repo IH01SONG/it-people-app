@@ -24,6 +24,8 @@ interface FormData {
   location: string;
   category: string;
   content: string;
+  meetingDate?: string;
+  tags?: string[];
 }
 
 interface ExtendedFormData extends FormData {
@@ -32,6 +34,8 @@ interface ExtendedFormData extends FormData {
   maxParticipants: string;
   additionalInfo: string;
   tags: string[];
+  venue: string;
+  location: string;
 }
 
 export default function Step2() {
@@ -67,8 +71,28 @@ export default function Step2() {
     }
   }, [location.state]);
 
-  const handleSubmit = () => {
-    navigate('/feedback-result', { state: formData });
+  const handleSubmit = async () => {
+    // 백엔드 API 호출을 위한 데이터 준비
+    const postData = {
+      title: formData.title,
+      content: formData.content,
+      category: formData.category,
+      location: {
+        type: 'Point' as const,
+        coordinates: [126.9235, 37.5502], // 홍대입구역 좌표
+        address: formData.location || '홍대입구 근처'
+      },
+      venue: formData.venue,
+      maxParticipants: parseInt(formData.maxParticipants.split('명')[0]),
+      meetingDate: formData.meetingTime ? new Date(formData.meetingTime) : undefined,
+      tags: formData.tags || [],
+      additionalInfo: formData.additionalInfo
+    };
+    
+    // TODO: API 호출
+    // await api.post('/api/posts', postData);
+    
+    navigate('/feedback-result', { state: { ...formData, postData } });
   };
 
   const handleAddTag = () => {
@@ -141,7 +165,7 @@ export default function Step2() {
           "{step1Data.title}"
         </Typography>
         <Typography variant="body2" color="white" sx={{ opacity: 0.9 }} mt={1}>
-          📍 {step1Data.venue} • {step1Data.category}
+          장소: {step1Data.venue} • {step1Data.category}
         </Typography>
       </Card>
 
@@ -156,7 +180,7 @@ export default function Step2() {
         }}
       >
         <Box mb={3}>
-          <div className="text-3xl mb-2 text-center">⏰</div>
+          <div className="text-xl mb-2 text-center font-bold">세부 설정</div>
           <Typography variant="h6" fontWeight={600} textAlign="center" mb={1}>
             모임 세부 정보
           </Typography>
