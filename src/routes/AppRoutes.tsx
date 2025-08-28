@@ -34,8 +34,27 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallbackSkeleton />}>
         <Routes>
+<<<<<<< HEAD
           {/* Search Results - without bottom navigation */}
           <Route path="/search-results" element={<SearchResults />} />
+=======
+          {/* Pages without bottom navigation */}
+          <Route path="/new" element={
+            <ProtectedRoute>
+              <NewPost />
+            </ProtectedRoute>
+          } />
+          <Route path="/new/step1" element={
+            <ProtectedRoute>
+              <Step1 />
+            </ProtectedRoute>
+          } />
+          <Route path="/new/step2" element={
+            <ProtectedRoute>
+              <Step2 />
+            </ProtectedRoute>
+          } />
+>>>>>>> feature/new-post
           
           <Route element={<RootLayout />}>
             {/* Home */}
@@ -53,34 +72,6 @@ export default function AppRoutes() {
               <Route
                 path="place/:placeId"
                 element={<PlaceDetail />}
-              />
-            </Route>
-
-            {/* New Post flow */}
-            <Route path="/new">
-              <Route
-                index
-                element={
-                  <ProtectedRoute>
-                    <NewPost />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="step1"
-                element={
-                  <ProtectedRoute>
-                    <Step1 />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="step2"
-                element={
-                  <ProtectedRoute>
-                    <Step2 />
-                  </ProtectedRoute>
-                }
               />
             </Route>
 
