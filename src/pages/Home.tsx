@@ -34,6 +34,9 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const observer = useRef<IntersectionObserver | null>(null);
+  
+  // 신청한 게시글 관리
+  const [appliedPosts, setAppliedPosts] = useState<Set<string>>(new Set());
 
   const notifications: Notification[] = [
     {
@@ -135,8 +138,9 @@ export default function Home() {
       const now = Date.now();
 
       // 목 데이터 생성 (첫 페이지는 3개, 나머지는 2개)
+      const postsCount = pageNum === 1 ? 3 : 2;
       const mockPosts = Array.from(
-        { length: Math.min(3, pageNum === 1 ? 3 : 2) },
+        { length: postsCount },
         (_, i) => {
           // 모임 타입별 템플릿
           const posts = [
@@ -178,7 +182,7 @@ export default function Home() {
           );
           
           return {
-            id: `${pageNum}-${i}`,
+            id: `${pageNum}-${i}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
             title: selectedPost.title,
             content: selectedPost.content,
             author: `사용자${pageNum}${i}`,
@@ -220,15 +224,16 @@ export default function Home() {
   }, [page, loadPosts]);
 
   const handleJoinRequest = async (postId: string) => {
-    try {
-      const response = await api.joinRequests.create(postId);
-      if (response.success) {
-        console.log("참여 신청 성공:", postId);
-        // TODO: 성공 알림 표시 또는 UI 업데이트
-      }
-    } catch (error) {
-      console.error("참여 신청 실패:", error);
-      // TODO: 에러 알림 표시
+    const newAppliedPosts = new Set(appliedPosts);
+    
+    if (appliedPosts.has(postId)) {
+      newAppliedPosts.delete(postId);
+      setAppliedPosts(newAppliedPosts);
+      console.log("참여 취소:", postId);
+    } else {
+      newAppliedPosts.add(postId);
+      setAppliedPosts(newAppliedPosts);
+      console.log("참여 신청:", postId);
     }
   };
 
@@ -265,7 +270,11 @@ export default function Home() {
               key={post.id}
               ref={posts.length === index + 1 ? lastPostElementRef : null}
             >
-              <PostCard post={post} onJoinRequest={handleJoinRequest} />
+              <PostCard 
+                post={post} 
+                onJoinRequest={handleJoinRequest}
+                isApplied={appliedPosts.has(post.id)}
+              />
             </div>
           ))}
         </div>

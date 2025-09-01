@@ -21,13 +21,14 @@ import type { Post } from "../types/home.types";
 interface PostCardProps {
   post: Post; // 게시글 데이터
   onJoinRequest: (postId: string) => void; // 참여 신청 콜백
+  isApplied?: boolean; // 신청 상태
 }
 
 /**
  * 게시글 카드 컴포넌트
  * 모임 게시글의 정보를 카드 형태로 표시하고 참여 신청 기능을 제공
  */
-export default function PostCard({ post, onJoinRequest }: PostCardProps) {
+export default function PostCard({ post, onJoinRequest, isApplied = false }: PostCardProps) {
   return (
     <Card
       sx={{
@@ -154,7 +155,7 @@ export default function PostCard({ post, onJoinRequest }: PostCardProps) {
           <Button
             onClick={() => onJoinRequest(post.id)}
             sx={{
-              bgcolor: "#E91E63",
+              bgcolor: isApplied ? "#C2185B" : "#E91E63",
               color: "white",
               borderRadius: 20,
               px: 2,
@@ -163,7 +164,7 @@ export default function PostCard({ post, onJoinRequest }: PostCardProps) {
               fontWeight: 600,
               minWidth: "auto",
               "&:hover": {
-                bgcolor: "#C2185B",
+                bgcolor: isApplied ? "#9C1346" : "#C2185B",
                 transform: "scale(1.05)",
               },
               transition: "all 0.2s ease",
