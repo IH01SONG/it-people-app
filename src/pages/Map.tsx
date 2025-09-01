@@ -34,7 +34,7 @@ export default function Map() {
 
   // 카카오 맵 SDK 로더
   const [mapLoading, mapError] = useKakaoLoader({
-    appkey: "0c537754f8fad9d1b779befd5d75dc07", // HTML에서 사용하는 것과 동일한 키
+    appkey: import.meta.env.VITE_KAKAO_MAP_API_KEY || "0c537754f8fad9d1b779befd5d75dc07",
   });
 
   const [center, setCenter] = useState({
@@ -197,7 +197,7 @@ export default function Map() {
           bgcolor: "linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)",
           borderBottom: "1px solid #e8ecef",
           backdropFilter: "blur(10px)",
-          boxShadow: "0 2px 12px rgba(233, 30, 99, 0.08)",
+          boxShadow: "0 2px 12px rgba(231, 98, 169, 0.08)",
         }}
       >
         <Box display="flex" gap={1} mb={2}>
@@ -212,7 +212,7 @@ export default function Map() {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "#E91E63" }} />
+                  <SearchIcon sx={{ color: "#E762A9" }} />
                 </InputAdornment>
               ),
             }}
@@ -224,13 +224,13 @@ export default function Map() {
                 boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                 transition: "all 0.3s ease",
                 "&:hover": {
-                  borderColor: "#E91E63",
-                  boxShadow: "0 4px 12px rgba(233, 30, 99, 0.12)",
+                  borderColor: "#E762A9",
+                  boxShadow: "0 4px 12px rgba(231, 98, 169, 0.12)",
                   transform: "translateY(-1px)",
                 },
                 "&.Mui-focused": {
-                  borderColor: "#E91E63",
-                  boxShadow: "0 4px 16px rgba(233, 30, 99, 0.2)",
+                  borderColor: "#E762A9",
+                  boxShadow: "0 4px 16px rgba(231, 98, 169, 0.2)",
                 },
               },
             }}
@@ -238,11 +238,11 @@ export default function Map() {
           <IconButton
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             sx={{
-              bgcolor: isFilterOpen ? "#E91E63" : "#f8f9fa",
-              color: isFilterOpen ? "white" : "#E91E63",
+              bgcolor: isFilterOpen ? "#E762A9" : "#f8f9fa",
+              color: isFilterOpen ? "white" : "#E762A9",
               borderRadius: 2,
               "&:hover": {
-                bgcolor: isFilterOpen ? "#C2185B" : "#f1f3f5",
+                bgcolor: isFilterOpen ? "#D554A0" : "#f1f3f5",
               },
             }}
           >
@@ -252,16 +252,16 @@ export default function Map() {
             onClick={getCurrentLocation}
             sx={{
               bgcolor: "white",
-              color: "#E91E63",
+              color: "#E762A9",
               borderRadius: 3,
-              border: "2px solid #E91E63",
-              boxShadow: "0 2px 8px rgba(233, 30, 99, 0.1)",
+              border: "2px solid #E762A9",
+              boxShadow: "0 2px 8px rgba(231, 98, 169, 0.1)",
               transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               "&:hover": {
-                bgcolor: "#E91E63",
+                bgcolor: "#E762A9",
                 color: "white",
                 transform: "translateY(-1px)",
-                boxShadow: "0 4px 12px rgba(233, 30, 99, 0.3)",
+                boxShadow: "0 4px 12px rgba(231, 98, 169, 0.3)",
               },
             }}
           >
@@ -277,8 +277,8 @@ export default function Map() {
               borderRadius: 4,
               p: 3,
               mb: 3,
-              boxShadow: "0 8px 24px rgba(233, 30, 99, 0.12)",
-              border: "1px solid rgba(233, 30, 99, 0.1)",
+              boxShadow: "0 8px 24px rgba(231, 98, 169, 0.12)",
+              border: "1px solid rgba(231, 98, 169, 0.1)",
               backdropFilter: "blur(10px)",
             }}
           >
@@ -293,7 +293,7 @@ export default function Map() {
                 gap: 1,
               }}
             >
-              <FilterListIcon sx={{ fontSize: 20, color: "#E91E63" }} />
+              <FilterListIcon sx={{ fontSize: 20, color: "#E762A9" }} />
               카테고리 필터
             </Typography>
             <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
@@ -309,7 +309,7 @@ export default function Map() {
                   }
                   sx={{
                     bgcolor:
-                      filters.category === category ? "#E91E63" : "white",
+                      filters.category === category ? "#E762A9" : "white",
                     color: filters.category === category ? "white" : "#666",
                     borderRadius: 3,
                     border:
@@ -322,16 +322,16 @@ export default function Map() {
                     height: 36,
                     boxShadow:
                       filters.category === category
-                        ? "0 2px 8px rgba(233, 30, 99, 0.3)"
+                        ? "0 2px 8px rgba(231, 98, 169, 0.3)"
                         : "0 2px 8px rgba(0,0,0,0.06)",
                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     "&:hover": {
                       bgcolor:
-                        filters.category === category ? "#C2185B" : "#f8f9fa",
+                        filters.category === category ? "#D554A0" : "#f8f9fa",
                       transform: "scale(1.05)",
                       boxShadow:
                         filters.category === category
-                          ? "0 4px 12px rgba(233, 30, 99, 0.4)"
+                          ? "0 4px 12px rgba(231, 98, 169, 0.4)"
                           : "0 4px 12px rgba(0,0,0,0.1)",
                     },
                   }}
@@ -349,11 +349,11 @@ export default function Map() {
                   label={tag}
                   onClick={() => handleTagFilter(tag)}
                   sx={{
-                    bgcolor: filters.tags.includes(tag) ? "#E91E63" : "white",
+                    bgcolor: filters.tags.includes(tag) ? "#E762A9" : "white",
                     color: filters.tags.includes(tag) ? "white" : "#666",
                     "&:hover": {
                       bgcolor: filters.tags.includes(tag)
-                        ? "#C2185B"
+                        ? "#D554A0"
                         : "#f1f3f5",
                     },
                     cursor: "pointer",
@@ -415,7 +415,7 @@ export default function Map() {
               bgcolor="#f8f9fa"
             >
               <Box textAlign="center">
-                <CircularProgress sx={{ color: "#E91E63", mb: 2 }} />
+                <CircularProgress sx={{ color: "#E762A9", mb: 2 }} />
                 <Typography variant="body2" color="text.secondary">
                   지도를 로드하고 있어요...
                 </Typography>
@@ -525,19 +525,19 @@ export default function Map() {
                   onClick={handleZoomIn}
                   sx={{
                     bgcolor: "white",
-                    color: "#E91E63",
-                    boxShadow: "0 4px 12px rgba(233, 30, 99, 0.15)",
+                    color: "#E762A9",
+                    boxShadow: "0 4px 12px rgba(231, 98, 169, 0.15)",
                     width: 48,
                     height: 48,
                     borderRadius: 3,
-                    border: "2px solid rgba(233, 30, 99, 0.1)",
+                    border: "2px solid rgba(231, 98, 169, 0.1)",
                     backdropFilter: "blur(10px)",
                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     "&:hover": {
-                      bgcolor: "#E91E63",
+                      bgcolor: "#E762A9",
                       color: "white",
                       transform: "translateY(-2px)",
-                      boxShadow: "0 8px 20px rgba(233, 30, 99, 0.3)",
+                      boxShadow: "0 8px 20px rgba(231, 98, 169, 0.3)",
                     },
                     "&:disabled": {
                       bgcolor: "#f5f5f5",
@@ -552,7 +552,7 @@ export default function Map() {
                 <Box
                   sx={{
                     bgcolor: "white",
-                    color: "#E91E63",
+                    color: "#E762A9",
                     borderRadius: 3,
                     py: 1,
                     px: 1.5,
@@ -564,8 +564,8 @@ export default function Map() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    boxShadow: "0 4px 12px rgba(233, 30, 99, 0.15)",
-                    border: "2px solid rgba(233, 30, 99, 0.1)",
+                    boxShadow: "0 4px 12px rgba(231, 98, 169, 0.15)",
+                    border: "2px solid rgba(231, 98, 169, 0.1)",
                     backdropFilter: "blur(10px)",
                   }}
                 >
@@ -576,19 +576,19 @@ export default function Map() {
                   onClick={handleZoomOut}
                   sx={{
                     bgcolor: "white",
-                    color: "#E91E63",
-                    boxShadow: "0 4px 12px rgba(233, 30, 99, 0.15)",
+                    color: "#E762A9",
+                    boxShadow: "0 4px 12px rgba(231, 98, 169, 0.15)",
                     width: 48,
                     height: 48,
                     borderRadius: 3,
-                    border: "2px solid rgba(233, 30, 99, 0.1)",
+                    border: "2px solid rgba(231, 98, 169, 0.1)",
                     backdropFilter: "blur(10px)",
                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     "&:hover": {
-                      bgcolor: "#E91E63",
+                      bgcolor: "#E762A9",
                       color: "white",
                       transform: "translateY(-2px)",
-                      boxShadow: "0 8px 20px rgba(233, 30, 99, 0.3)",
+                      boxShadow: "0 8px 20px rgba(231, 98, 169, 0.3)",
                     },
                     "&:disabled": {
                       bgcolor: "#f5f5f5",
@@ -615,8 +615,8 @@ export default function Map() {
               flexDirection: "column",
               borderRadius: "16px",
               m: 2,
-              boxShadow: "0 8px 32px rgba(233, 30, 99, 0.15)",
-              border: "1px solid rgba(233, 30, 99, 0.1)",
+              boxShadow: "0 8px 32px rgba(231, 98, 169, 0.15)",
+              border: "1px solid rgba(231, 98, 169, 0.1)",
               overflow: "hidden",
             }}
           >
@@ -624,13 +624,13 @@ export default function Map() {
             <Box
               sx={{
                 p: 3,
-                background: "linear-gradient(135deg, #E91E63 0%, #C2185B 100%)",
+                background: "linear-gradient(135deg, #E762A9 0%, #D554A0 100%)",
                 color: "white",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 borderRadius: "16px 16px 0 0",
-                boxShadow: "0 4px 12px rgba(233, 30, 99, 0.3)",
+                boxShadow: "0 4px 12px rgba(231, 98, 169, 0.3)",
               }}
             >
               <Typography variant="h6" fontWeight={600}>
@@ -677,7 +677,7 @@ export default function Map() {
                   label={selectedPost.category}
                   size="small"
                   sx={{
-                    bgcolor: "#E91E63",
+                    bgcolor: "#E762A9",
                     color: "white",
                     fontSize: "0.8rem",
                     height: 28,
@@ -709,7 +709,7 @@ export default function Map() {
               </Typography>
 
               <Box display="flex" alignItems="center" gap={1.5} mb={4}>
-                <LocationOnIcon sx={{ fontSize: 22, color: "#E91E63" }} />
+                <LocationOnIcon sx={{ fontSize: 22, color: "#E762A9" }} />
                 <Box>
                   <Typography
                     variant="body1"
@@ -748,11 +748,11 @@ export default function Map() {
                   py: 2,
                   fontSize: "1.1rem",
                   fontWeight: 700,
-                  boxShadow: "0 2px 8px rgba(233, 30, 99, 0.3)",
+                  boxShadow: "0 2px 8px rgba(231, 98, 169, 0.3)",
                   transition: "all 0.2s ease",
                   "&:hover": {
                     bgcolor: appliedPosts.has(selectedPost.id) ? "#9C1346" : "#C2185B",
-                    boxShadow: "0 4px 12px rgba(233, 30, 99, 0.4)",
+                    boxShadow: "0 4px 12px rgba(231, 98, 169, 0.4)",
                     transform: "scale(1.02)",
                   },
                 }}

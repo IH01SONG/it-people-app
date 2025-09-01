@@ -174,15 +174,15 @@ export default function Home() {
           ];
 
           const selectedPost = posts[i] || posts[0];
-          const createdAt = now - Math.random() * 12 * 60 * 60 * 1000; // 12시간 이내 랜덤하게 생성
+          const createdAt = now - ((pageNum * 1000 + i * 300) * 60 * 1000); // 고정된 시간 간격
 
           const participantIds = Array.from(
-            { length: Math.floor(Math.random() * 2) + 1 },
+            { length: (pageNum + i) % 2 + 1 }, // 1-2명으로 고정
             (_, idx) => `user${pageNum}${i}${idx}`
           );
           
           return {
-            id: `${pageNum}-${i}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            id: `${pageNum}-${i}`,
             title: selectedPost.title,
             content: selectedPost.content,
             author: `사용자${pageNum}${i}`,
@@ -197,11 +197,11 @@ export default function Home() {
             tags: ['혼밥탈출', '새친구', selectedPost.category].filter(Boolean),
             image: selectedPost.image,
             participants: participantIds,
-            maxParticipants: Math.floor(Math.random() * 2) + 3, // 3-4명
+            maxParticipants: (pageNum + i) % 2 + 3, // 3-4명으로 고정
             meetingDate: new Date(selectedPost.expiresAt),
             status: (selectedPost.expiresAt > now ? 'active' : 'completed') as 'active' | 'full' | 'completed' | 'cancelled',
             chatRoom: `chat-${pageNum}-${i}`,
-            viewCount: Math.floor(Math.random() * 50) + 1,
+            viewCount: (pageNum * 10 + i * 5) % 50 + 1, // 고정된 조회수
             createdAt: new Date(createdAt).toISOString(),
             updatedAt: new Date(createdAt).toISOString(),
             isLiked: false,
