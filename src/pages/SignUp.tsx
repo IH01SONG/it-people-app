@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, TextField, Typography, Stack, createTheme, ThemeProvider, IconButton } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // Import the back arrow icon
+import AreaSelectionModal from '../components/AreaSelectionModal';
 
 const theme = createTheme({
   palette: {
@@ -33,6 +34,9 @@ const SignUp: React.FC = () => {
   const [nameError, setNameError] = useState('');
   const [nicknameError, setNicknameError] = useState(''); // New state for nickname error
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [showAreaSelectionModal, setShowAreaSelectionModal] = useState(false);
+  const [selectedAutonomousDistrict, setSelectedAutonomousDistrict] = useState<string | null>(null);
+  const [selectedGeneralDistrict, setSelectedGeneralDistrict] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const validateEmail = (email: string) => {
@@ -127,6 +131,12 @@ const SignUp: React.FC = () => {
     navigate(-1); // Go back to the previous page
   };
 
+  const handleAreaSelect = (district: string, generalDistrict: string) => {
+    setSelectedAutonomousDistrict(district);
+    setSelectedGeneralDistrict(generalDistrict);
+    setShowAreaSelectionModal(false);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Box className="flex flex-col items-center min-h-screen bg-white w-full">
@@ -164,6 +174,20 @@ const SignUp: React.FC = () => {
               {isEmailVerified ? '인증 완료' : '이메일 인증'}
             </Button>
           </Box>
+          <Button
+            variant="outlined"
+            color="primary"
+            fullWidth
+            onClick={() => setShowAreaSelectionModal(true)}
+            sx={{ mt: 2, mb: 1 }}
+          >
+            활동 지역 설정
+          </Button>
+          {selectedAutonomousDistrict && selectedGeneralDistrict && (
+            <Typography variant="body2" color="text.secondary" mt={1} mb={2}>
+              선택된 지역: {selectedAutonomousDistrict} {selectedGeneralDistrict}
+            </Typography>
+          )}
           <Typography variant="subtitle2" color="textSecondary">닉네임</Typography>
           <TextField
             label="닉네임을 입력해주세요"
@@ -237,6 +261,11 @@ const SignUp: React.FC = () => {
           </Stack>
         </Stack>
       </Box>
+      <AreaSelectionModal
+        open={showAreaSelectionModal}
+        onClose={() => setShowAreaSelectionModal(false)}
+        onSelectArea={handleAreaSelect}
+      />
     </ThemeProvider>
   );
 };
