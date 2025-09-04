@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-// 환경 변수에서 API URL을 가져와서 사용하도록 수정합니다.
-// .env 파일에 VITE_API_URL=https://it-people-server-140857839854.asia-northeast3.run.app/api 로 설정해야 합니다.
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true, // 쿠키 인증이면 true

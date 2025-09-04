@@ -39,7 +39,7 @@ const SignUp: React.FC = () => {
     /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(String(email).toLowerCase());
 
   const validatePassword = (pwd: string) =>
-    /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,20}$/.test(pwd); // Password must be 8-20 characters, including letters, numbers, and special characters
+    pwd.length >= 6; // Password must be 6 characters or more
 
   const handleEmailVerification = () => {
     // Combine emailUsername and emailDomain to form the full email
@@ -67,7 +67,7 @@ const SignUp: React.FC = () => {
     else setEmailError('');
 
     if (!password) { setPasswordError('비밀번호를 입력해주세요.'); isValid = false; }
-    else if (!validatePassword(password)) { setPasswordError('비밀번호는 8-20자 이상이어야 하며, 문자, 숫자, 특수문자를 포함해야 합니다.'); isValid = false; }
+    else if (!validatePassword(password)) { setPasswordError('비밀번호는 6자 이상이어야 합니다.'); isValid = false; }
     else setPasswordError('');
 
     if (!confirmPassword) { setConfirmPasswordError('비밀번호를 재입력해주세요.'); isValid = false; }
@@ -295,3 +295,4 @@ const SignUp: React.FC = () => {
 };
 
 export default SignUp;
+
