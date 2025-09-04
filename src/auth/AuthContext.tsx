@@ -1,36 +1,68 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { api } from '../lib/api';
+import { createSocket } from '../lib/socket';
 
-type AuthContextValue = {
-  isAuthenticated: boolean;
-  login: (token?: string) => void;
+type User = { id: string; email: string; name?: string };
+type AuthContextType = {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
+
+type Socket = ReturnType<typeof createSocket>;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
-  const login = useCallback((token?: string) => {
-    // In real app, persist token and validate
-    if (token) localStorage.setItem("itp_token", token);
-    setIsAuthenticated(true);
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    api.get<User>('/auth/me')
+      .then((me) => {
+        setUser(me);
+        // 소켓 연결
+        socketRef.current = createSocket(() => localStorage.getItem('access_token'));
+        // 예: 공용 룸 조인
+        socketRef.current.emit('joinRoom', { roomId: 'global' });
+      })
+      .catch(() => {
+        localStorage.removeItem('access_token');
+        setUser(null);
+      });
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem("itp_token");
-    setIsAuthenticated(false);
-  }, []);
+  const login = async (email: string, password: string) => {
+    const { token } = await api.login(email, password);
+    localStorage.setItem('access_token', token);
+    const me = await api.getMe();
+    setUser(me);
 
-  const value = useMemo(() => ({ isAuthenticated, login, logout }), [isAuthenticated, login, logout]);
+    socketRef.current?.disconnect();
+    socketRef.current = createSocket(() => localStorage.getItem('access_token'));
+    socketRef.current.emit('joinRoom', { roomId: 'global' });
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const logout = () => {
+    localStorage.removeItem('access_token');
+    setUser(null);
+    socketRef.current?.disconnect();
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
-}
+};
 
 
