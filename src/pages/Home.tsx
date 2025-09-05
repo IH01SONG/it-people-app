@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Typography,
-  Box,
-} from "@mui/material";
+import { Typography, Box } from "@mui/material";
 import AppHeader from "../components/AppHeader";
 import LocationHeader from "../components/LocationHeader";
 import MyActivities from "../components/MyActivities";
@@ -16,9 +13,16 @@ export default function Home() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState("홍대입구");
-  
-  const availableLocations = ["홍대입구", "강남", "신촌", "이태원", "명동", "건대입구"];
-  
+
+  const availableLocations = [
+    "홍대입구",
+    "강남",
+    "신촌",
+    "이태원",
+    "명동",
+    "건대입구",
+  ];
+
   const handleLocationChange = () => {
     const currentIndex = availableLocations.indexOf(currentLocation);
     const nextIndex = (currentIndex + 1) % availableLocations.length;
@@ -31,10 +35,11 @@ export default function Home() {
   // 무한 스크롤 상태
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const isFetchingRef = useRef(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const observer = useRef<IntersectionObserver | null>(null);
-  
+
   // 신청한 게시글 관리
   const [appliedPosts, setAppliedPosts] = useState<Set<string>>(new Set());
 
@@ -68,7 +73,6 @@ export default function Home() {
     },
   ];
 
-
   const myActivities: Activity[] = [
     {
       id: 1,
@@ -84,7 +88,6 @@ export default function Home() {
   ].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-
 
   // 무한 스크롤 로직
   const lastPostElementRef = useCallback(
@@ -107,125 +110,45 @@ export default function Home() {
    */
   const loadPosts = useCallback(
     async (pageNum: number) => {
-      if (loading) return; // 이미 로딩 중이면 실행 안함
-
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
       setLoading(true);
-      
+
       try {
-        // 실제 API 호출 (개발 중에는 목 데이터 사용)
         const response = await api.posts.getAll({
           page: pageNum,
-          limit: pageNum === 1 ? 3 : 2,
-          location: currentLocation
+          limit: pageNum === 1 ? 10 : 10,
+          location: currentLocation,
         });
-        
+
         if (response.success && response.data) {
           const { posts: apiPosts, hasMore: apiHasMore } = response.data;
           setPosts((prevPosts) =>
             pageNum === 1 ? apiPosts : [...prevPosts, ...apiPosts]
           );
           setHasMore(apiHasMore);
-          setLoading(false);
-          return;
+        } else {
+          setHasMore(false);
         }
       } catch (error) {
-        console.warn('API 호출 실패, 목 데이터 사용:', error);
+        console.error("게시글 불러오기 실패:", error);
+        setHasMore(false);
+      } finally {
+        setLoading(false);
+        isFetchingRef.current = false;
       }
-      
-      // API 호출 실패 시 목 데이터 사용
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const now = Date.now();
-
-      // 목 데이터 생성 (첫 페이지는 3개, 나머지는 2개)
-      const postsCount = pageNum === 1 ? 3 : 2;
-      const mockPosts = Array.from(
-        { length: postsCount },
-        (_, i) => {
-          // 모임 타입별 템플릿
-          const posts = [
-            {
-              title: "저녁 같이 먹을 사람?",
-              content: "혼밥 싫어서 같이 드실 분 구해요! 맛있는 피자 같이 먹어요",
-              location: `${currentLocation} 근처`,
-              venue: `${currentLocation} 피자집`,
-              category: "식사",
-              image: `https://picsum.photos/seed/pizza${pageNum}${i}/400/250`,
-              expiresAt: now + 2 * 60 * 60 * 1000, // 2시간 후 만료
-            },
-            {
-              title: "카페에서 수다떨어요",
-              content: "근처 카페에서 커피 마시며 대화해요. 디저트도 같이!",
-              location: `${currentLocation} 동네`,
-              venue: `${currentLocation} 카페`,
-              category: "카페",
-              image: `https://picsum.photos/seed/cafe${pageNum}${i}/400/250`,
-              expiresAt: now + 1 * 60 * 60 * 1000, // 1시간 후 만료
-            },
-            {
-              title: "쇼핑 같이 해요",
-              content: "쇼핑하면서 구경하실 분! 같이 다녀요",
-              location: `${currentLocation} 상권`,
-              venue: `${currentLocation} 쇼핑몰`,
-              category: "쇼핑",
-              image: null, // 일부는 이미지 없이
-              expiresAt: now + 3 * 60 * 60 * 1000, // 3시간 후 만료
-            },
-          ];
-
-          const selectedPost = posts[i] || posts[0];
-          const createdAt = now - ((pageNum * 1000 + i * 300) * 60 * 1000); // 고정된 시간 간격
-
-          const participantIds = Array.from(
-            { length: (pageNum + i) % 2 + 1 }, // 1-2명으로 고정
-            (_, idx) => `user${pageNum}${i}${idx}`
-          );
-          
-          return {
-            id: `${pageNum}-${i}`,
-            title: selectedPost.title,
-            content: selectedPost.content,
-            author: `사용자${pageNum}${i}`,
-            authorId: `user${pageNum}${i}`,
-            location: {
-              type: 'Point' as const,
-              coordinates: [126.9235 + Math.random() * 0.01, 37.5502 + Math.random() * 0.01], // 홍대 근처
-              address: selectedPost.location,
-            },
-            venue: selectedPost.venue,
-            category: selectedPost.category,
-            tags: ['혼밥탈출', '새친구', selectedPost.category].filter(Boolean),
-            image: selectedPost.image,
-            participants: participantIds,
-            maxParticipants: (pageNum + i) % 2 + 3, // 3-4명으로 고정
-            meetingDate: new Date(selectedPost.expiresAt),
-            status: (selectedPost.expiresAt > now ? 'active' : 'completed') as 'active' | 'full' | 'completed' | 'cancelled',
-            chatRoom: `chat-${pageNum}-${i}`,
-            viewCount: (pageNum * 10 + i * 5) % 50 + 1, // 고정된 조회수
-            createdAt: new Date(createdAt).toISOString(),
-            updatedAt: new Date(createdAt).toISOString(),
-            isLiked: false,
-          };
-        }
-      ).filter((post) => post.status === 'active'); // 활성화된 게시글만 필터링
-
-      // 첫 페이지면 새로 설정, 아니면 기존 데이터에 추가
-      setPosts((prevPosts) =>
-        pageNum === 1 ? mockPosts : [...prevPosts, ...mockPosts]
-      );
-      setHasMore(pageNum < 10); // 10페이지까지만 로드 가능
-      setLoading(false);
     },
-    [loading, currentLocation]
+    [currentLocation]
   );
 
   useEffect(() => {
     loadPosts(page);
-  }, [page, loadPosts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, currentLocation]);
 
   const handleJoinRequest = async (postId: string) => {
     const newAppliedPosts = new Set(appliedPosts);
-    
+
     if (appliedPosts.has(postId)) {
       newAppliedPosts.delete(postId);
       setAppliedPosts(newAppliedPosts);
@@ -236,7 +159,6 @@ export default function Home() {
       console.log("참여 신청:", postId);
     }
   };
-
 
   return (
     <div className="w-full max-w-md mx-auto bg-white min-h-screen">
@@ -265,13 +187,23 @@ export default function Home() {
         </Box>
 
         <div className="space-y-4">
+          {posts.length === 0 && !loading && (
+            <Box textAlign="center" py={6} color="text.secondary">
+              <Typography variant="body1" fontWeight={600} mb={1}>
+                아직 작성된 모임이 없어요
+              </Typography>
+              <Typography variant="body2" mb={2}>
+                첫 번째 모임을 만들어보세요!
+              </Typography>
+            </Box>
+          )}
           {posts.map((post, index) => (
             <div
               key={post.id}
               ref={posts.length === index + 1 ? lastPostElementRef : null}
             >
-              <PostCard 
-                post={post} 
+              <PostCard
+                post={post}
                 onJoinRequest={handleJoinRequest}
                 isApplied={appliedPosts.has(post.id)}
               />
@@ -308,10 +240,7 @@ export default function Home() {
           </Box>
         )}
 
-        <SearchModal
-          open={searchOpen}
-          onClose={() => setSearchOpen(false)}
-        />
+        <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
         <NotificationModal
           open={notificationOpen}
