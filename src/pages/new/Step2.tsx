@@ -19,6 +19,7 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useNavigate, useLocation } from "react-router-dom";
 import { apiFetch, API_BASE_URL } from "../../utils/api";
+import { getDefaultImageForCategory } from "../../utils/defaultImages";
 import MapPicker from "./MapPicker";
 // import logoSvg from "../../assets/logo.png";
 
@@ -71,13 +72,31 @@ export default function Step2() {
         ...prev,
         category: location.state.category,
       }));
+      
+      // 카테고리가 설정되면 기본 이미지를 자동으로 추가 (이미지가 없는 경우에만)
+      if (images.length === 0) {
+        const defaultImage = getDefaultImageForCategory(location.state.category);
+        if (defaultImage) {
+          setImages([defaultImage]);
+        }
+      }
     }
-  }, [location.state]);
+  }, [location.state, images.length]);
 
   const handleSubmit = async () => {
     if (!formData.title.trim() || !formData.content.trim()) {
       alert("제목과 내용을 입력해주세요.");
       return;
+    }
+
+    // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
+    let finalImages = images;
+    if (finalImages.length === 0 && formData.category) {
+      const defaultImage = getDefaultImageForCategory(formData.category);
+      if (defaultImage) {
+        finalImages = [defaultImage];
+        setImages(finalImages); // UI에도 반영
+      }
     }
 
     // 위치 정보 가져오기 (사용자가 입력한 위치 또는 지도에서 선택한 장소)
@@ -98,31 +117,37 @@ export default function Step2() {
       tags: formData.tags,
       maxParticipants: formData.maxParticipants,
       meetingDate: formData.meetingDate || undefined,
-      image: images[0] || undefined,
+      image: finalImages[0] || undefined,
     };
 
     try {
       // 1) 이미지가 있으면 업로드 (멀티 파트)
       let imageUrl: string | undefined = undefined;
-      if (images.length > 0) {
-        const blobPromises = images.map(async (url) => {
-          const resp = await fetch(url);
-          return await resp.blob();
-        });
-        const blobs = await Promise.all(blobPromises);
-        const formDataUpload = new FormData();
-        blobs.forEach((b, idx) =>
-          formDataUpload.append("files", b, `image_${idx}.jpg`)
-        );
-        // 가정: 서버 업로드 엔드포인트 /uploads (필요 시 변경)
-        const uploadRes = await fetch(`${API_BASE_URL}/uploads`, {
-          method: "POST",
-          body: formDataUpload,
-        });
-        if (uploadRes.ok) {
-          const data = await uploadRes.json().catch(() => ({}));
-          // 서버가 배열/단일 URL을 반환한다고 가정
-          imageUrl = (data?.urls && data.urls[0]) || data?.url || undefined;
+      if (finalImages.length > 0) {
+        // 기본 이미지(외부 URL)인 경우 업로드하지 않고 바로 사용
+        if (finalImages[0].startsWith('https://images.unsplash.com/')) {
+          imageUrl = finalImages[0];
+        } else {
+          // 사용자가 업로드한 이미지인 경우에만 서버에 업로드
+          const blobPromises = finalImages.map(async (url) => {
+            const resp = await fetch(url);
+            return await resp.blob();
+          });
+          const blobs = await Promise.all(blobPromises);
+          const formDataUpload = new FormData();
+          blobs.forEach((b, idx) =>
+            formDataUpload.append("files", b, `image_${idx}.jpg`)
+          );
+          // 가정: 서버 업로드 엔드포인트 /uploads (필요 시 변경)
+          const uploadRes = await fetch(`${API_BASE_URL}/uploads`, {
+            method: "POST",
+            body: formDataUpload,
+          });
+          if (uploadRes.ok) {
+            const data = await uploadRes.json().catch(() => ({}));
+            // 서버가 배열/단일 URL을 반환한다고 가정
+            imageUrl = (data?.urls && data.urls[0]) || data?.url || undefined;
+          }
         }
       }
 
@@ -278,9 +303,14 @@ export default function Step2() {
 
         {/* 이미지 업로드 */}
         <Box mb={3}>
-          <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
+          <Typography variant="subtitle2" fontWeight={600} mb={1} color="#333">
             사진 첨부
           </Typography>
+          {images.length > 0 && images[0].startsWith('https://images.unsplash.com/') && (
+            <Typography variant="caption" color="primary" mb={2} display="block">
+              💡 카테고리에 맞는 기본 이미지가 자동으로 추가되었습니다. 원하시면 다른 사진으로 변경하실 수 있어요!
+            </Typography>
+          )}
           <Box display="flex" gap={2}>
             {images.map((img, idx) => (
               <Box key={idx} sx={{ position: "relative" }}>

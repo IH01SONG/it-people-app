@@ -9,6 +9,7 @@ import MyActivities from "../components/MyActivities";
 import PostCard from "../components/PostCard";
 import SearchModal from "../components/SearchModal";
 import NotificationModal from "../components/NotificationModal";
+import { getDefaultImageForCategory } from "../utils/defaultImages";
 import type { Post, Notification, Activity } from "../types/home.types";
 
 export default function Home() {
@@ -144,6 +145,12 @@ export default function Home() {
           const selectedPost = posts[i] || posts[0];
           const createdAt = now - Math.random() * 12 * 60 * 60 * 1000; // 12시간 이내 랜덤하게 생성
 
+          // 이미지가 없으면 카테고리에 맞는 기본 이미지 사용
+          let postImage = selectedPost.image;
+          if (!postImage && selectedPost.category) {
+            postImage = getDefaultImageForCategory(selectedPost.category);
+          }
+
           return {
             id: `${pageNum}-${i}`,
             title: selectedPost.title,
@@ -152,7 +159,7 @@ export default function Home() {
             location: selectedPost.location,
             venue: selectedPost.venue,
             category: selectedPost.category,
-            image: selectedPost.image,
+            image: postImage,
             participants: Math.floor(Math.random() * 2) + 1, // 1-2명
             maxParticipants: Math.floor(Math.random() * 2) + 3, // 3-4명
             createdAt: new Date(createdAt).toISOString(),
