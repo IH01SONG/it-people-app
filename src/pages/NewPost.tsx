@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
   Button,
-  Card,
   Container,
   Avatar,
-  Chip,
   IconButton,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -15,6 +13,13 @@ import { useNavigate } from "react-router-dom";
 
 // 로고 이미지
 import logoSvg from "../assets/logo.png";
+
+// Kakao Maps 타입 선언
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
 
 const categories = [
   { value: "자기계발", label: "자기계발", emoji: "📚", color: "#4CAF50" },
@@ -31,6 +36,43 @@ const categories = [
 export default function NewPost() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [userLocation, setUserLocation] = useState<string>("홍대입구 근처");
+
+  // 사용자 현재 위치 가져오기
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          // Kakao Maps API를 사용하여 좌표를 주소로 변환
+          if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+            const geocoder = new window.kakao.maps.services.Geocoder();
+            geocoder.coord2Address(longitude, latitude, (result: any, status: any) => {
+              if (status === window.kakao.maps.services.Status.OK && result[0]) {
+                const address = result[0].road_address?.region_2depth_name || 
+                               result[0].address?.region_2depth_name ||
+                               result[0].road_address?.region_3depth_name ||
+                               result[0].address?.region_3depth_name;
+                if (address) {
+                  setUserLocation(`${address} 근처`);
+                }
+              }
+            });
+          }
+        },
+        (error) => {
+          console.log("위치 정보를 가져올 수 없습니다:", error);
+          // 기본값 유지
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 300000 // 5분간 캐시
+        }
+      );
+    }
+  }, []);
 
   const handleNext = () => {
     if (selectedCategory) {
@@ -44,7 +86,20 @@ export default function NewPost() {
   };
 
   return (
-    <Box sx={{ bgcolor: "#f5f7fa", minHeight: "100vh" }}>
+    <Box
+      sx={{
+        // bgcolor: "#f5f7fa",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        maxWidth: "600px",
+        margin: "0 auto",
+        "@media (min-width: 600px)": {
+          maxWidth: "600px",
+        },
+      }}
+    >
       {/* Header */}
       <Box
         sx={{
@@ -72,98 +127,96 @@ export default function NewPost() {
         </Typography>
       </Box>
 
-      <Container maxWidth="sm" sx={{ px: 3, py: 3 }}>
+      <Container
+        maxWidth="sm"
+        sx={{
+          px: 3,
+          py: 3,
+          maxWidth: "600px !important",
+          "@media (min-width: 600px)": {
+            maxWidth: "600px !important",
+          },
+        }}
+      >
         {/* 프로필 섹션 */}
-        <Card
-          sx={{
-            borderRadius: 4,
-            p: 3,
-            mb: 3,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-            border: "1px solid rgba(231, 98, 169, 0.08)",
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={2} mb={3}>
-            <Avatar
-              sx={{
-                bgcolor: "#E762A9",
-                width: 48,
-                height: 48,
-                fontWeight: 700,
-              }}
-            >
-              나
-            </Avatar>
-            <Box>
-              <Typography variant="h6" fontWeight={700} color="#333">
-                어떤 모임을 만들고 싶으신가요?
+        <Box display="flex" alignItems="center" gap={2} mb={3}>
+          <Avatar
+            sx={{
+              bgcolor: "#E762A9",
+              width: 48,
+              height: 48,
+              fontWeight: 700,
+            }}
+          >
+            나
+          </Avatar>
+          <Box>
+            <Typography variant="h6" fontWeight={700} color="#333">
+              어떤 모임을 만들고 싶으신가요?
+            </Typography>
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
+              <Typography variant="body2" color="text.secondary">
+                {userLocation}
               </Typography>
-              <Box display="flex" alignItems="center" gap={0.5}>
-                <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
-                <Typography variant="body2" color="text.secondary">
-                  홍대입구 근처
-                </Typography>
-              </Box>
             </Box>
           </Box>
+        </Box>
 
-          <Typography variant="body1" color="text.secondary" mb={3}>
-            모임의 성격에 맞는 카테고리를 선택해주세요
-          </Typography>
-        </Card>
+        <Typography variant="body1" color="text.secondary" mb={3}>
+          모임의 성격에 맞는 카테고리를 선택해주세요
+        </Typography>
+
+        <Typography variant="h6" fontWeight={700} mb={3} color="#333">
+          카테고리 선택
+        </Typography>
 
         {/* 카테고리 선택 */}
-        <Card
-          sx={{
-            borderRadius: 4,
-            p: 3,
-            mb: 3,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-            border: "1px solid rgba(231, 98, 169, 0.08)",
-          }}
-        >
-          <Typography variant="h6" fontWeight={700} mb={3} color="#333">
-            카테고리 선택
-          </Typography>
-
-          <Box display="flex" flexWrap="wrap" gap={2}>
-            {categories.map((category) => (
-              <Chip
-                key={category.value}
-                label={`${category.emoji} ${category.label}`}
-                onClick={() => setSelectedCategory(category.value)}
-                sx={{
-                  cursor: "pointer",
+        <Box display="flex" flexDirection="column" gap={2} mb={3}>
+          {categories.map((category) => (
+            <Box
+              key={category.value}
+              onClick={() => setSelectedCategory(category.value)}
+              sx={{
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                p: 2,
+                bgcolor:
+                  selectedCategory === category.value
+                    ? category.color
+                    : "white",
+                color: selectedCategory === category.value ? "white" : "#666",
+                border: `2px solid ${
+                  selectedCategory === category.value
+                    ? category.color
+                    : "#e0e0e0"
+                }`,
+                borderRadius: 3,
+                fontWeight: 600,
+                fontSize: "1rem",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                "&:hover": {
                   bgcolor:
                     selectedCategory === category.value
                       ? category.color
-                      : "white",
-                  color: selectedCategory === category.value ? "white" : "#666",
-                  border: `2px solid ${
-                    selectedCategory === category.value
-                      ? category.color
-                      : "#e0e0e0"
-                  }`,
-                  borderRadius: 3,
-                  fontWeight: 600,
-                  fontSize: "0.9rem",
-                  py: 2,
-                  px: 1,
-                  height: "auto",
-                  "&:hover": {
-                    bgcolor:
-                      selectedCategory === category.value
-                        ? category.color
-                        : "#f8f9fa",
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                  },
-                  transition: "all 0.3s ease",
-                }}
-              />
-            ))}
-          </Box>
-        </Card>
+                      : "#f8f9fa",
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                },
+                transition: "all 0.3s ease",
+              }}
+            >
+              <Typography variant="h5" sx={{ minWidth: "24px" }}>
+                {category.emoji}
+              </Typography>
+              <Typography variant="body1" fontWeight={600}>
+                {category.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
 
         {/* 다음 버튼 */}
         <Button

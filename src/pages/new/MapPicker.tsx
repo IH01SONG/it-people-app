@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, Typography, TextField, List, ListItem, ListItemText } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { getUserLocation } from "../../utils/location";
 
 type Props = {
   open: boolean;
@@ -16,10 +17,23 @@ export default function MapPicker({ open, onClose, onSelect, center }: Props) {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<any>(null);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+
+  // 사용자 위치 가져오기
+  useEffect(() => {
+    getUserLocation().then((location) => {
+      setUserLocation({ lat: location.lat, lng: location.lng });
+    }).catch((error) => {
+      console.log('위치 가져오기 실패:', error);
+      // 기본값 사용 (홍대입구)
+      setUserLocation({ lat: 37.5502, lng: 126.9235 });
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     if (!window.kakao || !window.kakao.maps) return;
+    if (!userLocation) return; // 사용자 위치가 로드될 때까지 대기
     
     // Kakao Maps Services 라이브러리 로드 확인
     if (!window.kakao.maps.services) {
@@ -27,11 +41,11 @@ export default function MapPicker({ open, onClose, onSelect, center }: Props) {
     }
 
     const kakao = window.kakao;
+    // 우선순위: center prop > 사용자 위치 > 기본 위치
+    const mapCenter = center || userLocation || { lat: 37.5665, lng: 126.978 };
+    
     const map = new kakao.maps.Map(mapRef.current!, {
-      center: new kakao.maps.LatLng(
-        center?.lat || 37.5665,
-        center?.lng || 126.978
-      ),
+      center: new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng),
       level: 4,
     });
     mapObjRef.current = map;
@@ -128,7 +142,7 @@ export default function MapPicker({ open, onClose, onSelect, center }: Props) {
         });
       }
     };
-  }, [open, center]);
+  }, [open, center, userLocation]);
 
   if (!open) return null;
 
@@ -188,12 +202,17 @@ export default function MapPicker({ open, onClose, onSelect, center }: Props) {
         sx={{
           position: "absolute",
           bottom: 0,
-          left: 0,
-          right: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: "600px",
           bgcolor: "white",
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,
           p: 2,
+          "@media (min-width: 600px)": {
+            maxWidth: "600px",
+          },
         }}
       >
         <Typography variant="subtitle1" fontWeight={700} mb={1}>

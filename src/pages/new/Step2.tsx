@@ -39,13 +39,14 @@ export default function Step2() {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [userLocation, setUserLocation] = useState<string>("홍대입구");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     title: "",
     content: "",
     venue: "",
-    location: "홍대입구",
+    location: "",
     category: "",
     maxParticipants: 4,
     meetingDate: "",
@@ -65,6 +66,64 @@ export default function Step2() {
   // const locations = ["홍대입구", "강남", "신촌", "이태원", "명동", "건대입구"];
   const participantQuickOptions = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30];
 
+  // 사용자 현재 위치 가져오기
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+
+          // Kakao Maps API를 사용하여 좌표를 주소로 변환
+          if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+            const geocoder = new window.kakao.maps.services.Geocoder();
+            geocoder.coord2Address(
+              longitude,
+              latitude,
+              (result: any, status: any) => {
+                if (
+                  status === window.kakao.maps.services.Status.OK &&
+                  result[0]
+                ) {
+                  const address =
+                    result[0].road_address?.region_2depth_name ||
+                    result[0].address?.region_2depth_name ||
+                    result[0].road_address?.region_3depth_name ||
+                    result[0].address?.region_3depth_name;
+                  if (address) {
+                    setUserLocation(address);
+                    setFormData((prev) => ({
+                      ...prev,
+                      location: address,
+                    }));
+                  }
+                }
+              }
+            );
+          }
+        },
+        (error) => {
+          console.log("위치 정보를 가져올 수 없습니다:", error);
+          // 기본값으로 설정
+          setFormData((prev) => ({
+            ...prev,
+            location: userLocation,
+          }));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 300000, // 5분간 캐시
+        }
+      );
+    } else {
+      // Geolocation을 지원하지 않는 경우 기본값 사용
+      setFormData((prev) => ({
+        ...prev,
+        location: userLocation,
+      }));
+    }
+  }, [userLocation]);
+
   useEffect(() => {
     if (location.state?.category) {
       setSelectedCategory(location.state.category);
@@ -72,10 +131,12 @@ export default function Step2() {
         ...prev,
         category: location.state.category,
       }));
-      
+
       // 카테고리가 설정되면 기본 이미지를 자동으로 추가 (이미지가 없는 경우에만)
       if (images.length === 0) {
-        const defaultImage = getDefaultImageForCategory(location.state.category);
+        const defaultImage = getDefaultImageForCategory(
+          location.state.category
+        );
         if (defaultImage) {
           setImages([defaultImage]);
         }
@@ -100,11 +161,11 @@ export default function Step2() {
     }
 
     // 위치 정보 가져오기 (사용자가 입력한 위치 또는 지도에서 선택한 장소)
-    const displayLocation = locationInput || formData.location;
+    const displayLocation = locationInput || formData.location || userLocation;
     const locationData = {
       type: "Point" as const,
       coordinates: [coords?.lng || 126.9235, coords?.lat || 37.5502], // lng,lat 순서
-      address: displayLocation || `${formData.location} 근처`,
+      address: displayLocation || `${userLocation} 근처`,
     };
 
     // 백엔드 스키마에 맞춘 필드만 전송
@@ -125,7 +186,7 @@ export default function Step2() {
       let imageUrl: string | undefined = undefined;
       if (finalImages.length > 0) {
         // 기본 이미지(외부 URL)인 경우 업로드하지 않고 바로 사용
-        if (finalImages[0].startsWith('https://images.unsplash.com/')) {
+        if (finalImages[0].startsWith("https://images.unsplash.com/")) {
           imageUrl = finalImages[0];
         } else {
           // 사용자가 업로드한 이미지인 경우에만 서버에 업로드
@@ -210,7 +271,20 @@ export default function Step2() {
     formData.title.trim().length > 0 && formData.content.trim().length > 0;
 
   return (
-    <Box sx={{ bgcolor: "#f5f7fa", minHeight: "100vh" }}>
+    <Box
+      sx={{
+        // bgcolor: "#f5f7fa",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        maxWidth: "600px",
+        margin: "0 auto",
+        "@media (min-width:600px)": {
+          maxWidth: "600px",
+        },
+      }}
+    >
       {/* Header */}
       <Box
         sx={{
@@ -239,6 +313,17 @@ export default function Step2() {
       </Box>
 
       <Container maxWidth="sm" sx={{ px: 3, py: 3 }}>
+        <Container
+          maxWidth="sm"
+          sx={{
+            px: 3,
+            py: 3,
+            maxWidth: "600px !important",
+            "@media (min-width: 600px)": {
+              maxWidth: "600px !important",
+            },
+          }}
+        ></Container>
         {/* 항상 모바일 폭처럼 보이도록 */}
 
         {/* 프로그레스 */}
@@ -306,11 +391,18 @@ export default function Step2() {
           <Typography variant="subtitle2" fontWeight={600} mb={1} color="#333">
             사진 첨부
           </Typography>
-          {images.length > 0 && images[0].startsWith('https://images.unsplash.com/') && (
-            <Typography variant="caption" color="primary" mb={2} display="block">
-              💡 카테고리에 맞는 기본 이미지가 자동으로 추가되었습니다. 원하시면 다른 사진으로 변경하실 수 있어요!
-            </Typography>
-          )}
+          {images.length > 0 &&
+            images[0].startsWith("https://images.unsplash.com/") && (
+              <Typography
+                variant="caption"
+                color="primary"
+                mb={2}
+                display="block"
+              >
+                💡 카테고리에 맞는 기본 이미지가 자동으로 추가되었습니다.
+                원하시면 다른 사진으로 변경하실 수 있어요!
+              </Typography>
+            )}
           <Box display="flex" gap={2}>
             {images.map((img, idx) => (
               <Box key={idx} sx={{ position: "relative" }}>
@@ -438,10 +530,7 @@ export default function Step2() {
             <Box display="flex" alignItems="center" gap={1} mb={1}>
               <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
               <Typography variant="body2" fontWeight={600}>
-                {formData.location} 근처{" "}
-                {coords
-                  ? `(${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`
-                  : ""}
+                {formData.location || userLocation} 근처
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary">
@@ -453,6 +542,7 @@ export default function Step2() {
                     weekday: "short",
                   })
                 : "날짜 미정"}{" "}
+              <br></br>●{" "}
               {formData.meetingDate
                 ? new Date(formData.meetingDate).toLocaleTimeString("ko-KR", {
                     hour: "numeric",
@@ -473,7 +563,7 @@ export default function Step2() {
                 setLocationInput(e.target.value);
                 setFormData({
                   ...formData,
-                  location: e.target.value || "홍대입구",
+                  location: e.target.value || userLocation,
                 });
               }}
               variant="outlined"
@@ -756,7 +846,7 @@ export default function Step2() {
           }));
           setMapOpen(false);
         }}
-        center={coords || { lat: 37.5502, lng: 126.9235 }}
+        center={coords || undefined}
       />
     </Box>
   );
