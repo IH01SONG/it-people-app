@@ -5,6 +5,7 @@ import { createSocket } from '../lib/socket';
 type User = { id: string; email: string; name?: string };
 type AuthContextType = {
   user: User | null;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 };
@@ -21,8 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
-    api.get<User>('/auth/me')
-      .then((me) => {
+    api.getMe()
+      .then((me: User) => {
         setUser(me);
         // 소켓 연결
         socketRef.current = createSocket(() => localStorage.getItem('access_token'));
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

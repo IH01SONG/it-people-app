@@ -94,83 +94,47 @@ export default function AppRoutes() {
               />
             </Route>
 
-            {/* My page requires auth */}
+            {/* My page - no auth required */}
             <Route path="/my">
               <Route
                 index
-                element={
-                  <ProtectedRoute>
-                    <My />
-                  </ProtectedRoute>
-                }
+                element={<My />}
               />
               <Route
                 path="settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
+                element={<Settings />}
               />
               <Route
                 path="activity"
-                element={
-                  <ProtectedRoute>
-                    <MyActivity />
-                  </ProtectedRoute>
-                }
+                element={<MyActivity />}
               />
               <Route
                 path="terms"
-                element={
-                  <ProtectedRoute>
-                    <TermsAndConditions />
-                  </ProtectedRoute>
-                }
+                element={<TermsAndConditions />}
               />
               <Route
                 path="account-management"
-                element={
-                  <ProtectedRoute>
-                    <AccountManagement />
-                  </ProtectedRoute>
-                }
+                element={<AccountManagement />}
               />
               <Route
                 path="personal-info-edit"
-                element={
-                  <ProtectedRoute>
-                    <PersonalInformationEdit />
-                  </ProtectedRoute>
-                }
+                element={<PersonalInformationEdit />}
               />
               <Route
                 path="location-permission-settings"
-                element={
-                  <ProtectedRoute>
-                    <LocationPermissionSettings />
-                  </ProtectedRoute>
-                }
+                element={<LocationPermissionSettings />}
               />
               <Route
                 path="notification-settings"
-                element={
-                  <ProtectedRoute>
-                    <NotificationSettings />
-                  </ProtectedRoute>
-                }
+                element={<NotificationSettings />}
               />
             </Route>
 
-            {/* Inquiry page */}
+            {/* Inquiry page - no auth required */}
             <Route path="/inquiry">
               <Route
                 index
-                element={
-                  <ProtectedRoute>
-                    <Inquiry />
-                  </ProtectedRoute>
-                }
+                element={<Inquiry />}
               />
             </Route>
 

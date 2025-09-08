@@ -30,6 +30,8 @@ const SignUp: React.FC = () => {
   const [nicknameError, setNicknameError] = useState('');
   const [dateOfBirthError, setDateOfBirthError] = useState(''); // New state for date of birth error
   const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isNicknameChecked, setIsNicknameChecked] = useState(false);
+  const [nicknameCheckLoading, setNicknameCheckLoading] = useState(false);
   const [showAreaSelectionModal, setShowAreaSelectionModal] = useState(false);
   const [selectedAutonomousDistrict, setSelectedAutonomousDistrict] = useState<string | null>(null);
   const [selectedGeneralDistrict, setSelectedGeneralDistrict] = useState<string | null>(null);
@@ -52,6 +54,43 @@ const SignUp: React.FC = () => {
     setEmailError('');
     alert(`인증 이메일이 ${fullEmail}으로 전송되었습니다.`);
     setIsEmailVerified(true);
+  };
+
+  const handleNicknameCheck = async () => {
+    if (!nickname) {
+      setNicknameError('닉네임을 입력해주세요.');
+      return;
+    }
+    
+    if (nickname.length < 2 || nickname.length > 20) {
+      setNicknameError('닉네임은 2자 이상 20자 이하이어야 합니다.');
+      return;
+    }
+
+    setNicknameCheckLoading(true);
+    setNicknameError('');
+
+    try {
+      const response = await api.checkNickname(nickname);
+      
+      if (response.available) {
+        setIsNicknameChecked(true);
+        alert('사용 가능한 닉네임입니다.');
+      } else {
+        setNicknameError('이미 사용 중인 닉네임입니다.');
+        setIsNicknameChecked(false);
+      }
+    } catch (error: any) {
+      console.error('닉네임 중복 확인 실패:', error);
+      const errorMsg = error?.response?.data?.message || 
+                      error?.response?.data?.msg || 
+                      error?.message || 
+                      '닉네임 중복 확인 중 오류가 발생했습니다.';
+      setNicknameError(errorMsg);
+      setIsNicknameChecked(false);
+    } finally {
+      setNicknameCheckLoading(false);
+    }
   };
 
   const handleSignUp = async () => {
@@ -79,6 +118,7 @@ const SignUp: React.FC = () => {
 
     if (!nickname) { setNicknameError('닉네임을 입력해주세요.'); isValid = false; }
     else if (nickname.length < 2 || nickname.length > 20) { setNicknameError('닉네임은 2자 이상 20자 이하이어야 합니다.'); isValid = false; }
+    else if (!isNicknameChecked) { setNicknameError('닉네임 중복 확인을 완료해주세요.'); isValid = false; }
     else setNicknameError('');
 
     if (!dateOfBirth) { setDateOfBirthError('생년월일을 입력해주세요.'); isValid = false; }
@@ -112,10 +152,9 @@ const SignUp: React.FC = () => {
         // generalDistrict: selectedGeneralDistrict,
       };
 
-      const res = await api.signup(payload as any);
-      // 서버 응답 케이스별 안전 처리
-      const msg = (res && (res.message || res.msg)) ?? '회원가입이 완료되었습니다.';
-      alert(msg);
+      await api.signup(payload as any);
+      // 회원가입 성공
+      alert('회원가입이 완료되었습니다.');
 
       // (선택) 자동 로그인까지 진행하고 싶으면 아래 사용:
       // const { token } = await api.login(email, password);
@@ -140,6 +179,14 @@ const SignUp: React.FC = () => {
     setSelectedAutonomousDistrict(district);
     setSelectedGeneralDistrict(generalDistrict);
     setShowAreaSelectionModal(false);
+  };
+
+  const handleNicknameChange = (value: string) => {
+    setNickname(value);
+    // 닉네임이 변경되면 중복 확인 상태 초기화
+    if (isNicknameChecked) {
+      setIsNicknameChecked(false);
+    }
   };
 
   return (
@@ -215,15 +262,30 @@ const SignUp: React.FC = () => {
           )}
 
           <Typography variant="subtitle2" color="textSecondary">닉네임</Typography>
-          <TextField
-            label="닉네임을 입력해주세요"
-            variant="outlined"
-            fullWidth
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            error={!!nicknameError}
-            helperText={nicknameError}
-          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TextField
+              label="닉네임을 입력해주세요"
+              variant="outlined"
+              value={nickname}
+              onChange={(e) => handleNicknameChange(e.target.value)}
+              error={!!nicknameError}
+              helperText={nicknameError}
+              sx={{ flexGrow: 1 }}
+            />
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleNicknameCheck}
+              disabled={nicknameCheckLoading || isNicknameChecked || !nickname}
+              sx={{ 
+                whiteSpace: 'nowrap', 
+                px: 2,
+                minWidth: '100px'
+              }}
+            >
+              {nicknameCheckLoading ? '확인중...' : isNicknameChecked ? '확인완료' : '중복확인'}
+            </Button>
+          </Box>
 
           <Typography variant="subtitle2" color="textSecondary">비밀번호</Typography>
           <TextField

@@ -7,14 +7,18 @@ import AreaSelectionModal from '../../components/AreaSelectionModal';
 
 const AccountManagement: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth(); // Use the useAuth hook
+  const { logout, isAuthenticated } = useAuth(); // Use the useAuth hook
   const [showAreaSelectionModal, setShowAreaSelectionModal] = useState(false);
   const [selectedAutonomousDistrict, setSelectedAutonomousDistrict] = useState<string | null>(null);
   const [selectedGeneralDistrict, setSelectedGeneralDistrict] = useState<string | null>(null);
 
   const handleLogout = () => {
-    logout(); // Call the logout function from AuthContext
-    navigate('/login'); // Redirect to login page after logout
+    if (isAuthenticated) {
+      logout(); // Call the logout function from AuthContext
+      navigate('/login'); // Redirect to login page after logout
+    } else {
+      navigate('/login'); // Redirect to login page if not authenticated
+    }
   };
 
   return (
@@ -29,10 +33,24 @@ const AccountManagement: React.FC = () => {
       </Box>
       <Box p={2}>
         <Button
-          variant="outlined"
+          variant="contained"
           fullWidth
           onClick={() => setShowAreaSelectionModal(true)}
-          sx={{ mt: 2, mb: 2 }}
+          sx={{ 
+            mt: 2, 
+            mb: 2,
+            backgroundColor: '#E762A9',
+            color: 'white',
+            py: 2,
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            borderRadius: 3,
+            boxShadow: 2,
+            '&:hover': {
+              backgroundColor: '#d54d96',
+              boxShadow: 4,
+            },
+          }}
         >
           활동 지역 설정
         </Button>
@@ -41,19 +59,101 @@ const AccountManagement: React.FC = () => {
             선택된 지역: {selectedAutonomousDistrict} {selectedGeneralDistrict}
           </Typography>
         )}
-        <Stack spacing={2} mt={2}>
-          <Button variant="outlined" fullWidth className="py-3 text-lg" onClick={() => navigate('/my/personal-info-edit')}>
+        <Stack spacing={3} mt={2}>
+          <Button 
+            variant="contained" 
+            fullWidth 
+            className="py-4 text-xl font-semibold" 
+            onClick={() => navigate('/my/personal-info-edit')}
+            sx={{
+              backgroundColor: '#E762A9',
+              color: 'white',
+              borderRadius: 3,
+              boxShadow: 2,
+              '&:hover': {
+                backgroundColor: '#d54d96',
+                boxShadow: 4,
+              },
+            }}
+          >
             개인 정보 수정
           </Button>
-          <Button variant="outlined" fullWidth className="py-3 text-lg" onClick={() => navigate('/my/location-permission-settings')}>
+          <Button 
+            variant="contained" 
+            fullWidth 
+            className="py-4 text-xl font-semibold" 
+            onClick={() => navigate('/my/location-permission-settings')}
+            sx={{
+              backgroundColor: '#E762A9',
+              color: 'white',
+              borderRadius: 3,
+              boxShadow: 2,
+              '&:hover': {
+                backgroundColor: '#d54d96',
+                boxShadow: 4,
+              },
+            }}
+          >
             위치 권한 설정
           </Button>
-          <Button variant="outlined" fullWidth className="py-3 text-lg" onClick={() => navigate('/my/notification-settings')}>
+          <Button 
+            variant="contained" 
+            fullWidth 
+            className="py-4 text-xl font-semibold" 
+            onClick={() => navigate('/my/notification-settings')}
+            sx={{
+              backgroundColor: '#E762A9',
+              color: 'white',
+              borderRadius: 3,
+              boxShadow: 2,
+              '&:hover': {
+                backgroundColor: '#d54d96',
+                boxShadow: 4,
+              },
+            }}
+          >
             알림 설정
           </Button>
-          <Button variant="contained" color="error" fullWidth className="py-3 text-lg" onClick={handleLogout}>
-            로그아웃
-          </Button>
+          {isAuthenticated && (
+            <Button 
+              variant="contained" 
+              fullWidth 
+              className="py-4 text-xl font-semibold" 
+              onClick={handleLogout}
+              sx={{
+                backgroundColor: '#dc2626',
+                color: 'white',
+                borderRadius: 3,
+                boxShadow: 2,
+                '&:hover': {
+                  backgroundColor: '#b91c1c',
+                  boxShadow: 4,
+                },
+              }}
+            >
+              로그아웃
+            </Button>
+          )}
+          {!isAuthenticated && (
+            <Button 
+              variant="contained" 
+              fullWidth 
+              className="py-4 text-xl font-semibold" 
+              onClick={() => navigate('/login')}
+              sx={{
+                backgroundColor: '#dc2626',
+                color: 'white',
+                borderRadius: 3,
+                boxShadow: 2,
+                '&:hover': {
+                  backgroundColor: '#b91c1c',
+                  boxShadow: 4,
+                },
+              }}
+            >
+              로그아웃
+            </Button>
+          )}
         </Stack>
       </Box>
       <AreaSelectionModal

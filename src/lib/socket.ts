@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string;
+// 소켓 서버 URL 설정 (백엔드 서버와 동일한 URL 사용)
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export function createSocket(getToken: () => string | null): Socket {
   const socket = io(SOCKET_URL, {

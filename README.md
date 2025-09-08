@@ -1,11 +1,53 @@
-# React + TypeScript + Vite
+# IT People App - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite로 개발된 IT People App의 프론트엔드입니다.
 
-Currently, two official plugins are available:
+## 🚀 시작하기
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 1. 환경 설정
+
+프로젝트 루트에 `.env` 파일을 생성하고 백엔드 서버 URL을 설정하세요:
+
+```env
+# 백엔드 서버 URL 설정
+VITE_API_URL=http://localhost:3001
+
+# 소켓 서버 URL (필요한 경우)
+VITE_SOCKET_URL=http://localhost:3001
+```
+
+### 2. 의존성 설치
+
+```bash
+npm install
+```
+
+### 3. 개발 서버 실행
+
+```bash
+npm run dev
+```
+
+## 🔧 백엔드 연동
+
+이 프론트엔드는 별도의 백엔드 서버와 연동됩니다. 백엔드 팀원과 협의하여 다음 사항을 확인하세요:
+
+- 백엔드 서버 URL
+- API 엔드포인트 구조
+- 인증 방식 (JWT 토큰 등)
+- CORS 설정
+
+## 📁 프로젝트 구조
+
+```
+src/
+├── auth/           # 인증 관련 컴포넌트
+├── components/     # 공통 컴포넌트
+├── lib/           # API 및 유틸리티
+├── pages/         # 페이지 컴포넌트
+├── routes/        # 라우팅 설정
+└── types/         # TypeScript 타입 정의
+```
 
 ## Expanding the ESLint configuration
 
