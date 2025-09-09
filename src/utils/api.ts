@@ -17,9 +17,11 @@ interface ApiResponse<T> {
 }
 
 class ApiError extends Error {
-  constructor(message: string, public status?: number) {
+  status?: number;
+  constructor(message: string, status?: number) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
+    this.status = status;
   }
 }
 
@@ -31,12 +33,16 @@ async function apiCall<T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
-    // 인증 토큰 가져오기 (localStorage 또는 다른 저장소에서)
-    const token = localStorage.getItem('auth_token');
-    
+    // 인증 토큰 가져오기: access_token 우선, 없으면 auth_token, 마지막으로 VITE_TEST_TOKEN
+    const token =
+      localStorage.getItem("access_token") ||
+      localStorage.getItem("auth_token") ||
+      (import.meta as any).env?.VITE_TEST_TOKEN ||
+      null;
+
     const config: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
@@ -44,7 +50,7 @@ async function apiCall<T>(
     };
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
+
     if (!response.ok) {
       throw new ApiError(
         `API 요청 실패: ${response.status} ${response.statusText}`,
@@ -55,7 +61,7 @@ async function apiCall<T>(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('API 호출 에러:', error);
+    console.error("API 호출 에러:", error);
     throw error;
   }
 }
@@ -65,83 +71,85 @@ export const api = USE_MOCK_DATA ? mockApi : {
   // 게시글 관련
   posts: {
     // 게시글 목록 조회
-    getAll: (params?: { 
-      page?: number; 
-      limit?: number; 
-      location?: string; 
-      category?: string; 
+    getAll: (params?: {
+      page?: number;
+      limit?: number;
+      location?: string;
+      category?: string;
     }) => {
       const queryParams = new URLSearchParams();
-      if (params?.page) queryParams.append('page', params.page.toString());
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.location) queryParams.append('location', params.location);
-      if (params?.category) queryParams.append('category', params.category);
-      
+      if (params?.page) queryParams.append("page", params.page.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.location) queryParams.append("location", params.location);
+      if (params?.category) queryParams.append("category", params.category);
+
       const query = queryParams.toString();
-      return apiCall<{ posts: any[]; total: number; hasMore: boolean }>
-        (`/posts${query ? `?${query}` : ''}`);
+      return apiCall<{ posts: any[]; total: number; hasMore: boolean }>(
+        `/posts${query ? `?${query}` : ""}`
+      );
     },
 
     // 주변 게시글 조회
-    getNearby: (lat: number, lng: number, radius: number = 5000) => 
-      apiCall<{ posts: any[] }>
-        (`/posts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`),
+    getNearby: (lat: number, lng: number, radius: number = 5000) =>
+      apiCall<{ posts: any[] }>(
+        `/posts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`
+      ),
 
     // 게시글 작성
-    create: (postData: any) => 
-      apiCall<{ post: any }>('/posts', {
-        method: 'POST',
+    create: (postData: any) =>
+      apiCall<{ post: any }>("/posts", {
+        method: "POST",
         body: JSON.stringify(postData),
       }),
 
     // 게시글 수정
     update: (postId: string, postData: any) =>
       apiCall<{ post: any }>(`/posts/${postId}`, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(postData),
       }),
 
     // 게시글 삭제
     delete: (postId: string) =>
-      apiCall<{}>(`/posts/${postId}`, {
-        method: 'DELETE',
+      apiCall<object>(`/posts/${postId}`, {
+        method: "DELETE",
       }),
 
     // 모임 참여 신청
     join: (postId: string) =>
       apiCall<{ success: boolean }>(`/posts/${postId}/join`, {
-        method: 'POST',
+        method: "POST",
       }),
   },
 
   // 사용자 관련
   users: {
     // 내 정보 조회
-    getMe: () => apiCall<{ user: any }>('/users/me'),
+    getMe: () => apiCall<{ user: any }>("/users/me"),
 
     // 프로필 수정
     updateProfile: (userData: any) =>
-      apiCall<{ user: any }>('/users/me', {
-        method: 'PUT',
+      apiCall<{ user: any }>("/users/me", {
+        method: "PUT",
         body: JSON.stringify(userData),
       }),
 
     // 내가 쓴 글
-    getMyPosts: () => apiCall<{ posts: any[] }>('/users/me/posts'),
+    getMyPosts: () => apiCall<{ posts: any[] }>("/users/me/posts"),
 
     // 참여한 모임
-    getJoinedPosts: () => apiCall<{ posts: any[] }>('/users/me/joined-posts'),
+    getJoinedPosts: () => apiCall<{ posts: any[] }>("/users/me/joined-posts"),
 
     // 사용자 차단
     blockUser: (userId: string) =>
-      apiCall<{}>(`/users/block/${userId}`, {
-        method: 'POST',
+      apiCall<object>(`/users/block/${userId}`, {
+        method: "POST",
       }),
 
     // 사용자 차단 해제
     unblockUser: (userId: string) =>
-      apiCall<{}>(`/users/block/${userId}`, {
-        method: 'DELETE',
+      apiCall<object>(`/users/block/${userId}`, {
+        method: "DELETE",
       }),
   },
 
@@ -150,19 +158,19 @@ export const api = USE_MOCK_DATA ? mockApi : {
     // 참여 요청 보내기
     create: (postId: string) =>
       apiCall<{ request: any }>(`/join-requests/posts/${postId}/request-join`, {
-        method: 'POST',
+        method: "POST",
       }),
 
     // 참여 요청 수락
     accept: (requestId: string) =>
-      apiCall<{}>(`/join-requests/${requestId}/accept`, {
-        method: 'POST',
+      apiCall<object>(`/join-requests/${requestId}/accept`, {
+        method: "POST",
       }),
 
     // 참여 요청 거절
     reject: (requestId: string) =>
-      apiCall<{}>(`/join-requests/${requestId}/reject`, {
-        method: 'POST',
+      apiCall<object>(`/join-requests/${requestId}/reject`, {
+        method: "POST",
       }),
   },
 
@@ -207,18 +215,18 @@ export const api = USE_MOCK_DATA ? mockApi : {
   // 알림 관련
   notifications: {
     // 알림 목록 조회
-    getAll: () => apiCall<{ notifications: any[] }>('/notifications'),
+    getAll: () => apiCall<{ notifications: any[] }>("/notifications"),
 
     // 알림 읽음 처리
     markAsRead: (notificationId: string) =>
-      apiCall<{}>(`/notifications/${notificationId}/read`, {
-        method: 'POST',
+      apiCall<object>(`/notifications/${notificationId}/read`, {
+        method: "POST",
       }),
 
     // 모든 알림 읽음 처리
     markAllAsRead: () =>
-      apiCall<{}>('/notifications/read-all', {
-        method: 'POST',
+      apiCall<object>("/notifications/read-all", {
+        method: "POST",
       }),
   },
 
@@ -226,25 +234,21 @@ export const api = USE_MOCK_DATA ? mockApi : {
   auth: {
     // 로그인
     login: (credentials: { email: string; password: string }) =>
-      apiCall<{ token: string; user: any }>('/auth/login', {
-        method: 'POST',
+      apiCall<{ token: string; user: any }>("/auth/login", {
+        method: "POST",
         body: JSON.stringify(credentials),
       }),
 
     // 회원가입
-    signup: (userData: { 
-      email: string; 
-      password: string; 
-      nickname: string; 
-    }) =>
-      apiCall<{ token: string; user: any }>('/auth/signup', {
-        method: 'POST',
+    signup: (userData: { email: string; password: string; nickname: string }) =>
+      apiCall<{ token: string; user: any }>("/auth/signup", {
+        method: "POST",
         body: JSON.stringify(userData),
       }),
 
     // 로그아웃
     logout: () => {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem("auth_token");
       return Promise.resolve({ success: true });
     },
     

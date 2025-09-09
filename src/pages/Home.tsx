@@ -9,6 +9,7 @@ import MyActivities from "../components/MyActivities";
 import PostCard from "../components/PostCard";
 import SearchModal from "../components/SearchModal";
 import NotificationModal from "../components/NotificationModal";
+import { getDefaultImageForCategory } from "../utils/defaultImages";
 import type { Post, Notification, Activity } from "../types/home.types";
 import { api } from "../utils/api";
 
@@ -183,7 +184,12 @@ export default function Home() {
             { length: (pageNum + i) % 2 + 1 }, // 1-2명으로 고정
             (_, idx) => `user${pageNum}${i}${idx}`
           );
-          
+
+          // 이미지가 없으면 카테고리에 맞는 기본 이미지 사용
+          let postImage = selectedPost.image;
+          if (!postImage && selectedPost.category) {
+            postImage = getDefaultImageForCategory(selectedPost.category);
+          }
           return {
             id: `${pageNum}-${i}`,
             title: selectedPost.title,
@@ -198,7 +204,7 @@ export default function Home() {
             venue: selectedPost.venue,
             category: selectedPost.category,
             tags: ['혼밥탈출', '새친구', selectedPost.category].filter(Boolean),
-            image: selectedPost.image,
+            image: postImage,
             participants: participantIds,
             maxParticipants: (pageNum + i) % 2 + 3, // 3-4명으로 고정
             meetingDate: new Date(selectedPost.expiresAt),
