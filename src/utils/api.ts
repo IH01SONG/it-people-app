@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * API 유틸리티 함수들
  * 백엔드와의 통신을 위한 기본 설정 및 함수들
@@ -6,7 +7,14 @@
 
 import { mockApi } from './mockApi';
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://it-people-server-140857839854.asia-northeast3.run.app/api';
+// 기본 API 베이스 URL 구성: 환경 변수 우선, 없으면 기본 서버 URL 사용
+const rawBaseUrl = import.meta.env?.VITE_API_URL || 'https://it-people-server-140857839854.asia-northeast3.run.app/api';
+// 말미 슬래시 제거 후 /api 접미사 중복 방지
+const normalizedBaseUrl = rawBaseUrl.replace(/\/$/, "");
+const API_BASE_URL = normalizedBaseUrl.endsWith("/api")
+  ? normalizedBaseUrl
+  : `${normalizedBaseUrl}/api`;
+
 const USE_MOCK_DATA = import.meta.env?.VITE_USE_MOCK_DATA === 'true';
 
 interface ApiResponse<T> {

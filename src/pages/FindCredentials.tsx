@@ -118,7 +118,7 @@ const FindCredentials: React.FC = () => {
         </Tabs>
       </Box>
       <CustomTabPanel value={value} index={0}>
-        <Stack spacing={3} sx={{ width: '100%', maxWidth: '400px', mt: 3 }}>
+        <Stack spacing={3} sx={{ width: '100%', maxWidth: '400px', mt: 3, mx: 'auto' }}>
           <TextField
             label="이름을 입력해주세요"
             variant="outlined"
@@ -146,7 +146,7 @@ const FindCredentials: React.FC = () => {
         </Stack>
       </CustomTabPanel>
       <CustomTabPanel value={value} index={1}>
-        <Stack spacing={3} sx={{ width: '100%', maxWidth: '400px', mt: 3 }}>
+        <Stack spacing={3} sx={{ width: '100%', maxWidth: '400px', mt: 3, mx: 'auto' }}>
           {resetPwStep === 'email' && (
             <>
               <TextField

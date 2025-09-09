@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Button, Typography, Stack, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext'; // Import useAuth
+import AreaSelectionModal from '../../components/AreaSelectionModal';
 
 const AccountManagement: React.FC = () => {
   const navigate = useNavigate();
   const { logout } = useAuth(); // Use the useAuth hook
+  const [showAreaSelectionModal, setShowAreaSelectionModal] = useState(false);
+  const [selectedAutonomousDistrict, setSelectedAutonomousDistrict] = useState<string | null>(null);
+  const [selectedGeneralDistrict, setSelectedGeneralDistrict] = useState<string | null>(null);
 
   const handleLogout = () => {
     logout(); // Call the logout function from AuthContext
@@ -24,7 +28,20 @@ const AccountManagement: React.FC = () => {
         </Typography>
       </Box>
       <Box p={2}>
-        <Stack spacing={2} mt={3}>
+        <Button
+          variant="outlined"
+          fullWidth
+          onClick={() => setShowAreaSelectionModal(true)}
+          sx={{ mt: 2, mb: 2 }}
+        >
+          활동 지역 설정
+        </Button>
+        {selectedAutonomousDistrict && selectedGeneralDistrict && (
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            선택된 지역: {selectedAutonomousDistrict} {selectedGeneralDistrict}
+          </Typography>
+        )}
+        <Stack spacing={2} mt={2}>
           <Button variant="outlined" fullWidth className="py-3 text-lg" onClick={() => navigate('/my/personal-info-edit')}>
             개인 정보 수정
           </Button>
@@ -39,6 +56,15 @@ const AccountManagement: React.FC = () => {
           </Button>
         </Stack>
       </Box>
+      <AreaSelectionModal
+        open={showAreaSelectionModal}
+        onClose={() => setShowAreaSelectionModal(false)}
+        onSelectArea={(district, generalDistrict) => {
+          setSelectedAutonomousDistrict(district);
+          setSelectedGeneralDistrict(generalDistrict);
+          setShowAreaSelectionModal(false);
+        }}
+      />
     </Box>
   );
 };
