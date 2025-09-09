@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+<<<<<<< Updated upstream
 import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
@@ -22,6 +23,10 @@ import { apiFetch, API_BASE_URL } from "../../utils/api";
 import { getDefaultImageForCategory } from "../../utils/defaultImages";
 import MapPicker from "./MapPicker";
 // import logoSvg from "../../assets/logo.png";
+=======
+import { useNavigate, useLocation } from "react-router-dom";
+import { Map, MapMarker } from "react-kakao-maps-sdk";
+>>>>>>> Stashed changes
 
 interface FormData {
   title: string;
@@ -43,12 +48,30 @@ interface ExtendedFormData extends FormData {
   tags: string[];
   venue: string;
   location: string;
+<<<<<<< Updated upstream
 =======
   maxParticipants: number;
   meetingDate: string;
   tags: string[];
   image?: string;
 >>>>>>> feature/new-post
+=======
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
+
+interface LocationData {
+  id: string;
+  name: string;
+  category: string;
+  address: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+>>>>>>> Stashed changes
 }
 
 export default function Step2() {
@@ -64,19 +87,102 @@ export default function Step2() {
     venue: "",
     location: "",
     category: "",
+<<<<<<< Updated upstream
     maxParticipants: 4,
     meetingDate: "",
     tags: [],
     image: undefined,
+=======
+    content: ""
+  });
+  
+  const [formData, setFormData] = useState<ExtendedFormData>({
+    ...step1Data,
+    meetingTime: "",
+    duration: "",
+    maxParticipants: "",
+    additionalInfo: "",
+    tags: [],
+    coordinates: {
+      lat: 37.5502,
+      lng: 126.9235
+    }
+>>>>>>> Stashed changes
   });
 
   const [images, setImages] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+<<<<<<< Updated upstream
   const [mapOpen, setMapOpen] = useState(false);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     null
   );
   const [locationInput, setLocationInput] = useState("");
+=======
+  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
+  const [mapCenter, setMapCenter] = useState({ lat: 37.5502, lng: 126.9235 });
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+
+  // 홍대 주변 주요 장소들
+  const hongdaeLocations: LocationData[] = [
+    {
+      id: "hongik-univ",
+      name: "홍익대학교",
+      category: "대학교",
+      address: "서울 마포구 와우산로 94",
+      coordinates: { lat: 37.5486, lng: 126.9203 }
+    },
+    {
+      id: "hongdae-playground",
+      name: "홍대 놀이터",
+      category: "핫플레이스",
+      address: "서울 마포구 와우산로21길",
+      coordinates: { lat: 37.5500, lng: 126.9215 }
+    },
+    {
+      id: "hongdae-station",
+      name: "홍대입구역",
+      category: "지하철역",
+      address: "서울 마포구 양화로 지하188",
+      coordinates: { lat: 37.5502, lng: 126.9235 }
+    },
+    {
+      id: "mecenatpolis",
+      name: "메세나폴리스",
+      category: "쇼핑몰",
+      address: "서울 마포구 양화로 45",
+      coordinates: { lat: 37.5495, lng: 126.9245 }
+    },
+    {
+      id: "hongdae-ak",
+      name: "AK&홍대",
+      category: "쇼핑몰",
+      address: "서울 마포구 양화로 200",
+      coordinates: { lat: 37.5510, lng: 126.9255 }
+    },
+    {
+      id: "starbucks-hongdae",
+      name: "스타벅스 홍대점",
+      category: "카페",
+      address: "서울 마포구 양화로 155",
+      coordinates: { lat: 37.5505, lng: 126.9225 }
+    },
+    {
+      id: "bluebottle-hongdae",
+      name: "블루보틀 홍대점",
+      category: "카페",
+      address: "서울 마포구 와우산로29나길 17",
+      coordinates: { lat: 37.5485, lng: 126.9195 }
+    },
+    {
+      id: "megabox-hongdae",
+      name: "홍대 메가박스",
+      category: "영화관",
+      address: "서울 마포구 양화로 153",
+      coordinates: { lat: 37.5508, lng: 126.9228 }
+    }
+  ];
+>>>>>>> Stashed changes
 
   // 향후 위치 선택 기능 확장 시 사용
   // const locations = ["홍대입구", "강남", "신촌", "이태원", "명동", "건대입구"];
@@ -137,6 +243,21 @@ export default function Step2() {
         ...prev,
         location: userLocation,
       }));
+      
+      // Step1에서 선택한 장소와 매칭되는 좌표 찾기
+      const matchedLocation = hongdaeLocations.find(loc => 
+        loc.name.includes(step1.venue.split(' ')[0]) || 
+        step1.venue.includes(loc.name.split(' ')[0])
+      );
+      
+      if (matchedLocation) {
+        setSelectedLocation(matchedLocation);
+        setMapCenter(matchedLocation.coordinates);
+        setFormData(prev => ({
+          ...prev,
+          coordinates: matchedLocation.coordinates
+        }));
+      }
     }
   }, [userLocation]);
 
@@ -149,8 +270,8 @@ export default function Step2() {
       category: formData.category,
       location: {
         type: 'Point' as const,
-        coordinates: [126.9235, 37.5502], // 홍대입구역 좌표
-        address: formData.location || '홍대입구 근처'
+        coordinates: [formData.coordinates?.lng || 126.9235, formData.coordinates?.lat || 37.5502],
+        address: selectedLocation?.address || formData.location || '홍대입구 근처'
       },
       venue: formData.venue,
       maxParticipants: parseInt(formData.maxParticipants.split('명')[0]),
@@ -291,6 +412,34 @@ export default function Step2() {
 >>>>>>> feature/new-post
   };
 
+  const handleLocationSelect = (locationData: LocationData) => {
+    setSelectedLocation(locationData);
+    setMapCenter(locationData.coordinates);
+    setFormData(prev => ({
+      ...prev,
+      venue: locationData.name,
+      location: locationData.address,
+      coordinates: locationData.coordinates
+    }));
+  };
+
+  const handleMapClick = (target: any, mouseEvent: any) => {
+    const { latLng } = mouseEvent;
+    const newCoords = {
+      lat: latLng.getLat(),
+      lng: latLng.getLng()
+    };
+    
+    setMapCenter(newCoords);
+    setFormData(prev => ({
+      ...prev,
+      coordinates: newCoords
+    }));
+    
+    // 선택된 기존 장소 해제
+    setSelectedLocation(null);
+  };
+
   const handleAddTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
       setFormData({
@@ -374,6 +523,91 @@ export default function Step2() {
         <Typography variant="body2" color="white" sx={{ opacity: 0.9 }} mt={1}>
           장소: {step1Data.venue} • {step1Data.category}
         </Typography>
+      </Card>
+
+      {/* 지도 섹션 */}
+      <Card
+        sx={{
+          borderRadius: 4,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          p: 3,
+          mb: 3,
+          border: '1px solid rgba(0,0,0,0.05)'
+        }}
+      >
+        <Box mb={2}>
+          <Typography variant="h6" fontWeight={600} mb={1} display="flex" alignItems="center" gap={1}>
+            <LocationOnIcon sx={{ color: '#FFD700' }} />
+            만날 장소 확인
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            지도에서 정확한 만날 장소를 확인하거나 선택해주세요
+          </Typography>
+        </Box>
+
+        {/* 카카오 맵 */}
+        <Box sx={{ height: 300, borderRadius: 2, overflow: 'hidden', mb: 2 }}>
+          <Map
+            center={mapCenter}
+            style={{ width: '100%', height: '300px' }}
+            level={3}
+            onClick={handleMapClick}
+            onLoad={() => setIsMapLoaded(true)}
+          >
+            {/* 선택된 위치 마커 */}
+            <MapMarker
+              position={formData.coordinates || mapCenter}
+              image={{
+                src: 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
+                size: { width: 64, height: 69 },
+                options: { offset: { x: 27, y: 69 } }
+              }}
+            />
+
+            {/* 주변 장소들 마커 */}
+            {hongdaeLocations.map((loc) => (
+              <MapMarker
+                key={loc.id}
+                position={loc.coordinates}
+                title={loc.name}
+                image={{
+                  src: selectedLocation?.id === loc.id 
+                    ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png'
+                    : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
+                  size: { width: 24, height: 35 },
+                  options: { offset: { x: 12, y: 35 } }
+                }}
+                onClick={() => handleLocationSelect(loc)}
+              />
+            ))}
+          </Map>
+        </Box>
+
+        {/* 주변 장소 목록 */}
+        <Box>
+          <Typography variant="subtitle2" mb={1}>
+            주변 추천 장소
+          </Typography>
+          <Box display="flex" flexWrap="wrap" gap={1}>
+            {hongdaeLocations.slice(0, 6).map((loc) => (
+              <Chip
+                key={loc.id}
+                label={`${loc.name} (${loc.category})`}
+                size="small"
+                onClick={() => handleLocationSelect(loc)}
+                sx={{
+                  cursor: 'pointer',
+                  bgcolor: selectedLocation?.id === loc.id ? '#FFD700' : 'white',
+                  color: selectedLocation?.id === loc.id ? '#333' : '#666',
+                  border: '1px solid #ddd',
+                  '&:hover': {
+                    bgcolor: selectedLocation?.id === loc.id ? '#FFC107' : '#f5f5f5'
+                  }
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
       </Card>
 
       {/* 상세 정보 폼 */}
@@ -635,6 +869,7 @@ export default function Step2() {
                   })
                 : "시간 미정"}
             </Typography>
+<<<<<<< Updated upstream
           </Box>
 
           {/* 위치 입력 필드 */}
@@ -747,6 +982,21 @@ export default function Step2() {
                     maxParticipants: Math.max(2, formData.maxParticipants - 1),
                   })
                 }
+=======
+            <Box display="flex" gap={1} mb={2}>
+              <TextField
+                size="small"
+                placeholder="태그 추가 (Enter로 입력)"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={handleKeyPress}
+                sx={{ flexGrow: 1 }}
+              />
+              <Button 
+                variant="outlined" 
+                onClick={handleAddTag}
+                disabled={!newTag.trim()}
+>>>>>>> Stashed changes
                 size="small"
               >
                 <RemoveIcon />
