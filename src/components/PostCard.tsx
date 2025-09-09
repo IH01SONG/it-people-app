@@ -76,7 +76,7 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
                 color="#E91E63"
                 fontWeight={500}
               >
-                {post.location.address || `${post.location.coordinates[1].toFixed(3)}, ${post.location.coordinates[0].toFixed(3)}`}
+                {typeof post.location === 'string' ? post.location : (post.location.address || `${post.location.coordinates?.[1]?.toFixed(3)}, ${post.location.coordinates?.[0]?.toFixed(3)}`)}
               </Typography>
             </Box>
           </Box>
@@ -135,7 +135,7 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
             <Box display="flex" alignItems="center" gap={0.5}>
               <span className="text-xs text-gray-500">인원</span>
               <Typography variant="caption" color="text.secondary">
-                {post.participants.length}/{post.maxParticipants}명
+                {post.participants?.length || post.currentParticipants || 0}/{post.maxParticipants}명
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>

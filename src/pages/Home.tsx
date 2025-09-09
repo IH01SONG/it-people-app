@@ -34,6 +34,7 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const observer = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef(false);
   
   // 신청한 게시글 관리
   const [appliedPosts, setAppliedPosts] = useState<Set<string>>(new Set());
@@ -89,16 +90,16 @@ export default function Home() {
   // 무한 스크롤 로직
   const lastPostElementRef = useCallback(
     (node: HTMLDivElement | null) => {
-      if (loading) return;
+      if (loadingRef.current || !hasMore) return;
       if (observer.current) observer.current.disconnect();
       observer.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
+        if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
           setPage((prevPage) => prevPage + 1);
         }
       });
       if (node) observer.current.observe(node);
     },
-    [loading, hasMore]
+    [hasMore]
   );
 
   /**
@@ -107,8 +108,9 @@ export default function Home() {
    */
   const loadPosts = useCallback(
     async (pageNum: number) => {
-      if (loading) return; // 이미 로딩 중이면 실행 안함
-
+      if (loadingRef.current) return; // 이미 로딩 중이면 중복 실행 방지
+      
+      loadingRef.current = true;
       setLoading(true);
       
       try {
@@ -126,6 +128,7 @@ export default function Home() {
           );
           setHasMore(apiHasMore);
           setLoading(false);
+          loadingRef.current = false;
           return;
         }
       } catch (error) {
@@ -215,8 +218,9 @@ export default function Home() {
       );
       setHasMore(pageNum < 10); // 10페이지까지만 로드 가능
       setLoading(false);
+      loadingRef.current = false;
     },
-    [loading, currentLocation]
+    [currentLocation]
   );
 
   useEffect(() => {
@@ -225,15 +229,16 @@ export default function Home() {
 
   const handleJoinRequest = async (postId: string) => {
     const newAppliedPosts = new Set(appliedPosts);
+    const actualPostId = postId; // post._id 또는 post.id 둘 다 처리
     
-    if (appliedPosts.has(postId)) {
-      newAppliedPosts.delete(postId);
+    if (appliedPosts.has(actualPostId)) {
+      newAppliedPosts.delete(actualPostId);
       setAppliedPosts(newAppliedPosts);
-      console.log("참여 취소:", postId);
+      console.log("참여 취소:", actualPostId);
     } else {
-      newAppliedPosts.add(postId);
+      newAppliedPosts.add(actualPostId);
       setAppliedPosts(newAppliedPosts);
-      console.log("참여 신청:", postId);
+      console.log("참여 신청:", actualPostId);
     }
   };
 
@@ -267,13 +272,13 @@ export default function Home() {
         <div className="space-y-4">
           {posts.map((post, index) => (
             <div
-              key={post.id}
+              key={post._id || post.id}
               ref={posts.length === index + 1 ? lastPostElementRef : null}
             >
               <PostCard 
                 post={post} 
                 onJoinRequest={handleJoinRequest}
-                isApplied={appliedPosts.has(post.id)}
+                isApplied={appliedPosts.has(post._id || post.id)}
               />
             </div>
           ))}

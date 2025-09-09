@@ -1,9 +1,13 @@
 /**
  * API 유틸리티 함수들
  * 백엔드와의 통신을 위한 기본 설정 및 함수들
+ * 개발 모드에서는 목 데이터를 사용할 수 있습니다.
  */
 
-const API_BASE_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3001/api';
+import { mockApi } from './mockApi';
+
+const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://it-people-server-140857839854.asia-northeast3.run.app/api';
+const USE_MOCK_DATA = import.meta.env?.VITE_USE_MOCK_DATA === 'true';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -56,8 +60,8 @@ async function apiCall<T>(
   }
 }
 
-// API 함수들
-export const api = {
+// API 함수들 - 개발 모드에서는 목 데이터 사용
+export const api = USE_MOCK_DATA ? mockApi : {
   // 게시글 관련
   posts: {
     // 게시글 목록 조회
@@ -162,6 +166,44 @@ export const api = {
       }),
   },
 
+  // 채팅 관련
+  chat: {
+    // 채팅방 목록 조회
+    getRooms: () => apiCall<any[]>('/chat/rooms'),
+
+    // 특정 채팅방 정보 조회
+    getRoom: (roomId: string) => apiCall<any>(`/chat/rooms/${roomId}`),
+
+    // 채팅방 메시지 목록 조회
+    getMessages: (roomId: string, page: number = 1, limit: number = 50) => 
+      apiCall<{ messages: any[]; currentPage: number; totalCount: number }>
+        (`/chat/rooms/${roomId}/messages?page=${page}&limit=${limit}`),
+
+    // 메시지 전송
+    sendMessage: (roomId: string, messageData: { type: string; content: string; fileUrl?: string; fileName?: string; fileSize?: number }) =>
+      apiCall<any>(`/chat/rooms/${roomId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify(messageData),
+      }),
+
+    // 채팅방 나가기 (채팅 내역 삭제)
+    leaveRoom: (roomId: string) =>
+      apiCall<{}>(`/chat/rooms/${roomId}/leave`, {
+        method: 'DELETE',
+        body: JSON.stringify({ deleteHistory: true }),
+      }),
+
+    // 메시지 읽음 처리
+    markMessageAsRead: (roomId: string, messageId: string) =>
+      apiCall<{}>(`/chat/rooms/${roomId}/messages/${messageId}/read`, {
+        method: 'PATCH',
+      }),
+
+    // 안읽은 메시지 수 조회
+    getUnreadCount: (roomId: string) =>
+      apiCall<{ unreadCount: number }>(`/chat/rooms/${roomId}/unread-count`),
+  },
+
   // 알림 관련
   notifications: {
     // 알림 목록 조회
@@ -205,6 +247,9 @@ export const api = {
       localStorage.removeItem('auth_token');
       return Promise.resolve({ success: true });
     },
+    
+    // 현재 사용자 정보 조회
+    getMe: () => apiCall<any>('/auth/me'),
   },
 };
 

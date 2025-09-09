@@ -1,79 +1,98 @@
-import { Box, Typography, List, ListItem, ListItemButton, ListItemAvatar, ListItemText, Avatar, Badge, Card, Chip } from "@mui/material";
+import { Box, Typography, List, ListItem, ListItemButton, ListItemAvatar, ListItemText, Avatar, Badge, Card, Chip, CircularProgress } from "@mui/material";
 import { ChatBubbleOutline, LocationOn } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { api } from "../utils/api";
+import socketManager from "../utils/socket";
 import AppHeader from "../components/AppHeader";
+import DevModeBanner from "../components/DevModeBanner";
 
-interface ItplChat {
-  id: string;
-  postTitle: string;
-  postCategory: string;
-  postLocation: string;
-  otherUser: {
-    id: string;
-    name: string;
-    avatar?: string;
+interface ChatRoomData {
+  _id: string;
+  type: "post" | "direct";
+  participants: Array<{
+    _id: string;
+    nickname: string;
+    email: string;
+    profileImageUrl?: string;
+  }>;
+  lastMessage?: {
+    _id: string;
+    content: string;
+    createdAt: string;
   };
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
-  status: 'active' | 'completed' | 'blocked';
-  meetingDate?: string;
+  postId?: {
+    _id: string;
+    title: string;
+    content: string;
+  };
+  lastActivity: string;
+  isActive: boolean;
 }
 
-const mockItplChats: ItplChat[] = [
-  {
-    id: "1",
-    postTitle: "저녁 같이 먹을 사람?",
-    postCategory: "식사",
-    postLocation: "홍대입구",
-    otherUser: {
-      id: "user1",
-      name: "김잇플",
-      avatar: "https://picsum.photos/seed/user1/40/40",
-    },
-    lastMessage: "홍대입구역 2번 출구에서 만나요",
-    lastMessageTime: "10분 전",
-    unreadCount: 2,
-    status: 'active',
-    meetingDate: "오늘 17:00",
-  },
-  {
-    id: "2", 
-    postTitle: "카페에서 수다떨어요",
-    postCategory: "카페",
-    postLocation: "강남",
-    otherUser: {
-      id: "user2",
-      name: "박카페",
-    },
-    lastMessage: "감사했습니다! 다음에 또 만나요",
-    lastMessageTime: "어제",
-    unreadCount: 0,
-    status: 'completed',
-  },
-  {
-    id: "3",
-    postTitle: "쇼핑 같이 해요",
-    postCategory: "쇼핑",
-    postLocation: "명동",
-    otherUser: {
-      id: "user3",
-      name: "최쇼핑",
-      avatar: "https://picsum.photos/seed/user3/40/40",
-    },
-    lastMessage: "언제 시간 되세요?",
-    lastMessageTime: "1시간 전",
-    unreadCount: 1,
-    status: 'active',
-    meetingDate: "내일 14:00",
-  },
-];
+// Mock 데이터는 제거하고 서버에서 가져올 예정
 
 export default function Chat() {
   const navigate = useNavigate();
+  const [chatRooms, setChatRooms] = useState<ChatRoomData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // 채팅방 목록 로드
+  useEffect(() => {
+    const loadChatRooms = async () => {
+      try {
+        setLoading(true);
+        
+        // 현재 사용자 정보 가져오기
+        const userResponse = await api.auth.getMe();
+        if (userResponse.success && userResponse.user) {
+          setCurrentUser(userResponse.user);
+          
+          // Socket 연결 및 사용자 등록
+          socketManager.register(userResponse.user.id);
+        }
+
+        // 채팅방 목록 가져오기
+        const roomsResponse = await api.chat.getRooms();
+        if (roomsResponse.success && roomsResponse.data) {
+          setChatRooms(roomsResponse.data);
+        }
+      } catch (error) {
+        console.error('채팅방 목록 로딩 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadChatRooms();
+  }, []);
 
   const handleChatClick = (chatId: string) => {
     navigate(`/chat/room/${chatId}`);
+  };
+
+  const formatLastMessageTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 1) return '방금 전';
+    if (diffMinutes < 60) return `${diffMinutes}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+    
+    return date.toLocaleDateString('ko-KR', {
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getOtherParticipant = (room: ChatRoomData) => {
+    return room.participants.find(p => p._id !== currentUser?.id);
   };
 
   const getStatusColor = (status: string) => {
@@ -99,6 +118,9 @@ export default function Chat() {
       <AppHeader />
       
       <div className="px-4 pb-24">
+        {/* 개발 모드 배너 */}
+        <DevModeBanner />
+        
         {/* 페이지 제목 */}
         <Box sx={{ py: 2, mb: 2 }}>
           <Typography variant="h5" fontWeight={700} color="#333" mb={0.5}>
@@ -110,7 +132,18 @@ export default function Chat() {
         </Box>
 
         {/* Chat List */}
-        {mockItplChats.length === 0 ? (
+        {loading ? (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '50vh'
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        ) : chatRooms.length === 0 ? (
           <Box 
             sx={{ 
               display: 'flex', 
@@ -131,117 +164,100 @@ export default function Chat() {
           </Box>
         ) : (
           <div className="space-y-3">
-            {mockItplChats.map((chat) => (
-              <Card
-                key={chat.id}
-                onClick={() => handleChatClick(chat.id)}
-                sx={{
-                  borderRadius: 3,
-                  boxShadow: "0 2px 12px rgba(231, 98, 169, 0.08)",
-                  border: "1px solid rgba(231, 98, 169, 0.1)",
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    boxShadow: "0 4px 20px rgba(231, 98, 169, 0.15)",
-                    transform: 'translateY(-1px)'
-                  }
-                }}
-              >
-                <Box p={3}>
-                  {/* 모임 정보 헤더 */}
-                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                    <Box>
-                      <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                        <Chip
-                          label={chat.postCategory}
-                          size="small"
-                          sx={{
-                            bgcolor: '#E762A9',
-                            color: 'white',
-                            fontSize: '0.7rem',
-                            height: 20,
-                            borderRadius: 2,
-                            fontWeight: 600,
-                          }}
-                        />
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                          <LocationOn sx={{ fontSize: 12, color: '#E762A9' }} />
-                          <Typography variant="caption" color="#E762A9" fontWeight={500}>
-                            {chat.postLocation}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      <Typography variant="subtitle1" fontWeight={600} color="#333" mb={0.5}>
-                        {chat.postTitle}
-                      </Typography>
-                      {chat.meetingDate && (
-                        <Typography variant="caption" color="text.secondary">
-                          약속: {chat.meetingDate}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Chip
-                        label={getStatusText(chat.status)}
-                        size="small"
-                        sx={{
-                          bgcolor: getStatusColor(chat.status),
-                          color: 'white',
-                          fontSize: '0.7rem',
-                          height: 18,
-                          borderRadius: 2,
-                        }}
-                      />
-                      {chat.unreadCount > 0 && (
-                        <Badge 
-                          badgeContent={chat.unreadCount} 
-                          sx={{
-                            '& .MuiBadge-badge': {
+            {chatRooms.map((room) => {
+              const otherUser = getOtherParticipant(room);
+              return (
+                <Card
+                  key={room._id}
+                  onClick={() => handleChatClick(room._id)}
+                  sx={{
+                    borderRadius: 3,
+                    boxShadow: "0 2px 12px rgba(231, 98, 169, 0.08)",
+                    border: "1px solid rgba(231, 98, 169, 0.1)",
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      boxShadow: "0 4px 20px rgba(231, 98, 169, 0.15)",
+                      transform: 'translateY(-1px)'
+                    }
+                  }}
+                >
+                  <Box p={3}>
+                    {/* 모임 정보 헤더 */}
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                      <Box>
+                        <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                          <Chip
+                            label={room.type === 'post' ? '모임' : '1:1'}
+                            size="small"
+                            sx={{
                               bgcolor: '#E762A9',
                               color: 'white',
-                              minWidth: '18px',
-                              height: '18px',
-                              fontSize: '0.7rem'
-                            }
-                          }}
-                        />
-                      )}
-                    </Box>
-                  </Box>
-
-                  {/* 사용자 정보 및 메시지 */}
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <Avatar 
-                      src={chat.otherUser.avatar}
-                      sx={{ width: 40, height: 40 }}
-                    >
-                      {chat.otherUser.name.charAt(0)}
-                    </Avatar>
-                    <Box flex={1}>
-                      <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
-                        <Typography variant="subtitle2" fontWeight={600} color="#333">
-                          {chat.otherUser.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {chat.lastMessageTime}
+                              fontSize: '0.7rem',
+                              height: 20,
+                              borderRadius: 2,
+                              fontWeight: 600,
+                            }}
+                          />
+                          {room.postId && (
+                            <Typography variant="caption" color="#E762A9" fontWeight={500}>
+                              📍 모임 채팅
+                            </Typography>
+                          )}
+                        </Box>
+                        <Typography variant="subtitle1" fontWeight={600} color="#333" mb={0.5}>
+                          {room.postId ? room.postId.title : `${otherUser?.nickname || '알 수 없음'}와의 대화`}
                         </Typography>
                       </Box>
-                      <Typography 
-                        variant="body2" 
-                        color="text.secondary"
-                        sx={{ 
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Chip
+                          label={room.isActive ? '진행중' : '종료됨'}
+                          size="small"
+                          sx={{
+                            bgcolor: room.isActive ? '#4CAF50' : '#FF9800',
+                            color: 'white',
+                            fontSize: '0.7rem',
+                            height: 18,
+                            borderRadius: 2,
+                          }}
+                        />
+                      </Box>
+                    </Box>
+
+                    {/* 사용자 정보 및 메시지 */}
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <Avatar 
+                        src={otherUser?.profileImageUrl}
+                        sx={{ width: 40, height: 40 }}
                       >
-                        {chat.lastMessage}
-                      </Typography>
+                        {otherUser?.nickname.charAt(0) || '?'}
+                      </Avatar>
+                      <Box flex={1}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                          <Typography variant="subtitle2" fontWeight={600} color="#333">
+                            {otherUser?.nickname || '알 수 없음'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {room.lastMessage ? formatLastMessageTime(room.lastMessage.createdAt) : formatLastMessageTime(room.lastActivity)}
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ 
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {room.lastMessage?.content || '메시지가 없습니다'}
+                        </Typography>
+                      </Box>
                     </Box>
                   </Box>
-                </Box>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
