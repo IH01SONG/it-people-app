@@ -9,7 +9,15 @@
     <meta name="theme-color" content="#E762A9" />
     
     <!-- 카카오맵 API -->
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=0c537754f8fad9d1b779befd5d75dc07&libraries=services"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=0c537754f8fad9d1b779befd5d75dc07&libraries=services&autoload=false"></script>
+    <script>
+      // Kakao Maps SDK 수동 로드
+      window.kakaoAsyncInit = function() {
+        window.kakao.maps.load(() => {
+          console.log('Kakao Maps SDK loaded successfully');
+        });
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

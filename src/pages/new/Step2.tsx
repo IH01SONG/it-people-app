@@ -1,559 +1,1329 @@
-import { useState, useEffect } from "react";
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  Button, 
-  Card, 
+import { useState, useEffect, useRef } from "react";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Card,
   Stepper,
   Step,
   StepLabel,
   IconButton,
   Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Container,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
+import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Map, MapMarker } from "react-kakao-maps-sdk";
+import { getDefaultImageForCategory } from "../../utils/defaultImages";
+
+declare global {
+  interface Window {
+    kakao: any;
+  }
+}
 
 interface FormData {
   title: string;
-  venue: string;
-  location: string;
-  category: string;
   content: string;
-  meetingDate?: string;
-  tags?: string[];
-}
-
-interface ExtendedFormData extends FormData {
-  meetingTime: string;
-  duration: string;
-  maxParticipants: string;
-  additionalInfo: string;
-  tags: string[];
   venue: string;
   location: string;
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
-}
-
-interface LocationData {
-  id: string;
-  name: string;
   category: string;
-  address: string;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
+  maxParticipants: number;
+  meetingDate: string;
+  tags: string[];
+  image?: string;
 }
 
 export default function Step2() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [step1Data, setStep1Data] = useState<FormData>({
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [userLocation, setUserLocation] = useState<string>("홍대입구");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [formData, setFormData] = useState<FormData>({
     title: "",
+    content: "",
     venue: "",
     location: "",
     category: "",
-    content: ""
-  });
-  
-  const [formData, setFormData] = useState<ExtendedFormData>({
-    ...step1Data,
-    meetingTime: "",
-    duration: "",
-    maxParticipants: "",
-    additionalInfo: "",
+    maxParticipants: 4,
+    meetingDate: "",
     tags: [],
-    coordinates: {
-      lat: 37.5502,
-      lng: 126.9235
-    }
+    image: undefined,
   });
 
+  const [images, setImages] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
-  const [mapCenter, setMapCenter] = useState({ lat: 37.5502, lng: 126.9235 });
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [initialCoords, setInitialCoords] = useState<{ lat: number; lng: number } | null>(null); // 초기 현재위치 저장
+  const [locationInput, setLocationInput] = useState("");
+  const [map, setMap] = useState<any>(null);
+  const [marker, setMarker] = useState<any>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<any>(null); // 마커 참조를 위한 ref 추가
 
-  // 홍대 주변 주요 장소들
-  const hongdaeLocations: LocationData[] = [
-    {
-      id: "hongik-univ",
-      name: "홍익대학교",
-      category: "대학교",
-      address: "서울 마포구 와우산로 94",
-      coordinates: { lat: 37.5486, lng: 126.9203 }
-    },
-    {
-      id: "hongdae-playground",
-      name: "홍대 놀이터",
-      category: "핫플레이스",
-      address: "서울 마포구 와우산로21길",
-      coordinates: { lat: 37.5500, lng: 126.9215 }
-    },
-    {
-      id: "hongdae-station",
-      name: "홍대입구역",
-      category: "지하철역",
-      address: "서울 마포구 양화로 지하188",
-      coordinates: { lat: 37.5502, lng: 126.9235 }
-    },
-    {
-      id: "mecenatpolis",
-      name: "메세나폴리스",
-      category: "쇼핑몰",
-      address: "서울 마포구 양화로 45",
-      coordinates: { lat: 37.5495, lng: 126.9245 }
-    },
-    {
-      id: "hongdae-ak",
-      name: "AK&홍대",
-      category: "쇼핑몰",
-      address: "서울 마포구 양화로 200",
-      coordinates: { lat: 37.5510, lng: 126.9255 }
-    },
-    {
-      id: "starbucks-hongdae",
-      name: "스타벅스 홍대점",
-      category: "카페",
-      address: "서울 마포구 양화로 155",
-      coordinates: { lat: 37.5505, lng: 126.9225 }
-    },
-    {
-      id: "bluebottle-hongdae",
-      name: "블루보틀 홍대점",
-      category: "카페",
-      address: "서울 마포구 와우산로29나길 17",
-      coordinates: { lat: 37.5485, lng: 126.9195 }
-    },
-    {
-      id: "megabox-hongdae",
-      name: "홍대 메가박스",
-      category: "영화관",
-      address: "서울 마포구 양화로 153",
-      coordinates: { lat: 37.5508, lng: 126.9228 }
-    }
-  ];
+  // 향후 위치 선택 기능 확장 시 사용
+  const participantQuickOptions = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30];
+
 
   useEffect(() => {
-    if (location.state) {
-      const step1 = location.state as FormData;
-      setStep1Data(step1);
-      setFormData(prev => ({
+    if (location.state?.category) {
+      setSelectedCategory(location.state.category);
+      setFormData((prev) => ({
         ...prev,
-        ...step1
+        category: location.state.category,
       }));
-      
-      // Step1에서 선택한 장소와 매칭되는 좌표 찾기
-      const matchedLocation = hongdaeLocations.find(loc => 
-        loc.name.includes(step1.venue.split(' ')[0]) || 
-        step1.venue.includes(loc.name.split(' ')[0])
-      );
-      
-      if (matchedLocation) {
-        setSelectedLocation(matchedLocation);
-        setMapCenter(matchedLocation.coordinates);
-        setFormData(prev => ({
-          ...prev,
-          coordinates: matchedLocation.coordinates
-        }));
-      }
+
     }
-  }, [location.state]);
+  }, [location.state, images.length]);
+
+  // 지도 초기화 (컴포넌트 마운트 시)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      initializeMap();
+    }, 1000);
+
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      clearTimeout(timer);
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+        markerRef.current = null;
+      }
+      if (marker) {
+        marker.setMap(null);
+      }
+    };
+  }, []);
+
+  // 위치 입력값이 변경될 때 지도에 반영
+  useEffect(() => {
+    if (map && locationInput.trim()) {
+      const timer = setTimeout(() => {
+        searchAndDisplayAddress(locationInput);
+      }, 800); // 0.8초 디바운싱
+
+      return () => clearTimeout(timer);
+    }
+  }, [locationInput, map]);
 
   const handleSubmit = async () => {
-    // 백엔드 API 호출을 위한 데이터 준비
-    const postData = {
+    if (!formData.title.trim() || !formData.content.trim()) {
+      alert("제목과 내용을 입력해주세요.");
+      return;
+    }
+
+    // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가 (UI에는 반영하지 않음)
+    let finalImages = images;
+    if (finalImages.length === 0 && formData.category) {
+      const defaultImage = getDefaultImageForCategory(formData.category);
+      if (defaultImage) {
+        finalImages = [defaultImage];
+        // UI에는 반영하지 않음 - setImages(finalImages) 제거
+      }
+    }
+
+    // 위치 정보 가져오기 (사용자가 입력한 위치 또는 지도에서 선택한 장소)
+    const displayLocation = locationInput || formData.location || userLocation;
+    const locationData = {
+      type: "Point" as const,
+      coordinates: [coords?.lng || 126.9235, coords?.lat || 37.5502], // lng,lat 순서
+      address: displayLocation || `${userLocation} 근처`,
+    };
+
+    // 백엔드 스키마에 맞춘 필드만 전송
+    const payload = {
       title: formData.title,
       content: formData.content,
+      location: locationData,
+      venue: formData.venue || `${displayLocation} 모임장소`,
       category: formData.category,
-      location: {
-        type: 'Point' as const,
-        coordinates: [formData.coordinates?.lng || 126.9235, formData.coordinates?.lat || 37.5502],
-        address: selectedLocation?.address || formData.location || '홍대입구 근처'
-      },
-      venue: formData.venue,
-      maxParticipants: parseInt(formData.maxParticipants.split('명')[0]),
-      meetingDate: formData.meetingTime ? new Date(formData.meetingTime) : undefined,
-      tags: formData.tags || [],
-      additionalInfo: formData.additionalInfo
+      tags: formData.tags,
+      maxParticipants: formData.maxParticipants,
+      meetingDate: formData.meetingDate || undefined,
+      image: finalImages[0] || undefined,
     };
-    
-    // TODO: API 호출
-    // await api.post('/api/posts', postData);
-    
-    navigate('/feedback-result', { state: { ...formData, postData } });
+
+    try {
+      // TODO: API 호출 - 현재는 프론트엔드만 구현
+      console.log('게시글 생성 데이터:', payload);
+      navigate("/");
+    } catch (error) {
+      console.error("게시글 생성 실패:", error);
+      alert("게시글 생성에 실패했습니다. 다시 시도해주세요.");
+    }
   };
 
-  const handleLocationSelect = (locationData: LocationData) => {
-    setSelectedLocation(locationData);
-    setMapCenter(locationData.coordinates);
-    setFormData(prev => ({
-      ...prev,
-      venue: locationData.name,
-      location: locationData.address,
-      coordinates: locationData.coordinates
-    }));
+  const handleImageUpload = () => {
+    if (images.length >= 3) return;
+    fileInputRef.current?.click();
   };
 
-  const handleMapClick = (target: any, mouseEvent: any) => {
-    const { latLng } = mouseEvent;
-    const newCoords = {
-      lat: latLng.getLat(),
-      lng: latLng.getLng()
-    };
-    
-    setMapCenter(newCoords);
-    setFormData(prev => ({
-      ...prev,
-      coordinates: newCoords
-    }));
-    
-    // 선택된 기존 장소 해제
-    setSelectedLocation(null);
+  const handleFilesChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remainingSlots = 3 - images.length;
+    const selected = files.slice(0, remainingSlots);
+
+    const newUrls: string[] = selected.map((file) => URL.createObjectURL(file));
+    setImages((prev) => [...prev, ...newUrls]);
+
+    // 입력 값 초기화 (같은 파일 다시 선택 가능하도록)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleAddTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()]
-      }));
+      setFormData({
+        ...formData,
+        tags: [...formData.tags, newTag.trim()],
+      });
       setNewTag("");
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
+    setFormData({
+      ...formData,
+      tags: formData.tags.filter((tag) => tag !== tagToRemove),
+    });
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
+  // 마커 관리 함수 - 기존 마커 제거 후 새 마커 생성
+  const updateMarker = (position: any, mapInstance: any) => {
+    console.log('마커 업데이트 시작 - 기존 마커 제거');
+    
+    // 기존 마커들 완전 제거
+    if (markerRef.current) {
+      console.log('markerRef 마커 제거');
+      markerRef.current.setMap(null);
+      markerRef.current = null;
+    }
+    if (marker) {
+      console.log('state 마커 제거');
+      marker.setMap(null);
+      setMarker(null);
+    }
+
+    // 잠시 대기 후 새 마커 생성 (기존 마커가 완전히 제거되도록)
+    setTimeout(() => {
+      const newMarker = new window.kakao.maps.Marker({
+        position: position,
+        map: mapInstance,
+      });
+      
+      // 참조 저장
+      markerRef.current = newMarker;
+      setMarker(newMarker);
+      
+      console.log('새 마커 생성 완료');
+    }, 50);
+  };
+
+  // 지도 초기화
+  const initializeMap = () => {
+    if (!mapRef.current || map) return; // 이미 지도가 초기화되어 있으면 중복 실행 방지
+    
+    // 먼저 현재 위치를 가져온 후 지도 초기화
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCoords({ lat: latitude, lng: longitude });
+          setInitialCoords({ lat: latitude, lng: longitude }); // 초기 위치 저장
+          createMapWithLocation(latitude, longitude);
+        },
+        (error) => {
+          console.log('위치 권한이 없어 기본 위치로 설정합니다:', error);
+          // 위치를 가져올 수 없으면 홍대입구역 좌표 사용
+          const defaultLat = 37.5563;
+          const defaultLng = 126.9236;
+          setCoords({ lat: defaultLat, lng: defaultLng });
+          setInitialCoords({ lat: defaultLat, lng: defaultLng }); // 기본 위치도 초기 위치로 저장
+          createMapWithLocation(defaultLat, defaultLng);
+        }
+      );
+    } else {
+      // Geolocation을 지원하지 않는 경우 기본 위치
+      const defaultLat = 37.5563;
+      const defaultLng = 126.9236;
+      setCoords({ lat: defaultLat, lng: defaultLng });
+      setInitialCoords({ lat: defaultLat, lng: defaultLng }); // 기본 위치도 초기 위치로 저장
+      createMapWithLocation(defaultLat, defaultLng);
     }
   };
 
+  const createMapWithLocation = (lat: number, lng: number) => {
+    // Kakao Maps 로딩 대기
+    const waitForKakao = () => {
+      if (window.kakao && window.kakao.maps) {
+        window.kakao.maps.load(() => {
+          createMap(lat, lng);
+        });
+      } else {
+        setTimeout(waitForKakao, 200);
+      }
+    };
+
+    const createMap = (latitude: number, longitude: number) => {
+      try {
+        if (!mapRef.current || map) return;
+        
+        const options = {
+          center: new window.kakao.maps.LatLng(latitude, longitude),
+          level: 3,
+        };
+
+        const mapInstance = new window.kakao.maps.Map(mapRef.current, options);
+        setMap(mapInstance);
+
+        // 초기 마커 생성
+        const initialPosition = new window.kakao.maps.LatLng(latitude, longitude);
+        updateMarker(initialPosition, mapInstance);
+
+        // 지도 클릭 이벤트 등록
+        window.kakao.maps.event.addListener(mapInstance, "click", (mouseEvent: any) => {
+          handleMapClick(mouseEvent, mapInstance);
+        });
+
+        console.log('지도 초기화 완료:', latitude, longitude);
+      } catch (error) {
+        console.error('지도 생성 실패:', error);
+      }
+    };
+
+    waitForKakao();
+  };
+
+  // 지도 클릭 이벤트 핸들러
+  const handleMapClick = (mouseEvent: any, mapInstance: any) => {
+    const latlng = mouseEvent.latLng;
+    const lat = latlng.getLat();
+    const lng = latlng.getLng();
+
+    setCoords({ lat, lng });
+
+    // 마커 업데이트
+    updateMarker(latlng, mapInstance);
+
+    // 먼저 주변 상호/장소 검색 시도
+    searchNearbyPlaces(lat, lng, mapInstance);
+  };
+
+  // 주변 상호/장소 검색 함수
+  const searchNearbyPlaces = (lat: number, lng: number, mapInstance: any) => {
+    if (!window.kakao.maps.services) {
+      fallbackToAddress(lat, lng);
+      return;
+    }
+
+    const places = new window.kakao.maps.services.Places();
+    const position = new window.kakao.maps.LatLng(lat, lng);
+    
+    // 먼저 주변 음식점/카페 검색 시도
+    const searchCategories = ['FD6', 'CE7', 'CS2']; // 음식점, 카페, 편의점
+    let searchIndex = 0;
+    
+    const searchByCategory = () => {
+      if (searchIndex >= searchCategories.length) {
+        // 모든 카테고리 검색 실패 시 키워드 검색 시도
+        searchByKeyword();
+        return;
+      }
+      
+      places.categorySearch(searchCategories[searchIndex], (result: any, status: any) => {
+        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+          // 가장 가까운 장소 찾기
+          let closestPlace = null;
+          let minDistance = Infinity;
+          
+          result.forEach((place: any) => {
+            const placePosition = new window.kakao.maps.LatLng(place.y, place.x);
+            const distance = getDistance(position, placePosition);
+            
+            if (distance < minDistance && distance < 100) { // 100m 이내의 가장 가까운 장소
+              minDistance = distance;
+              closestPlace = place;
+            }
+          });
+          
+          if (closestPlace) {
+            const placeName = closestPlace.place_name;
+            console.log('가까운 상호 발견:', placeName, `(${Math.round(minDistance)}m)`);
+            setLocationInput(placeName);
+            setFormData(prev => ({ ...prev, location: placeName }));
+            return;
+          }
+        }
+        
+        // 다음 카테고리 검색
+        searchIndex++;
+        searchByCategory();
+      }, {
+        location: position,
+        radius: 200,
+        sort: window.kakao.maps.services.SortBy.DISTANCE
+      });
+    };
+
+    const searchByKeyword = () => {
+      // 다양한 키워드로 검색 시도
+      const keywords = ['상점', '건물', '매장', '시설'];
+      let keywordIndex = 0;
+      
+      const tryKeywordSearch = () => {
+        if (keywordIndex >= keywords.length) {
+          // 모든 키워드 검색 실패 시 주소로 폴백
+          fallbackToAddress(lat, lng);
+          return;
+        }
+        
+        places.keywordSearch(keywords[keywordIndex], (result: any, status: any) => {
+          if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+            // 가장 가까운 장소 찾기
+            let closestPlace = null;
+            let minDistance = Infinity;
+            
+            result.forEach((place: any) => {
+              const placePosition = new window.kakao.maps.LatLng(place.y, place.x);
+              const distance = getDistance(position, placePosition);
+              
+              if (distance < minDistance && distance < 50) { // 50m 이내
+                minDistance = distance;
+                closestPlace = place;
+              }
+            });
+            
+            if (closestPlace) {
+              const placeName = closestPlace.place_name;
+              console.log('키워드 검색 장소 발견:', placeName);
+              setLocationInput(placeName);
+              setFormData(prev => ({ ...prev, location: placeName }));
+              return;
+            }
+          }
+          
+          // 다음 키워드로 시도
+          keywordIndex++;
+          tryKeywordSearch();
+        }, {
+          location: position,
+          radius: 100,
+          sort: window.kakao.maps.services.SortBy.DISTANCE
+        });
+      };
+      
+      tryKeywordSearch();
+    };
+
+    // 검색 시작
+    searchByCategory();
+  };
+
+  // 두 좌표 간의 거리 계산 (미터)
+  const getDistance = (pos1: any, pos2: any) => {
+    const R = 6371e3; // 지구 반지름 (미터)
+    const φ1 = pos1.getLat() * Math.PI/180;
+    const φ2 = pos2.getLat() * Math.PI/180;
+    const Δφ = (pos2.getLat() - pos1.getLat()) * Math.PI/180;
+    const Δλ = (pos2.getLng() - pos1.getLng()) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+  };
+
+  // 주소로 폴백하는 함수
+  const fallbackToAddress = (lat: number, lng: number) => {
+    if (window.kakao.maps.services) {
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+          const address = result[0].address.address_name;
+          console.log('주소로 폴백:', address);
+          setLocationInput(address);
+          setFormData(prev => ({ ...prev, location: address }));
+        }
+      });
+    }
+  };
+
+  // 검색어 전처리 함수
+  const preprocessSearchQuery = (query: string): string[] => {
+    const cleaned = query.trim().replace(/\s+/g, ' ');
+    
+    // 다양한 검색 패턴 생성
+    const variants = [cleaned];
+    
+    // 띄어쓰기 제거 버전
+    variants.push(cleaned.replace(/\s/g, ''));
+    
+    // "근처", "앞", "뒤" 등 제거
+    const withoutModifiers = cleaned.replace(/(근처|앞|뒤|옆|주변|부근)/g, '').trim();
+    if (withoutModifiers && withoutModifiers !== cleaned) {
+      variants.push(withoutModifiers);
+    }
+    
+    // "역", "점", "지점" 등 추가/제거 버전
+    if (!cleaned.includes('역') && !cleaned.includes('점')) {
+      variants.push(cleaned + '역');
+      variants.push(cleaned + '점');
+    }
+    
+    return [...new Set(variants)].filter(v => v.length > 0);
+  };
+
+  // 향상된 위치 검색 함수
+  const searchAndDisplayAddress = (address: string) => {
+    if (!address.trim() || !window.kakao?.maps?.services || !map) return;
+
+    const searchQueries = preprocessSearchQuery(address);
+    let searchIndex = 0;
+    let found = false;
+
+    const tryNextSearch = () => {
+      if (found || searchIndex >= searchQueries.length) {
+        if (!found) {
+          console.log('모든 검색 방법으로 위치를 찾을 수 없습니다:', address);
+        }
+        return;
+      }
+
+      const currentQuery = searchQueries[searchIndex];
+      console.log(`검색 시도 ${searchIndex + 1}: "${currentQuery}"`);
+      
+      // 1단계: 정확한 주소 검색
+      tryAddressSearch(currentQuery, () => {
+        // 2단계: 키워드 검색
+        tryKeywordSearch(currentQuery, () => {
+          // 3단계: 다음 검색어로 이동
+          searchIndex++;
+          tryNextSearch();
+        });
+      });
+    };
+
+    // 주소 검색 함수
+    const tryAddressSearch = (query: string, onFail: () => void) => {
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.addressSearch(query, (result: any, status: any) => {
+        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+          found = true;
+          const newCoords = new window.kakao.maps.LatLng(result[0].y, result[0].x);
+          moveMapToLocation(newCoords, `주소 검색: ${query}`);
+        } else {
+          onFail();
+        }
+      });
+    };
+
+    // 장소의 중요도 점수 계산 함수
+    const calculatePlaceScore = (place: any, query: string, distance: number): number => {
+      let score = 0;
+      const placeName = place.place_name.toLowerCase();
+      const queryLower = query.toLowerCase();
+      
+      // 1. 정확한 이름 매칭 (높은 점수)
+      if (placeName === queryLower) {
+        score += 1000;
+      } else if (placeName.includes(queryLower)) {
+        score += 500;
+      }
+      
+      // 2. 주요 랜드마크 우선순위 (역, 대학교, 공공기관 등)
+      const landmarkTypes = ['역', '대학교', '대학', '시청', '구청', '공원', '병원', '터미널', '공항', '항구'];
+      if (landmarkTypes.some(type => placeName.includes(type))) {
+        score += 800;
+      }
+      
+      // 3. 카테고리별 가중치
+      if (place.category_group_code) {
+        const categoryWeights: { [key: string]: number } = {
+          'SW8': 900, // 지하철역
+          'PK6': 700, // 주차장
+          'OL7': 600, // 주유소
+          'SC4': 500, // 학교
+          'AC5': 400, // 학원
+          'PS3': 300, // 약국
+          'MT1': 100, // 대형마트
+          'CS2': 50,  // 편의점
+          'FD6': 30,  // 음식점
+          'CE7': 20,  // 카페
+        };
+        
+        score += categoryWeights[place.category_group_code] || 0;
+      }
+      
+      // 4. 거리 패널티 (멀수록 점수 감소, 하지만 랜드마크는 덜 감소)
+      const isLandmark = landmarkTypes.some(type => placeName.includes(type)) || place.category_group_code === 'SW8';
+      const distancePenalty = isLandmark ? distance / 1000 : distance / 500; // 랜드마크는 거리 패널티 절반
+      score -= distancePenalty;
+      
+      return score;
+    };
+
+    // 키워드 검색 함수
+    const tryKeywordSearch = (query: string, onFail: () => void) => {
+      const places = new window.kakao.maps.services.Places();
+      
+      // 기본 검색 옵션
+      const searchOptions: any = {
+        size: 15,
+        sort: window.kakao.maps.services.SortBy.ACCURACY
+      };
+
+      // 현재 마커 위치가 있으면 해당 위치 중심으로 검색 (합리적인 반경으로 제한)
+      if (coords) {
+        searchOptions.location = new window.kakao.maps.LatLng(coords.lat, coords.lng);
+        searchOptions.radius = 20000; // 20km 반경으로 축소
+      }
+
+      console.log('키워드 검색 옵션:', searchOptions);
+
+      places.keywordSearch(query, (result: any, status: any) => {
+        console.log('키워드 검색 결과:', status, result);
+        
+        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+          found = true;
+          
+          let selectedPlace = result[0];
+          
+          // 현재 마커 위치가 있으면 점수 기반으로 최적 장소 선택
+          if (coords && result.length > 1) {
+            const currentPos = new window.kakao.maps.LatLng(coords.lat, coords.lng);
+            let bestScore = -Infinity;
+            
+            result.forEach((place: any) => {
+              const placePos = new window.kakao.maps.LatLng(place.y, place.x);
+              const distance = getDistance(currentPos, placePos);
+              const score = calculatePlaceScore(place, query, distance);
+              
+              console.log(`${place.place_name}: 점수 ${Math.round(score)}, 거리 ${Math.round(distance)}m, 카테고리 ${place.category_group_code}`);
+              
+              if (score > bestScore) {
+                bestScore = score;
+                selectedPlace = place;
+              }
+            });
+            
+            console.log(`최종 선택: ${selectedPlace.place_name} (점수: ${Math.round(bestScore)})`);
+          }
+          
+          const newCoords = new window.kakao.maps.LatLng(selectedPlace.y, selectedPlace.x);
+          moveMapToLocation(newCoords, `키워드 검색: ${selectedPlace.place_name}`);
+          
+          // 검색된 장소명을 입력 필드에 업데이트
+          setLocationInput(selectedPlace.place_name);
+          setFormData(prev => ({ ...prev, location: selectedPlace.place_name }));
+        } else {
+          console.log('키워드 검색 실패:', status);
+          // 위치 제한 없이 전역 검색 재시도
+          places.keywordSearch(query, (globalResult: any, globalStatus: any) => {
+            console.log('전역 키워드 검색 결과:', globalStatus, globalResult);
+            
+            if (globalStatus === window.kakao.maps.services.Status.OK && globalResult.length > 0) {
+              found = true;
+              
+              let selectedPlace = globalResult[0];
+              
+              // 전역 검색에서도 점수 기반 선택 적용
+              if (coords && globalResult.length > 1) {
+                const currentPos = new window.kakao.maps.LatLng(coords.lat, coords.lng);
+                let bestScore = -Infinity;
+                
+                globalResult.forEach((place: any) => {
+                  const placePos = new window.kakao.maps.LatLng(place.y, place.x);
+                  const distance = getDistance(currentPos, placePos);
+                  const score = calculatePlaceScore(place, query, distance);
+                  
+                  if (score > bestScore) {
+                    bestScore = score;
+                    selectedPlace = place;
+                  }
+                });
+                
+                console.log(`전역 검색 최종 선택: ${selectedPlace.place_name}`);
+              }
+              
+              const newCoords = new window.kakao.maps.LatLng(selectedPlace.y, selectedPlace.x);
+              moveMapToLocation(newCoords, `전역 키워드 검색: ${selectedPlace.place_name}`);
+              
+              setLocationInput(selectedPlace.place_name);
+              setFormData(prev => ({ ...prev, location: selectedPlace.place_name }));
+            } else {
+              onFail();
+            }
+          }, { size: 15, sort: window.kakao.maps.services.SortBy.ACCURACY }); // 위치 제한 없는 전역 검색
+        }
+      }, searchOptions);
+    };
+
+    // 지도 이동 및 마커 업데이트
+    const moveMapToLocation = (coords: any, logMessage: string) => {
+      map.setCenter(coords);
+      updateMarker(coords, map);
+      setCoords({ lat: coords.getLat(), lng: coords.getLng() });
+      console.log(logMessage, coords.getLat(), coords.getLng());
+    };
+
+    // 검색 시작
+    tryNextSearch();
+  };
+
+  // 현재 위치로 돌아가기 함수
+  const returnToCurrentLocation = () => {
+    if (!initialCoords || !map) {
+      console.log('초기 위치 정보가 없습니다.');
+      return;
+    }
+
+    const currentLocationCoords = new window.kakao.maps.LatLng(initialCoords.lat, initialCoords.lng);
+    
+    // 지도 중심을 현재 위치로 이동
+    map.setCenter(currentLocationCoords);
+    
+    // 마커도 현재 위치로 이동
+    updateMarker(currentLocationCoords, map);
+    
+    // 좌표 상태 업데이트
+    setCoords({ lat: initialCoords.lat, lng: initialCoords.lng });
+    
+    // 위치 입력 필드 클리어
+    setLocationInput("");
+    setFormData(prev => ({ ...prev, location: "" }));
+    
+    console.log('현재 위치로 복귀:', initialCoords);
+  };
+
+
+  const isFormValid =
+    formData.title.trim().length > 0 && formData.content.trim().length > 0;
+
   return (
-    <div className="w-full max-w-md mx-auto px-4 pb-24 bg-white min-h-screen">
-      {/* 상단 헤더 */}
-      <div className="flex items-center justify-between py-4">
-        <IconButton onClick={() => navigate(-1)}>
+    <Box
+      sx={{
+        bgcolor: "#f5f7fa",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        maxWidth: "600px",
+        margin: "0 auto",
+        "@media (min-width:600px)": {
+          maxWidth: "600px",
+        },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          bgcolor: "#E762A9",
+          color: "white",
+          p: 2.5,
+          display: "flex",
+          alignItems: "center",
+          boxShadow: "0 2px 8px rgba(231, 98, 169, 0.3)",
+        }}
+      >
+        <IconButton onClick={() => navigate(-1)} sx={{ color: "white" }}>
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h6" fontWeight={600} color="#333">
-          상세 정보
+        <Typography
+          variant="h6"
+          sx={{
+            flexGrow: 1,
+            textAlign: "center",
+            mr: 4,
+            fontWeight: 700,
+          }}
+        >
+          모임 상세 정보
         </Typography>
-        <div className="w-10"></div>
-      </div>
-
-      {/* 프로그레스 */}
-      <Box mb={4}>
-        <Stepper activeStep={1} sx={{ mb: 2 }}>
-          <Step>
-            <StepLabel>기본 정보</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>상세 내용</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>완료</StepLabel>
-          </Step>
-        </Stepper>
       </Box>
 
-      {/* 입력한 제목 요약 */}
-      <Card
+      <Container
+        maxWidth="sm"
         sx={{
-          borderRadius: 3,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-          p: 2,
-          mb: 3,
-          background: 'linear-gradient(135deg, #FFD700 0%, #FFC107 100%)',
-          border: '1px solid rgba(0,0,0,0.05)'
+          px: 3,
+          py: 3,
+          maxWidth: "600px !important",
+          "@media (min-width: 600px)": {
+            maxWidth: "600px !important",
+          },
         }}
       >
-        <Typography variant="body2" color="white" fontWeight={600} mb={1}>
-          만들 모임
-        </Typography>
-        <Typography variant="h6" color="white" fontWeight={700}>
-          "{step1Data.title}"
-        </Typography>
-        <Typography variant="body2" color="white" sx={{ opacity: 0.9 }} mt={1}>
-          장소: {step1Data.venue} • {step1Data.category}
-        </Typography>
-      </Card>
+        {/* 항상 모바일 폭처럼 보이도록 */}
 
-      {/* 지도 섹션 */}
-      <Card
-        sx={{
-          borderRadius: 4,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          p: 3,
-          mb: 3,
-          border: '1px solid rgba(0,0,0,0.05)'
-        }}
-      >
-        <Box mb={2}>
-          <Typography variant="h6" fontWeight={600} mb={1} display="flex" alignItems="center" gap={1}>
-            <LocationOnIcon sx={{ color: '#FFD700' }} />
-            만날 장소 확인
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            지도에서 정확한 만날 장소를 확인하거나 선택해주세요
-          </Typography>
+        {/* 프로그레스 */}
+        <Box mb={4}>
+          <Stepper activeStep={1} sx={{ mb: 2 }}>
+            <Step>
+              <StepLabel>카테고리 선택</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>상세 정보</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>완료</StepLabel>
+            </Step>
+          </Stepper>
         </Box>
 
-        {/* 카카오 맵 */}
-        <Box sx={{ height: 300, borderRadius: 2, overflow: 'hidden', mb: 2 }}>
-          <Map
-            center={mapCenter}
-            style={{ width: '100%', height: '300px' }}
-            level={3}
-            onClick={handleMapClick}
-            onLoad={() => setIsMapLoaded(true)}
-          >
-            {/* 선택된 위치 마커 */}
-            <MapMarker
-              position={formData.coordinates || mapCenter}
-              image={{
-                src: 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png',
-                size: { width: 64, height: 69 },
-                options: { offset: { x: 27, y: 69 } }
-              }}
-            />
+        {/* 선택된 카테고리 표시 */}
+        <Card
+          sx={{
+            borderRadius: 3,
+            boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+            p: 2,
+            mb: 3,
+            background: "linear-gradient(135deg, #E762A9 0%, #D554A0 100%)",
+            border: "1px solid rgba(0,0,0,0.05)",
+          }}
+        >
+          <Typography variant="body2" color="white" fontWeight={600} mb={1}>
+            선택한 카테고리
+          </Typography>
+          <Typography variant="h6" color="white" fontWeight={700}>
+            {selectedCategory}
+          </Typography>
+        </Card>
 
-            {/* 주변 장소들 마커 */}
-            {hongdaeLocations.map((loc) => (
-              <MapMarker
-                key={loc.id}
-                position={loc.coordinates}
-                title={loc.name}
-                image={{
-                  src: selectedLocation?.id === loc.id 
-                    ? 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png'
-                    : 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
-                  size: { width: 24, height: 35 },
-                  options: { offset: { x: 12, y: 35 } }
-                }}
-                onClick={() => handleLocationSelect(loc)}
-              />
-            ))}
-          </Map>
+        {/* 제목 입력 */}
+        <Box mb={3}>
+          <TextField
+            fullWidth
+            placeholder="제목을 입력해 주세요(5-20글자)"
+            value={formData.title}
+            onChange={(e) => {
+              const title = e.target.value;
+              if (title.length <= 20) {
+                setFormData({ ...formData, title });
+              }
+            }}
+            variant="outlined"
+            helperText={`${formData.title.length}/20자`}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                fontSize: "1.1rem",
+                "&:hover": {
+                  borderColor: "#E762A9",
+                },
+                "&.Mui-focused": {
+                  borderColor: "#E762A9",
+                  boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
+                },
+              },
+            }}
+          />
         </Box>
 
-        {/* 주변 장소 목록 */}
-        <Box>
-          <Typography variant="subtitle2" mb={1}>
-            주변 추천 장소
+        {/* 이미지 업로드 */}
+        <Box mb={3}>
+          <Typography variant="subtitle2" fontWeight={600} mb={1} color="#333">
+            사진 첨부
           </Typography>
-          <Box display="flex" flexWrap="wrap" gap={1}>
-            {hongdaeLocations.slice(0, 6).map((loc) => (
-              <Chip
-                key={loc.id}
-                label={`${loc.name} (${loc.category})`}
-                size="small"
-                onClick={() => handleLocationSelect(loc)}
-                sx={{
-                  cursor: 'pointer',
-                  bgcolor: selectedLocation?.id === loc.id ? '#FFD700' : 'white',
-                  color: selectedLocation?.id === loc.id ? '#333' : '#666',
-                  border: '1px solid #ddd',
-                  '&:hover': {
-                    bgcolor: selectedLocation?.id === loc.id ? '#FFC107' : '#f5f5f5'
+          <Box display="flex" gap={2}>
+            {images.map((img, idx) => (
+              <Box key={idx} sx={{ position: "relative" }}>
+                <Box
+                  component="img"
+                  src={img}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    borderRadius: 2,
+                    border: "1px solid #e0e0e0",
+                  }}
+                />
+                <IconButton
+                  onClick={() =>
+                    setImages((prev) => prev.filter((_, i) => i !== idx))
                   }
-                }}
-              />
+                  size="small"
+                  sx={{
+                    position: "absolute",
+                    top: -8,
+                    right: -8,
+                    bgcolor: "white",
+                    color: "#666",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    "&:hover": { bgcolor: "#f5f5f5" },
+                  }}
+                >
+                  ×
+                </IconButton>
+              </Box>
             ))}
+            {images.length < 3 && (
+              <Box
+                onClick={handleImageUpload}
+                sx={{
+                  width: 80,
+                  height: 80,
+                  border: "2px dashed #E762A9",
+                  borderRadius: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  bgcolor: "rgba(231, 98, 169, 0.02)",
+                  "&:hover": {
+                    bgcolor: "rgba(231, 98, 169, 0.05)",
+                    borderColor: "#D554A0",
+                  },
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <PhotoCameraIcon
+                  sx={{ fontSize: 24, color: "#E762A9", mb: 0.5 }}
+                />
+                <Typography
+                  variant="caption"
+                  color="#E762A9"
+                  textAlign="center"
+                >
+                  {images.length}/3
+                  <br />
+                  (선택)
+                </Typography>
+              </Box>
+            )}
+            {/* 모바일/데스크탑 파일 선택 인풋 (숨김) */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              capture="environment"
+              onChange={handleFilesChange}
+              style={{ display: "none" }}
+            />
           </Box>
         </Box>
-      </Card>
 
-      {/* 상세 정보 폼 */}
-      <Card
-        sx={{
-          borderRadius: 4,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          p: 3,
-          mb: 3,
-          border: '1px solid rgba(0,0,0,0.05)'
-        }}
-      >
+        {/* 소개글 입력 */}
         <Box mb={3}>
-          <div className="text-xl mb-2 text-center font-bold">세부 설정</div>
-          <Typography variant="h6" fontWeight={600} textAlign="center" mb={1}>
-            모임 세부 정보
-          </Typography>
-          <Typography variant="body2" color="text.secondary" textAlign="center">
-            언제 만날지, 몇 명까지 참여할지 설정해주세요
-          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            placeholder="소개글을 입력해 주세요 (최대 100글자)"
+            value={formData.content}
+            onChange={(e) => {
+              const content = e.target.value;
+              if (content.length <= 100) {
+                setFormData({ ...formData, content });
+              }
+            }}
+            helperText={`${formData.content.length}/100자`}
+            variant="outlined"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                "&:hover": {
+                  borderColor: "#E762A9",
+                },
+                "&.Mui-focused": {
+                  borderColor: "#E762A9",
+                  boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
+                },
+              },
+            }}
+          />
         </Box>
 
-        <Box sx={{ space: 3 }}>
-          <TextField
-            fullWidth
-            label="만날 시간"
-            placeholder="예: 오늘 저녁 7시, 내일 오후 2시"
-            value={formData.meetingTime}
-            onChange={(e) => setFormData({...formData, meetingTime: e.target.value})}
-            sx={{ mb: 3 }}
-          />
+        {/* 만날 위치 및 시간 */}
+        <Box mb={3}>
+          <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
+            만날 위치 및 시간
+          </Typography>
 
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>예상 소요 시간</InputLabel>
-            <Select
-              value={formData.duration}
-              onChange={(e) => setFormData({...formData, duration: e.target.value})}
-              label="예상 소요 시간"
-            >
-              <MenuItem value="30분~1시간">30분~1시간</MenuItem>
-              <MenuItem value="1~2시간">1~2시간</MenuItem>
-              <MenuItem value="2~3시간">2~3시간</MenuItem>
-              <MenuItem value="3시간 이상">3시간 이상</MenuItem>
-              <MenuItem value="하루 종일">하루 종일</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>최대 참여 인원</InputLabel>
-            <Select
-              value={formData.maxParticipants}
-              onChange={(e) => setFormData({...formData, maxParticipants: e.target.value})}
-              label="최대 참여 인원"
-            >
-              <MenuItem value="2명 (나 + 1명)">2명 (나 + 1명)</MenuItem>
-              <MenuItem value="3명 (나 + 2명)">3명 (나 + 2명)</MenuItem>
-              <MenuItem value="4명 (나 + 3명)">4명 (나 + 3명)</MenuItem>
-              <MenuItem value="5명 (나 + 4명)">5명 (나 + 4명)</MenuItem>
-              <MenuItem value="6명 (나 + 5명)">6명 (나 + 5명)</MenuItem>
-              <MenuItem value="제한 없음">제한 없음</MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            fullWidth
-            label="추가 정보"
-            placeholder="특별한 준비물, 주의사항, 참여자에게 바라는 점 등"
-            value={formData.additionalInfo}
-            onChange={(e) => setFormData({...formData, additionalInfo: e.target.value})}
-            multiline
-            rows={3}
-            sx={{ mb: 3 }}
-          />
-
-          {/* 태그 입력 */}
-          <Box mb={2}>
-            <Typography variant="subtitle2" mb={1}>
-              관련 태그
+          {/* 날짜/시간 표시 */}
+          <Box
+            sx={{
+              p: 2,
+              border: "1px solid #e0e0e0",
+              borderRadius: 2,
+              mb: 2,
+              bgcolor: "#f8f9fa",
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
+              <Typography variant="body2" fontWeight={600}>
+                {formData.location || userLocation} 근처
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              ●{" "}
+              {formData.meetingDate
+                ? new Date(formData.meetingDate).toLocaleDateString("ko-KR", {
+                    month: "numeric",
+                    day: "numeric",
+                    weekday: "short",
+                  })
+                : "날짜 미정"}{" "}
+              <br></br>●{" "}
+              {formData.meetingDate
+                ? new Date(formData.meetingDate).toLocaleTimeString("ko-KR", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                : "시간 미정"}
             </Typography>
-            <Box display="flex" gap={1} mb={2}>
-              <TextField
-                size="small"
-                placeholder="태그 추가 (Enter로 입력)"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={handleKeyPress}
-                sx={{ flexGrow: 1 }}
-              />
-              <Button 
-                variant="outlined" 
-                onClick={handleAddTag}
-                disabled={!newTag.trim()}
+          </Box>
+
+          {/* 위치 입력 필드 */}
+          <Box mb={2}>
+            <TextField
+              fullWidth
+              placeholder="위치를 입력해주세요"
+              value={locationInput}
+              onChange={(e) => {
+                const newLocation = e.target.value;
+                setLocationInput(newLocation);
+                setFormData({
+                  ...formData,
+                  location: newLocation || userLocation,
+                });
+                
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover": {
+                    borderColor: "#E762A9",
+                  },
+                  "&.Mui-focused": {
+                    borderColor: "#E762A9",
+                    boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
+                  },
+                },
+              }}
+            />
+          </Box>
+
+          {/* 지도 영역 */}
+          <Box
+            mb={3}
+            sx={{
+              border: "2px solid #E762A9",
+              borderRadius: 2,
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
+            <Box
+              ref={mapRef}
+              sx={{
+                width: "100%",
+                height: "250px",
+                bgcolor: "#f5f5f5",
+              }}
+            />
+            
+            {/* 현재 위치로 돌아가기 버튼 */}
+            <IconButton
+              onClick={returnToCurrentLocation}
+              sx={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                zIndex: 1000, // 카카오 지도 컨트롤보다 높은 z-index 설정
+                backgroundColor: "white",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                border: "1px solid #E762A9",
+                color: "#E762A9",
+                width: 36,
+                height: 36,
+                "&:hover": {
+                  backgroundColor: "#E762A9",
+                  color: "white",
+                },
+                transition: "all 0.2s ease",
+                // 추가 스타일로 확실히 위에 표시되도록 설정
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: -1,
+                },
+              }}
+              disabled={!initialCoords || !map}
+            >
+              <MyLocationIcon sx={{ fontSize: 20, position: "relative", zIndex: 1 }} />
+            </IconButton>
+            
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "rgba(231, 98, 169, 0.05)",
+                borderTop: "1px solid rgba(231, 98, 169, 0.2)",
+              }}
+            >
+              <Typography variant="caption" color="#E762A9">
+                💡 위치를 입력하거나 지도를 클릭하여 위치를 선택해주세요
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* 날짜/시간 설정 */}
+          <Box display="flex" gap={2} mb={2}>
+            <TextField
+              fullWidth
+              type="date"
+              value={
+                formData.meetingDate ? formData.meetingDate.split("T")[0] : ""
+              }
+              onChange={(e) => {
+                const date = e.target.value;
+                const time = formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00";
+                setFormData({
+                  ...formData,
+                  meetingDate: date ? `${date}T${time}` : "",
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              type="time"
+              value={
+                formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00"
+              }
+              onChange={(e) => {
+                const date = formData.meetingDate
+                  ? formData.meetingDate.split("T")[0]
+                  : new Date().toISOString().split("T")[0];
+                setFormData({
+                  ...formData,
+                  meetingDate: `${date}T${e.target.value}`,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Box>
+
+          {/* 최대 모집 인원 - 직관적 컨트롤 */}
+          <Box>
+            <Typography variant="subtitle2" fontWeight={600} mb={1}>
+              최대 모집 인원
+            </Typography>
+            <Box display="flex" alignItems="center" gap={1}>
+              <IconButton
+                aria-label="decrease"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    maxParticipants: Math.max(2, formData.maxParticipants - 1),
+                  })
+                }
                 size="small"
               >
-                추가
-              </Button>
+                <RemoveIcon />
+              </IconButton>
+              <TextField
+                value={formData.maxParticipants}
+                onChange={(e) => {
+                  const v = Number(e.target.value.replace(/[^0-9]/g, "")) || 2;
+                  setFormData({
+                    ...formData,
+                    maxParticipants: Math.min(30, Math.max(2, v)),
+                  });
+                }}
+                inputProps={{
+                  inputMode: "numeric",
+                  pattern: "[0-9]*",
+                  style: { textAlign: "center", width: 64 },
+                }}
+                size="small"
+              />
+              <IconButton
+                aria-label="increase"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    maxParticipants: Math.min(30, formData.maxParticipants + 1),
+                  })
+                }
+                size="small"
+              >
+                <AddIcon />
+              </IconButton>
+              <Typography variant="body2" color="text.secondary">
+                명
+              </Typography>
             </Box>
-            <Box display="flex" flexWrap="wrap" gap={1}>
-              {formData.tags.map((tag, index) => (
+
+            {/* 빠른 선택 옵션 */}
+            <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
+              {participantQuickOptions.map((num) => (
                 <Chip
-                  key={index}
-                  label={tag}
-                  onDelete={() => handleRemoveTag(tag)}
+                  key={num}
+                  label={`${num}`}
                   size="small"
-                  sx={{ bgcolor: '#FFD700', color: '#333' }}
+                  onClick={() =>
+                    setFormData({ ...formData, maxParticipants: num })
+                  }
+                  sx={{
+                    cursor: "pointer",
+                    bgcolor:
+                      formData.maxParticipants === num ? "#E762A9" : "white",
+                    color: formData.maxParticipants === num ? "white" : "#666",
+                    border: `1px solid ${
+                      formData.maxParticipants === num ? "#E762A9" : "#e0e0e0"
+                    }`,
+                    "&:hover": {
+                      bgcolor:
+                        formData.maxParticipants === num
+                          ? "#D554A0"
+                          : "#f5f5f5",
+                    },
+                  }}
                 />
               ))}
             </Box>
           </Box>
         </Box>
-      </Card>
 
-      {/* 추천 태그 */}
-      <Card
-        sx={{
-          borderRadius: 3,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-          p: 3,
-          mb: 4,
-          background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-          border: '1px solid rgba(0,0,0,0.05)'
-        }}
-      >
-        <Typography variant="subtitle1" fontWeight={600} mb={2}>
-          추천 태그
-        </Typography>
-        <Box display="flex" flexWrap="wrap" gap={1}>
-          {["혼밥탈출", "새친구", "홍대맛집", "카페투어", "영화친구", "쇼핑메이트", "게임친구", "스터디", "혼자하기아쉬운", "즉석만남"].map((tag) => (
-            <Chip
-              key={tag}
-              label={tag}
-              size="small"
-              onClick={() => {
-                if (!formData.tags.includes(tag)) {
-                  setFormData(prev => ({
-                    ...prev,
-                    tags: [...prev.tags, tag]
-                  }));
-                }
-              }}
-              sx={{ 
-                cursor: 'pointer',
-                bgcolor: formData.tags.includes(tag) ? '#FFD700' : 'white',
-                color: formData.tags.includes(tag) ? '#333' : '#666',
-                '&:hover': {
-                  bgcolor: formData.tags.includes(tag) ? '#FFC107' : '#f5f5f5'
-                }
-              }}
-            />
-          ))}
-        </Box>
-      </Card>
+        {/* 해시태그 입력 */}
+        <Box mb={3}>
+          <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
+            해시태그 입력
+          </Typography>
 
-      {/* 하단 버튼 */}
-      <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, p: 2, bgcolor: 'white', borderTop: 1, borderColor: 'divider' }}>
-        <div className="max-w-md mx-auto">
-          <Button
+          {/* 해시태그 입력 필드 */}
+          <TextField
             fullWidth
-            variant="contained"
-            onClick={handleSubmit}
-            sx={{
-              bgcolor: '#FFD700',
-              color: '#333',
-              fontWeight: 700,
-              borderRadius: 3,
-              py: 1.5,
-              '&:hover': {
-                bgcolor: '#FFC107',
+            placeholder="#태그입력"
+            value={newTag}
+            onChange={(e) => {
+              // # 기호 자동 제거
+              const value = e.target.value.replace(/^#+/, "");
+              setNewTag(value);
+            }}
+            onKeyPress={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                if (newTag.trim()) {
+                  handleAddTag();
+                }
               }
             }}
-          >
-            모임 만들기
-          </Button>
-        </div>
-      </Box>
-    </div>
+            variant="outlined"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+                "&:hover": {
+                  borderColor: "#E762A9",
+                },
+                "&.Mui-focused": {
+                  borderColor: "#E762A9",
+                  boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
+                },
+              },
+            }}
+          />
+
+          {/* 입력된 해시태그 표시 */}
+          {formData.tags.length > 0 && (
+            <Box mt={2}>
+              <Box display="flex" flexWrap="wrap" gap={1}>
+                {formData.tags.map((tag, index) => (
+                  <Chip
+                    key={index}
+                    label={`#${tag}`}
+                    onDelete={() => handleRemoveTag(tag)}
+                    size="small"
+                    sx={{
+                      bgcolor: "#E762A9",
+                      color: "white",
+                      fontWeight: 600,
+                      "& .MuiChip-deleteIcon": {
+                        color: "rgba(255,255,255,0.8)",
+                        "&:hover": {
+                          color: "white",
+                        },
+                      },
+                      "&:hover": {
+                        bgcolor: "#D554A0",
+                        transform: "scale(1.05)",
+                      },
+                      transition: "all 0.2s ease",
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+        </Box>
+
+        {/* 완료 버튼 */}
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={!isFormValid}
+          sx={{
+            bgcolor: "#E762A9",
+            "&:hover": {
+              bgcolor: "#D554A0",
+            },
+            "&:disabled": {
+              bgcolor: "#e0e0e0",
+              color: "#9e9e9e",
+            },
+            borderRadius: 2,
+            py: 1.5,
+            fontSize: "1.1rem",
+            fontWeight: 700,
+            mb: 2,
+          }}
+        >
+          완료
+        </Button>
+
+        <Typography variant="body2" color="text.secondary" textAlign="center">
+          모임을 만들면 다른 사용자들이 참여 신청을 할 수 있어요
+        </Typography>
+      </Container>
+    </Box>
   );
 }
