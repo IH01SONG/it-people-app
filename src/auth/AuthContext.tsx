@@ -21,24 +21,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // 개발 모드에서 테스트 토큰 자동 설정
+    const testToken = import.meta.env?.VITE_TEST_TOKEN;
+    const bypassAuth = import.meta.env?.VITE_BYPASS_AUTH === 'true';
+    
+    if (bypassAuth && testToken && !localStorage.getItem("access_token")) {
+      localStorage.setItem("access_token", testToken);
+      console.log("개발 모드: 테스트 토큰 자동 설정");
+    }
+
     const token = localStorage.getItem("access_token");
     if (!token) {
       setIsLoading(false);
       return;
     }
+
     api.users
-      .getMe()
-      .then((res) => {
-        const me = (res as any).data?.user ?? (res as any).user;
-        if (me) {
+      .getProfile()
+      .then((me: any) => {
+        // 백엔드에서 직접 사용자 객체를 반환
+        if (me && me._id) {
           setUser({
-            id: me.id || me._id || "me",
+            id: me._id || me.id || "me",
             email: me.email || "",
             name: me.nickname || me.name,
           });
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("사용자 정보 조회 실패:", error);
         const dummy: User = {
           id: "dummy-user",
           email: "dummy@example.com",
@@ -62,10 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!token) throw new Error("토큰이 없습니다");
       localStorage.setItem("access_token", token);
 
-      const meRes = await api.users.getMe();
-      const me = (meRes as any).data?.user ?? (meRes as any).user;
+      const meResponse = await api.users.getProfile();
+      const me = meResponse as any;
       setUser({
-        id: me?.id || me?._id || "me",
+        id: me?._id || me?.id || "me",
         email: me?.email || email,
         name: me?.nickname || me?.name,
       });

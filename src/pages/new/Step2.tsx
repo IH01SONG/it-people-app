@@ -20,6 +20,7 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getDefaultImageForCategory } from "../../utils/defaultImages";
+import { api } from "../../utils/api";
 
 declare global {
   interface Window {
@@ -119,44 +120,65 @@ export default function Step2() {
       return;
     }
 
-    // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가 (UI에는 반영하지 않음)
-    let finalImages = images;
-    if (finalImages.length === 0 && formData.category) {
-      const defaultImage = getDefaultImageForCategory(formData.category);
-      if (defaultImage) {
-        finalImages = [defaultImage];
-        // UI에는 반영하지 않음 - setImages(finalImages) 제거
-      }
+    // 위치 정보는 필수
+    if (!coords) {
+      alert("위치 정보를 설정해주세요. 지도를 클릭하거나 위치를 입력해주세요.");
+      return;
     }
 
-    // 위치 정보 가져오기 (사용자가 입력한 위치 또는 지도에서 선택한 장소)
-    const displayLocation = locationInput || formData.location || userLocation;
-    const locationData = {
-      type: "Point" as const,
-      coordinates: [coords?.lng || 126.9235, coords?.lat || 37.5502], // lng,lat 순서
-      address: displayLocation || `${userLocation} 근처`,
-    };
-
-    // 백엔드 스키마에 맞춘 필드만 전송
-    const payload = {
-      title: formData.title,
-      content: formData.content,
-      location: locationData,
-      venue: formData.venue || `${displayLocation} 모임장소`,
-      category: formData.category,
-      tags: formData.tags,
-      maxParticipants: formData.maxParticipants,
-      meetingDate: formData.meetingDate || undefined,
-      image: finalImages[0] || undefined,
-    };
-
     try {
-      // TODO: API 호출 - 현재는 프론트엔드만 구현
-      console.log('게시글 생성 데이터:', payload);
+      // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
+      let finalImages = images;
+      if (finalImages.length === 0 && formData.category) {
+        const defaultImage = getDefaultImageForCategory(formData.category);
+        if (defaultImage) {
+          finalImages = [defaultImage];
+        }
+      }
+
+      // 위치 정보 설정 (필수)
+      const displayLocation = locationInput || formData.location || userLocation;
+      const locationData = {
+        type: "Point" as const,
+        coordinates: [coords.lng, coords.lat], // [경도, 위도] 순서
+        address: displayLocation || "위치 정보", // 백엔드에서 address 필드 지원
+      };
+
+      // 백엔드 API 스키마에 맞춘 게시글 데이터
+      const postPayload = {
+        title: formData.title,
+        content: formData.content,
+        location: locationData, // 필수 필드 (address 포함)
+        tags: formData.tags,
+        maxParticipants: formData.maxParticipants,
+        // 선택적 필드들 (카테고리는 백엔드 이슈로 임시 제외)
+        // ...(formData.category && { category: formData.category }),
+        ...(formData.venue && { venue: formData.venue }),
+        ...(formData.meetingDate && { meetingDate: formData.meetingDate }),
+        ...(finalImages.length > 0 && { images: finalImages }),
+      };
+
+      console.log('게시글 생성 시도:', postPayload);
+
+      // 백엔드 API 호출
+      const response = await api.posts.create(postPayload);
+      
+      console.log('게시글 생성 성공:', response);
+      alert('게시글이 성공적으로 작성되었습니다!');
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("게시글 생성 실패:", error);
-      alert("게시글 생성에 실패했습니다. 다시 시도해주세요.");
+      
+      let errorMessage = "게시글 생성에 실패했습니다.";
+      if (error.status === 401) {
+        errorMessage = "로그인이 필요합니다.";
+      } else if (error.status === 400) {
+        errorMessage = "입력 정보를 확인해주세요.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage + " 다시 시도해주세요.");
     }
   };
 
@@ -319,8 +341,8 @@ export default function Step2() {
     searchNearbyPlaces(lat, lng, mapInstance);
   };
 
-  // 주변 상호/장소 검색 함수
-  const searchNearbyPlaces = (lat: number, lng: number, mapInstance: any) => {
+  // 주변 상호/장소 검색 함수 (마커 위치는 변경하지 않고 텍스트만 업데이트)
+  const searchNearbyPlaces = (lat: number, lng: number, mapInstance?: any) => {
     if (!window.kakao.maps.services) {
       fallbackToAddress(lat, lng);
       return;
@@ -359,6 +381,7 @@ export default function Step2() {
           if (closestPlace) {
             const placeName = closestPlace.place_name;
             console.log('가까운 상호 발견:', placeName, `(${Math.round(minDistance)}m)`);
+            // 마커 위치는 변경하지 않고 텍스트만 업데이트
             setLocationInput(placeName);
             setFormData(prev => ({ ...prev, location: placeName }));
             return;
@@ -406,6 +429,7 @@ export default function Step2() {
             if (closestPlace) {
               const placeName = closestPlace.place_name;
               console.log('키워드 검색 장소 발견:', placeName);
+              // 마커 위치는 변경하지 않고 텍스트만 업데이트
               setLocationInput(placeName);
               setFormData(prev => ({ ...prev, location: placeName }));
               return;
@@ -621,8 +645,8 @@ export default function Step2() {
             console.log(`최종 선택: ${selectedPlace.place_name} (점수: ${Math.round(bestScore)})`);
           }
           
-          const newCoords = new window.kakao.maps.LatLng(selectedPlace.y, selectedPlace.x);
-          moveMapToLocation(newCoords, `키워드 검색: ${selectedPlace.place_name}`);
+          // 텍스트 입력 검색에서는 마커를 이동하지 않고 텍스트만 업데이트
+          console.log(`키워드 검색: ${selectedPlace.place_name}`);
           
           // 검색된 장소명을 입력 필드에 업데이트
           setLocationInput(selectedPlace.place_name);
@@ -657,8 +681,8 @@ export default function Step2() {
                 console.log(`전역 검색 최종 선택: ${selectedPlace.place_name}`);
               }
               
-              const newCoords = new window.kakao.maps.LatLng(selectedPlace.y, selectedPlace.x);
-              moveMapToLocation(newCoords, `전역 키워드 검색: ${selectedPlace.place_name}`);
+              // 텍스트 입력 검색에서는 마커를 이동하지 않고 텍스트만 업데이트
+              console.log(`전역 키워드 검색: ${selectedPlace.place_name}`);
               
               setLocationInput(selectedPlace.place_name);
               setFormData(prev => ({ ...prev, location: selectedPlace.place_name }));
@@ -700,11 +724,31 @@ export default function Step2() {
     // 좌표 상태 업데이트
     setCoords({ lat: initialCoords.lat, lng: initialCoords.lng });
     
-    // 위치 입력 필드 클리어
-    setLocationInput("");
-    setFormData(prev => ({ ...prev, location: "" }));
+    // 위치 입력 필드를 "현재 위치"로 설정
+    setLocationInput("현재 위치");
+    setFormData(prev => ({ ...prev, location: "현재 위치" }));
     
     console.log('현재 위치로 복귀:', initialCoords);
+  };
+
+  // 표시할 위치 텍스트 계산 함수
+  const getDisplayLocation = () => {
+    if (locationInput && locationInput.trim()) {
+      return locationInput;
+    }
+    if (formData.location && formData.location.trim()) {
+      return formData.location;
+    }
+    if (coords) {
+      // 현재 위치와 동일한 좌표인지 확인
+      if (initialCoords && 
+          Math.abs(coords.lat - initialCoords.lat) < 0.001 && 
+          Math.abs(coords.lng - initialCoords.lng) < 0.001) {
+        return "현재 위치";
+      }
+      return "선택된 위치";
+    }
+    return "위치를 선택해주세요";
   };
 
 
@@ -965,27 +1009,43 @@ export default function Step2() {
           >
             <Box display="flex" alignItems="center" gap={1} mb={1}>
               <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
-              <Typography variant="body2" fontWeight={600}>
-                {formData.location || userLocation} 근처
+              <Typography 
+                variant="body2" 
+                fontWeight={600}
+                sx={{
+                  color: getDisplayLocation() === "위치를 선택해주세요" ? "#999" : "#333"
+                }}
+              >
+                {getDisplayLocation()}
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary">
               ●{" "}
-              {formData.meetingDate
-                ? new Date(formData.meetingDate).toLocaleDateString("ko-KR", {
-                    month: "numeric",
-                    day: "numeric",
-                    weekday: "short",
-                  })
-                : "날짜 미정"}{" "}
-              <br></br>●{" "}
-              {formData.meetingDate
-                ? new Date(formData.meetingDate).toLocaleTimeString("ko-KR", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  })
-                : "시간 미정"}
+              <span style={{ 
+                color: formData.meetingDate ? "inherit" : "#999",
+                fontStyle: formData.meetingDate ? "normal" : "italic"
+              }}>
+                {formData.meetingDate
+                  ? new Date(formData.meetingDate).toLocaleDateString("ko-KR", {
+                      month: "numeric",
+                      day: "numeric",
+                      weekday: "short",
+                    })
+                  : "날짜를 선택해주세요"}
+              </span>
+              <br />●{" "}
+              <span style={{ 
+                color: formData.meetingDate ? "inherit" : "#999",
+                fontStyle: formData.meetingDate ? "normal" : "italic"
+              }}>
+                {formData.meetingDate
+                  ? new Date(formData.meetingDate).toLocaleTimeString("ko-KR", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                  : "시간을 선택해주세요"}
+              </span>
             </Typography>
           </Box>
 

@@ -82,14 +82,14 @@ export const api = USE_MOCK_DATA ? mockApi : {
     getAll: (params?: {
       page?: number;
       limit?: number;
-      location?: string;
       category?: string;
+      status?: string;
     }) => {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.append("page", params.page.toString());
       if (params?.limit) queryParams.append("limit", params.limit.toString());
-      if (params?.location) queryParams.append("location", params.location);
       if (params?.category) queryParams.append("category", params.category);
+      if (params?.status) queryParams.append("status", params.status);
 
       const query = queryParams.toString();
       return apiCall<{ posts: any[]; total: number; hasMore: boolean }>(
@@ -97,14 +97,26 @@ export const api = USE_MOCK_DATA ? mockApi : {
       );
     },
 
-    // 주변 게시글 조회
-    getNearby: (lat: number, lng: number, radius: number = 5000) =>
-      apiCall<{ posts: any[] }>(
-        `/posts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`
-      ),
+    // 게시글 상세 조회
+    getById: (postId: string) =>
+      apiCall<{ post: any }>(`/posts/${postId}`),
 
     // 게시글 작성
-    create: (postData: any) =>
+    create: (postData: {
+      title: string;
+      content: string;
+      category: string;
+      tags?: string[];
+      maxParticipants?: number;
+      location?: {
+        type: "Point";
+        coordinates: [number, number];
+        address?: string;
+      };
+      venue?: string;
+      meetingDate?: string;
+      images?: string[];
+    }) =>
       apiCall<{ post: any }>("/posts", {
         method: "POST",
         body: JSON.stringify(postData),
@@ -119,7 +131,7 @@ export const api = USE_MOCK_DATA ? mockApi : {
 
     // 게시글 삭제
     delete: (postId: string) =>
-      apiCall<object>(`/posts/${postId}`, {
+      apiCall<{ success: boolean; message: string }>(`/posts/${postId}`, {
         method: "DELETE",
       }),
 
@@ -130,35 +142,24 @@ export const api = USE_MOCK_DATA ? mockApi : {
       }),
   },
 
-  // 사용자 관련
+  // 사용자 관리
   users: {
-    // 내 정보 조회
-    getMe: () => apiCall<{ user: any }>("/users/me"),
+    // 내 정보 조회 (인증된 사용자) - 백엔드 응답에서 직접 사용자 객체 반환
+    getMe: () => apiCall<any>("/users/me"),
 
-    // 프로필 수정
+    // 사용자 프로필 조회 (본인)
+    getProfile: () => apiCall<any>("/users/me"),
+
+    // 사용자 프로필 수정
     updateProfile: (userData: any) =>
-      apiCall<{ user: any }>("/users/me", {
+      apiCall<{ user: any }>("/users/profile", {
         method: "PUT",
         body: JSON.stringify(userData),
       }),
 
-    // 내가 쓴 글
-    getMyPosts: () => apiCall<{ posts: any[] }>("/users/me/posts"),
-
-    // 참여한 모임
-    getJoinedPosts: () => apiCall<{ posts: any[] }>("/users/me/joined-posts"),
-
-    // 사용자 차단
-    blockUser: (userId: string) =>
-      apiCall<object>(`/users/block/${userId}`, {
-        method: "POST",
-      }),
-
-    // 사용자 차단 해제
-    unblockUser: (userId: string) =>
-      apiCall<object>(`/users/block/${userId}`, {
-        method: "DELETE",
-      }),
+    // 다른 사용자 프로필 조회
+    getById: (userId: string) =>
+      apiCall<{ user: any }>(`/users/${userId}`),
   },
 
   // 참여 요청 관련
@@ -182,42 +183,44 @@ export const api = USE_MOCK_DATA ? mockApi : {
       }),
   },
 
-  // 채팅 관련
+  // 채팅 관리
   chat: {
     // 채팅방 목록 조회
-    getRooms: () => apiCall<any[]>('/chat/rooms'),
+    getRooms: () => apiCall<{ rooms: any[] }>('/chat/rooms'),
+
+    // 채팅방 생성
+    createRoom: (roomData: { name?: string; participants: string[]; type?: string }) =>
+      apiCall<{ room: any }>('/chat/rooms', {
+        method: 'POST',
+        body: JSON.stringify(roomData),
+      }),
 
     // 특정 채팅방 정보 조회
-    getRoom: (roomId: string) => apiCall<any>(`/chat/rooms/${roomId}`),
+    getRoom: (roomId: string) => apiCall<{ room: any }>(`/chat/rooms/${roomId}`),
 
     // 채팅방 메시지 목록 조회
     getMessages: (roomId: string, page: number = 1, limit: number = 50) => 
-      apiCall<{ messages: any[]; currentPage: number; totalCount: number }>
+      apiCall<{ messages: any[]; currentPage: number; totalPages: number; totalCount: number }>
         (`/chat/rooms/${roomId}/messages?page=${page}&limit=${limit}`),
 
-    // 메시지 전송
-    sendMessage: (roomId: string, messageData: { type: string; content: string; fileUrl?: string; fileName?: string; fileSize?: number }) =>
-      apiCall<any>(`/chat/rooms/${roomId}/messages`, {
+    // 메시지 전송 (REST API - 실시간은 Socket.IO 사용)
+    sendMessage: (roomId: string, messageData: { 
+      content: string; 
+      type?: 'text' | 'image' | 'file'; 
+      fileUrl?: string; 
+      fileName?: string; 
+      fileSize?: number 
+    }) =>
+      apiCall<{ message: any }>(`/chat/rooms/${roomId}/messages`, {
         method: 'POST',
         body: JSON.stringify(messageData),
       }),
 
-    // 채팅방 나가기 (채팅 내역 삭제)
+    // 채팅방 나가기
     leaveRoom: (roomId: string) =>
-      apiCall<{}>(`/chat/rooms/${roomId}/leave`, {
+      apiCall<{ success: boolean; message: string }>(`/chat/rooms/${roomId}/leave`, {
         method: 'DELETE',
-        body: JSON.stringify({ deleteHistory: true }),
       }),
-
-    // 메시지 읽음 처리
-    markMessageAsRead: (roomId: string, messageId: string) =>
-      apiCall<{}>(`/chat/rooms/${roomId}/messages/${messageId}/read`, {
-        method: 'PATCH',
-      }),
-
-    // 안읽은 메시지 수 조회
-    getUnreadCount: (roomId: string) =>
-      apiCall<{ unreadCount: number }>(`/chat/rooms/${roomId}/unread-count`),
   },
 
   // 알림 관련
@@ -238,30 +241,96 @@ export const api = USE_MOCK_DATA ? mockApi : {
       }),
   },
 
-  // 인증 관련
+  // 인증 관리
   auth: {
-    // 로그인
-    login: (credentials: { email: string; password: string }) =>
-      apiCall<{ token: string; user: any }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(credentials),
-      }),
-
     // 회원가입
-    signup: (userData: { email: string; password: string; nickname: string }) =>
-      apiCall<{ token: string; user: any }>("/auth/signup", {
+    signup: (userData: {
+      email: string;
+      password: string;
+      name: string;
+      birthDate?: string;
+      nickname: string;
+      activityRegion?: {
+        city: string;
+        district: string;
+        fullAddress: string;
+      };
+    }) =>
+      apiCall<{ message: string }>("/auth/signup", {
         method: "POST",
         body: JSON.stringify(userData),
       }),
 
+    // 로그인
+    login: (credentials: { email: string; password: string }) =>
+      apiCall<{ token: string; user: any; message: string }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify(credentials),
+      }),
+
+    // 이메일 중복 확인
+    checkEmail: (email: string) =>
+      apiCall<{ isAvailable: boolean; isValid: boolean; message: string }>("/auth/check-email", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+
+    // 구글 로그인 (브라우저 리다이렉트)
+    googleLogin: () => {
+      window.location.href = `${API_BASE_URL}/auth/google`;
+    },
+
     // 로그아웃
     logout: () => {
+      localStorage.removeItem("access_token");
       localStorage.removeItem("auth_token");
       return Promise.resolve({ success: true });
     },
-    
-    // 현재 사용자 정보 조회
-    getMe: () => apiCall<any>('/auth/me'),
+  },
+
+  // 카테고리 & 태그
+  categories: {
+    // 카테고리 목록 조회
+    getAll: (params?: { includeInactive?: boolean; parentId?: string }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.includeInactive) queryParams.append("includeInactive", "true");
+      if (params?.parentId) queryParams.append("parentId", params.parentId);
+      
+      const query = queryParams.toString();
+      return apiCall<{ categories: any[]; total: number }>(`/categories${query ? `?${query}` : ""}`);
+    },
+
+    // 인기 카테고리 조회
+    getPopular: (limit: number = 10) =>
+      apiCall<{ categories: any[] }>(`/categories/popular?limit=${limit}`),
+
+    // 특정 카테고리 상세 조회
+    getById: (categoryId: string) =>
+      apiCall<{ category: any }>(`/categories/${categoryId}`),
+  },
+
+  tags: {
+    // 태그 목록 조회
+    getAll: (params?: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append("page", params.page.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+      if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+      const query = queryParams.toString();
+      return apiCall<{ 
+        tags: any[]; 
+        currentPage: number; 
+        totalPages: number; 
+        totalCount: number; 
+      }>(`/tags${query ? `?${query}` : ""}`);
+    },
   },
 };
 
