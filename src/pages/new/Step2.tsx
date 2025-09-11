@@ -158,12 +158,10 @@ export default function Step2() {
         ...(finalImages.length > 0 && { images: finalImages }),
       };
 
-      console.log('게시글 생성 시도:', postPayload);
 
       // 백엔드 API 호출
       const response = await api.posts.create(postPayload);
       
-      console.log('게시글 생성 성공:', response);
       alert('게시글이 성공적으로 작성되었습니다!');
       navigate("/");
     } catch (error: any) {
@@ -222,16 +220,13 @@ export default function Step2() {
 
   // 마커 관리 함수 - 기존 마커 제거 후 새 마커 생성
   const updateMarker = (position: any, mapInstance: any) => {
-    console.log('마커 업데이트 시작 - 기존 마커 제거');
     
     // 기존 마커들 완전 제거
     if (markerRef.current) {
-      console.log('markerRef 마커 제거');
       markerRef.current.setMap(null);
       markerRef.current = null;
     }
     if (marker) {
-      console.log('state 마커 제거');
       marker.setMap(null);
       setMarker(null);
     }
@@ -247,7 +242,6 @@ export default function Step2() {
       markerRef.current = newMarker;
       setMarker(newMarker);
       
-      console.log('새 마커 생성 완료');
     }, 50);
   };
 
@@ -265,7 +259,6 @@ export default function Step2() {
           createMapWithLocation(latitude, longitude);
         },
         (error) => {
-          console.log('위치 권한이 없어 기본 위치로 설정합니다:', error);
           // 위치를 가져올 수 없으면 홍대입구역 좌표 사용
           const defaultLat = 37.5563;
           const defaultLng = 126.9236;
@@ -317,7 +310,6 @@ export default function Step2() {
           handleMapClick(mouseEvent, mapInstance);
         });
 
-        console.log('지도 초기화 완료:', latitude, longitude);
       } catch (error) {
         console.error('지도 생성 실패:', error);
       }
@@ -380,7 +372,6 @@ export default function Step2() {
           
           if (closestPlace) {
             const placeName = closestPlace.place_name;
-            console.log('가까운 상호 발견:', placeName, `(${Math.round(minDistance)}m)`);
             // 마커 위치는 변경하지 않고 텍스트만 업데이트
             setLocationInput(placeName);
             setFormData(prev => ({ ...prev, location: placeName }));
@@ -428,7 +419,6 @@ export default function Step2() {
             
             if (closestPlace) {
               const placeName = closestPlace.place_name;
-              console.log('키워드 검색 장소 발견:', placeName);
               // 마커 위치는 변경하지 않고 텍스트만 업데이트
               setLocationInput(placeName);
               setFormData(prev => ({ ...prev, location: placeName }));
@@ -476,7 +466,6 @@ export default function Step2() {
       geocoder.coord2Address(lng, lat, (result: any, status: any) => {
         if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
           const address = result[0].address.address_name;
-          console.log('주소로 폴백:', address);
           setLocationInput(address);
           setFormData(prev => ({ ...prev, location: address }));
         }
@@ -520,13 +509,11 @@ export default function Step2() {
     const tryNextSearch = () => {
       if (found || searchIndex >= searchQueries.length) {
         if (!found) {
-          console.log('모든 검색 방법으로 위치를 찾을 수 없습니다:', address);
         }
         return;
       }
 
       const currentQuery = searchQueries[searchIndex];
-      console.log(`검색 시도 ${searchIndex + 1}: "${currentQuery}"`);
       
       // 1단계: 정확한 주소 검색
       tryAddressSearch(currentQuery, () => {
@@ -547,6 +534,10 @@ export default function Step2() {
           found = true;
           const newCoords = new window.kakao.maps.LatLng(result[0].y, result[0].x);
           moveMapToLocation(newCoords, `주소 검색: ${query}`);
+          
+          // 검색된 주소로 입력 필드 업데이트
+          setLocationInput(query);
+          setFormData(prev => ({ ...prev, location: query }));
         } else {
           onFail();
         }
@@ -614,10 +605,8 @@ export default function Step2() {
         searchOptions.radius = 20000; // 20km 반경으로 축소
       }
 
-      console.log('키워드 검색 옵션:', searchOptions);
 
       places.keywordSearch(query, (result: any, status: any) => {
-        console.log('키워드 검색 결과:', status, result);
         
         if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
           found = true;
@@ -634,7 +623,6 @@ export default function Step2() {
               const distance = getDistance(currentPos, placePos);
               const score = calculatePlaceScore(place, query, distance);
               
-              console.log(`${place.place_name}: 점수 ${Math.round(score)}, 거리 ${Math.round(distance)}m, 카테고리 ${place.category_group_code}`);
               
               if (score > bestScore) {
                 bestScore = score;
@@ -642,20 +630,20 @@ export default function Step2() {
               }
             });
             
-            console.log(`최종 선택: ${selectedPlace.place_name} (점수: ${Math.round(bestScore)})`);
           }
           
-          // 텍스트 입력 검색에서는 마커를 이동하지 않고 텍스트만 업데이트
-          console.log(`키워드 검색: ${selectedPlace.place_name}`);
+          // 검색 결과로 지도 이동 및 마커 업데이트
+          const newCoords = new window.kakao.maps.LatLng(selectedPlace.y, selectedPlace.x);
+          
+          // 지도를 검색된 위치로 이동하고 마커 업데이트
+          moveMapToLocation(newCoords, `키워드 검색: ${selectedPlace.place_name}`);
           
           // 검색된 장소명을 입력 필드에 업데이트
           setLocationInput(selectedPlace.place_name);
           setFormData(prev => ({ ...prev, location: selectedPlace.place_name }));
         } else {
-          console.log('키워드 검색 실패:', status);
           // 위치 제한 없이 전역 검색 재시도
           places.keywordSearch(query, (globalResult: any, globalStatus: any) => {
-            console.log('전역 키워드 검색 결과:', globalStatus, globalResult);
             
             if (globalStatus === window.kakao.maps.services.Status.OK && globalResult.length > 0) {
               found = true;
@@ -678,11 +666,13 @@ export default function Step2() {
                   }
                 });
                 
-                console.log(`전역 검색 최종 선택: ${selectedPlace.place_name}`);
               }
               
-              // 텍스트 입력 검색에서는 마커를 이동하지 않고 텍스트만 업데이트
-              console.log(`전역 키워드 검색: ${selectedPlace.place_name}`);
+              // 전역 검색 결과로 지도 이동 및 마커 업데이트
+              const globalNewCoords = new window.kakao.maps.LatLng(selectedPlace.y, selectedPlace.x);
+              
+              // 지도를 검색된 위치로 이동하고 마커 업데이트
+              moveMapToLocation(globalNewCoords, `전역 키워드 검색: ${selectedPlace.place_name}`);
               
               setLocationInput(selectedPlace.place_name);
               setFormData(prev => ({ ...prev, location: selectedPlace.place_name }));
@@ -699,7 +689,6 @@ export default function Step2() {
       map.setCenter(coords);
       updateMarker(coords, map);
       setCoords({ lat: coords.getLat(), lng: coords.getLng() });
-      console.log(logMessage, coords.getLat(), coords.getLng());
     };
 
     // 검색 시작
@@ -709,7 +698,6 @@ export default function Step2() {
   // 현재 위치로 돌아가기 함수
   const returnToCurrentLocation = () => {
     if (!initialCoords || !map) {
-      console.log('초기 위치 정보가 없습니다.');
       return;
     }
 
@@ -728,7 +716,6 @@ export default function Step2() {
     setLocationInput("현재 위치");
     setFormData(prev => ({ ...prev, location: "현재 위치" }));
     
-    console.log('현재 위치로 복귀:', initialCoords);
   };
 
   // 표시할 위치 텍스트 계산 함수

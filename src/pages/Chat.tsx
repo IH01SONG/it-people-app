@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { api } from "../utils/api";
 import socketManager from "../utils/socket";
 import AppHeader from "../components/AppHeader";
-import DevModeBanner from "../components/DevModeBanner";
 
 interface ChatRoomData {
   _id: string;
@@ -117,10 +116,7 @@ export default function Chat() {
     <div className="w-full max-w-md mx-auto bg-white min-h-screen">
       <AppHeader />
       
-      <div className="px-4 pb-24">
-        {/* 개발 모드 배너 */}
-        <DevModeBanner />
-        
+      <div className="px-4 pb-24">        
         {/* 페이지 제목 */}
         <Box sx={{ py: 2, mb: 2 }}>
           <Typography variant="h5" fontWeight={700} color="#333" mb={0.5}>

@@ -5,10 +5,8 @@
  */
 
 import { io, Socket } from 'socket.io-client';
-import mockSocketManager from './mockSocket';
 
 const SOCKET_URL = import.meta.env?.VITE_SOCKET_URL || 'https://it-people-server-140857839854.asia-northeast3.run.app';
-const USE_MOCK_DATA = import.meta.env?.VITE_USE_MOCK_DATA === 'true';
 
 interface SocketEvents {
   // 연결 관련
@@ -243,7 +241,7 @@ class SocketManager {
 }
 
 // 싱글톤 인스턴스 - 개발 모드에서는 목 소켓 사용
-const socketManager = USE_MOCK_DATA ? mockSocketManager : new SocketManager();
+const socketManager = new SocketManager();
 
 export default socketManager;
 export { SocketManager };
