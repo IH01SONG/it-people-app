@@ -5,10 +5,18 @@ export interface Post {
   id: string; // 게시글 고유 ID
   title: string; // 게시글 제목
   content: string; // 게시글 내용
-  author: string; // 작성자 이름
-  authorId: string; // 작성자 ID
+
+  // json으로 표현
+  author: {
+    name: string;
+    email: string;
+    id: string;
+    nickname: string;
+    profileImageUrl: string;
+  };
+
   location: {
-    type: 'Point';
+    type: "Point";
     coordinates: [number, number]; // [경도, 위도] GeoJSON 형식
     address?: string; // 주소 (표시용)
   }; // 위치 정보 (GeoJSON Point)
@@ -19,7 +27,7 @@ export interface Post {
   participants: string[]; // 참여자 ID 배열
   maxParticipants: number; // 최대 참여자 수
   meetingDate?: Date; // 모임 일시
-  status: 'active' | 'full' | 'completed' | 'cancelled'; // 모임 상태
+  status: "active" | "full" | "completed" | "cancelled"; // 모임 상태
   chatRoom?: string; // 채팅방 ID
   viewCount: number; // 조회수
   createdAt: string; // 생성 일시
@@ -33,7 +41,15 @@ export interface Post {
 export interface Notification {
   id: string; // 알림 고유 ID
   userId: string; // 알림 받을 사용자 ID
-  type: 'join_request' | 'request_accepted' | 'request_rejected' | 'post_full' | 'post_reminder' | 'chat_message' | 'post_cancelled' | 'system'; // 알림 타입
+  type:
+    | "join_request"
+    | "request_accepted"
+    | "request_rejected"
+    | "post_full"
+    | "post_reminder"
+    | "chat_message"
+    | "post_cancelled"
+    | "system"; // 알림 타입
   title: string; // 알림 제목
   message: string; // 알림 메시지
   data?: {

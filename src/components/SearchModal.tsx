@@ -16,7 +16,7 @@ import {
   InputAdornment,
   Card,
   CircularProgress,
-  Button
+  Button,
 } from "@mui/material";
 
 // React Router
@@ -40,6 +40,7 @@ const rightModalStyle = {
   position: "fixed" as const,
   top: "60px",
   right: "16px",
+  left: "16px",
   bottom: "60px",
   width: "75%",
   maxWidth: "320px",
@@ -57,10 +58,7 @@ const rightModalStyle = {
  * 검색 모달 컴포넌트
  * 검색어 입력, 최근 검색어, 인기 카테고리, 실시간 검색 결과 기능을 제공
  */
-export default function SearchModal({
-  open,
-  onClose,
-}: SearchModalProps) {
+export default function SearchModal({ open, onClose }: SearchModalProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Post[]>([]);
@@ -70,13 +68,13 @@ export default function SearchModal({
 
   // localStorage에서 최근 검색어 로드
   useEffect(() => {
-    const savedSearches = localStorage.getItem('recentSearches');
+    const savedSearches = localStorage.getItem("recentSearches");
     if (savedSearches) {
       try {
         const parsed = JSON.parse(savedSearches);
         setRecentSearches(Array.isArray(parsed) ? parsed : []);
       } catch (error) {
-        console.error('Failed to parse recent searches:', error);
+        console.error("Failed to parse recent searches:", error);
         setRecentSearches([]);
       }
     }
@@ -85,26 +83,41 @@ export default function SearchModal({
   // 최근 검색어를 localStorage에 저장
   const saveToRecentSearches = (query: string) => {
     if (!query.trim()) return;
-    
+
     const updatedSearches = [
       query.trim(),
-      ...recentSearches.filter(search => search !== query.trim())
+      ...recentSearches.filter((search) => search !== query.trim()),
     ].slice(0, 8); // 최대 8개까지만 저장
-    
+
     setRecentSearches(updatedSearches);
-    localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
+    localStorage.setItem("recentSearches", JSON.stringify(updatedSearches));
   };
 
   const trendingTags = [
-    "식사", "카페", "쇼핑", "운동", "문화생활", 
-    "스터디", "취미", "산책", "영화", "공연"
+    "식사",
+    "카페",
+    "쇼핑",
+    "운동",
+    "문화생활",
+    "스터디",
+    "취미",
+    "산책",
+    "영화",
+    "공연",
   ];
 
   // Home 페이지와 동일한 데이터 생성 함수
   const generateMockPosts = (): Post[] => {
     const now = Date.now();
-    const locations = ["홍대입구", "강남", "신촌", "이태원", "명동", "건대입구"];
-    
+    const locations = [
+      "홍대입구",
+      "강남",
+      "신촌",
+      "이태원",
+      "명동",
+      "건대입구",
+    ];
+
     const postTemplates = [
       {
         title: "저녁 같이 먹을 사람?",
@@ -141,23 +154,34 @@ export default function SearchModal({
         content: "새로 나온 영화 같이 보실 분! 영화 후 맛집도 가요",
         category: "문화생활",
         expiresAt: now + 3 * 60 * 60 * 1000,
-      }
+      },
     ];
 
     return Array.from({ length: 20 }, (_, i) => {
       const template = postTemplates[i % postTemplates.length];
       const location = locations[i % locations.length];
       const createdAt = now - Math.random() * 12 * 60 * 60 * 1000;
-      
+
       return {
         id: `search-${i}`,
         title: template.title,
         content: template.content,
         author: `사용자${i + 1}`,
         location: `${location} 근처`,
-        venue: `${location} ${template.category === '식사' ? '맛집' : template.category === '카페' ? '카페' : template.category === '쇼핑' ? '쇼핑몰' : '모임장소'}`,
+        venue: `${location} ${
+          template.category === "식사"
+            ? "맛집"
+            : template.category === "카페"
+            ? "카페"
+            : template.category === "쇼핑"
+            ? "쇼핑몰"
+            : "모임장소"
+        }`,
         category: template.category,
-        image: Math.random() > 0.5 ? `https://picsum.photos/seed/${template.category}${i}/400/250` : null,
+        image:
+          Math.random() > 0.5
+            ? `https://picsum.photos/seed/${template.category}${i}/400/250`
+            : null,
         participants: Math.floor(Math.random() * 3) + 1,
         maxParticipants: Math.floor(Math.random() * 3) + 4,
         createdAt: new Date(createdAt).toISOString(),
@@ -165,7 +189,7 @@ export default function SearchModal({
         isLiked: false,
         isActive: template.expiresAt > now,
       };
-    }).filter(post => post.isActive);
+    }).filter((post) => post.isActive);
   };
 
   // 검색 실행
@@ -178,21 +202,22 @@ export default function SearchModal({
 
     setIsSearching(true);
     setShowResults(true);
-    
+
     // 검색어를 최근 검색어에 저장
     saveToRecentSearches(query);
 
     setTimeout(() => {
       const lowerQuery = query.toLowerCase();
       const allPosts = generateMockPosts();
-      const results = allPosts.filter(post => 
-        post.title.toLowerCase().includes(lowerQuery) ||
-        post.category.toLowerCase().includes(lowerQuery) ||
-        post.content.toLowerCase().includes(lowerQuery) ||
-        post.location.toLowerCase().includes(lowerQuery) ||
-        post.venue.toLowerCase().includes(lowerQuery)
+      const results = allPosts.filter(
+        (post) =>
+          post.title.toLowerCase().includes(lowerQuery) ||
+          post.category.toLowerCase().includes(lowerQuery) ||
+          post.content.toLowerCase().includes(lowerQuery) ||
+          post.location.toLowerCase().includes(lowerQuery) ||
+          post.venue.toLowerCase().includes(lowerQuery)
       );
-      
+
       setSearchResults(results);
       setIsSearching(false);
     }, 300);
@@ -212,7 +237,7 @@ export default function SearchModal({
 
   // 엔터 키 처리
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
+    if (e.key === "Enter" && searchQuery.trim()) {
       saveToRecentSearches(searchQuery);
       navigate(`/search-results?q=${encodeURIComponent(searchQuery)}`);
       onClose();
@@ -261,43 +286,39 @@ export default function SearchModal({
   }, [open]);
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      sx={{ zIndex: 1300 }}
-    >
+    <Modal open={open} onClose={onClose} sx={{ zIndex: 1300 }}>
       <Box sx={rightModalStyle}>
         {/* Header with back button */}
         <Box
-          sx={{ 
-            bgcolor: '#E762A9', 
-            color: 'white', 
-            p: 2, 
-            display: 'flex', 
-            alignItems: 'center',
-            borderRadius: "16px 16px 0 0"
+          sx={{
+            bgcolor: "#E762A9",
+            color: "white",
+            p: 2,
+            display: "flex",
+            alignItems: "center",
+            borderRadius: "16px 16px 0 0",
           }}
         >
           {showResults && (
-            <IconButton 
-              onClick={handleBackClick} 
-              sx={{ color: 'white', mr: 1 }}
+            <IconButton
+              onClick={handleBackClick}
+              sx={{ color: "white", mr: 1 }}
             >
               <ArrowBackIcon />
             </IconButton>
           )}
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              flexGrow: 1, 
-              textAlign: showResults ? 'left' : 'center',
+          <Typography
+            variant="h6"
+            sx={{
+              flexGrow: 1,
+              textAlign: showResults ? "left" : "center",
               mr: showResults ? 0 : 4,
-              fontWeight: 600
+              fontWeight: 600,
             }}
           >
             {showResults ? "검색 결과" : "검색"}
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: 'white' }}>
+          <IconButton onClick={onClose} sx={{ color: "white" }}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -310,24 +331,26 @@ export default function SearchModal({
             value={searchQuery}
             onChange={handleSearchChange}
             onKeyPress={handleKeyPress}
-            sx={{ 
+            sx={{
               mb: 3,
-              '& .MuiOutlinedInput-root': {
+              "& .MuiOutlinedInput-root": {
                 borderRadius: 2,
-              }
+              },
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconButton 
+                  <IconButton
                     onClick={handleSearchClick}
                     size="small"
-                    sx={{ 
-                      color: searchQuery.trim() ? '#E762A9' : '#666',
+                    sx={{
+                      color: searchQuery.trim() ? "#E762A9" : "#666",
                       p: 0.5,
-                      '&:hover': {
-                        backgroundColor: searchQuery.trim() ? 'rgba(231, 98, 169, 0.1)' : 'rgba(0, 0, 0, 0.04)'
-                      }
+                      "&:hover": {
+                        backgroundColor: searchQuery.trim()
+                          ? "rgba(231, 98, 169, 0.1)"
+                          : "rgba(0, 0, 0, 0.04)",
+                      },
                     }}
                     disabled={!searchQuery.trim()}
                   >
@@ -344,13 +367,13 @@ export default function SearchModal({
               <Typography variant="subtitle2" fontWeight={600} mb={2}>
                 검색 결과 {isSearching ? "" : `(${searchResults.length}개)`}
               </Typography>
-              
+
               {isSearching ? (
                 <Box display="flex" justifyContent="center" py={2}>
-                  <CircularProgress size={24} sx={{ color: '#E762A9' }} />
+                  <CircularProgress size={24} sx={{ color: "#E762A9" }} />
                 </Box>
               ) : searchResults.length > 0 ? (
-                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
                   {searchResults.map((post) => (
                     <Card
                       key={post.id}
@@ -358,16 +381,16 @@ export default function SearchModal({
                       sx={{
                         p: 2,
                         mb: 2,
-                        cursor: 'pointer',
+                        cursor: "pointer",
                         borderRadius: 3,
-                        border: '1px solid #f0f0f0',
-                        '&:hover': {
-                          bgcolor: '#f9f9f9',
-                          borderColor: '#E762A9',
-                          transform: 'translateY(-1px)',
-                          boxShadow: '0 4px 12px rgba(231, 98, 169, 0.15)'
+                        border: "1px solid #f0f0f0",
+                        "&:hover": {
+                          bgcolor: "#f9f9f9",
+                          borderColor: "#E762A9",
+                          transform: "translateY(-1px)",
+                          boxShadow: "0 4px 12px rgba(231, 98, 169, 0.15)",
                         },
-                        transition: 'all 0.2s ease'
+                        transition: "all 0.2s ease",
                       }}
                     >
                       <Typography variant="body1" fontWeight={600} mb={1}>
@@ -377,15 +400,15 @@ export default function SearchModal({
                         {post.content.substring(0, 60)}...
                       </Typography>
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <Chip 
-                          label={post.category} 
-                          size="small" 
-                          sx={{ 
-                            fontSize: '0.7rem', 
+                        <Chip
+                          label={post.category}
+                          size="small"
+                          sx={{
+                            fontSize: "0.7rem",
                             height: 20,
-                            bgcolor: '#E762A9',
-                            color: 'white',
-                            borderRadius: 2
+                            bgcolor: "#E762A9",
+                            color: "white",
+                            borderRadius: 2,
                           }}
                         />
                         <Typography variant="caption" color="text.secondary">
@@ -397,15 +420,15 @@ export default function SearchModal({
                       </Typography>
                     </Card>
                   ))}
-                  <Button 
-                    fullWidth 
-                    variant="contained" 
-                    sx={{ 
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    sx={{
                       mt: 2,
-                      bgcolor: '#E762A9',
-                      '&:hover': {
-                        bgcolor: '#D554A0'
-                      }
+                      bgcolor: "#E762A9",
+                      "&:hover": {
+                        bgcolor: "#D554A0",
+                      },
                     }}
                     onClick={handleResultClick}
                   >
@@ -413,7 +436,12 @@ export default function SearchModal({
                   </Button>
                 </Box>
               ) : (
-                <Typography variant="body2" color="text.secondary" textAlign="center" py={4}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                  py={4}
+                >
                   검색 결과가 없습니다.
                 </Typography>
               )}
@@ -424,7 +452,7 @@ export default function SearchModal({
           {!showResults && (
             <Box mb={3}>
               <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <HistoryIcon sx={{ color: '#666', fontSize: 18 }} />
+                <HistoryIcon sx={{ color: "#666", fontSize: 18 }} />
                 <Typography variant="subtitle2" fontWeight={600}>
                   최근 검색어
                 </Typography>
@@ -437,21 +465,25 @@ export default function SearchModal({
                       label={search}
                       size="small"
                       onClick={() => handleTagClick(search)}
-                      sx={{ 
+                      sx={{
                         cursor: "pointer",
-                        bgcolor: '#f5f5f5',
+                        bgcolor: "#f5f5f5",
                         borderRadius: 2,
-                        '&:hover': {
-                          bgcolor: '#e0e0e0',
-                          transform: 'translateY(-1px)',
+                        "&:hover": {
+                          bgcolor: "#e0e0e0",
+                          transform: "translateY(-1px)",
                         },
-                        transition: 'all 0.2s ease'
+                        transition: "all 0.2s ease",
                       }}
                     />
                   ))}
                 </Box>
               ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontStyle: "italic" }}
+                >
                   아직 검색한 내역이 없어요
                 </Typography>
               )}
@@ -462,7 +494,7 @@ export default function SearchModal({
           {!showResults && (
             <Box>
               <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <TrendingUpIcon sx={{ color: '#666', fontSize: 18 }} />
+                <TrendingUpIcon sx={{ color: "#666", fontSize: 18 }} />
                 <Typography variant="subtitle2" fontWeight={600}>
                   인기 태그
                 </Typography>

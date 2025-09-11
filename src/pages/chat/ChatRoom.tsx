@@ -1,11 +1,11 @@
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  IconButton, 
-  Paper, 
-  Avatar, 
-  AppBar, 
+import {
+  Box,
+  Typography,
+  TextField,
+  IconButton,
+  Paper,
+  Avatar,
+  AppBar,
   Toolbar,
   List,
   ListItem,
@@ -21,15 +21,19 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
-  Chip
+  Chip,
 } from "@mui/material";
-import { 
-  Send as SendIcon, 
+import {
+  Send as SendIcon,
   ArrowBack as ArrowBackIcon,
   MoreVert as MoreVertIcon,
   Block as BlockIcon,
   Report as ReportIcon,
-  LocationOn
+  LocationOn,
+  ExitToApp as ExitToAppIcon,
+  Add as AddIcon,
+  Image as ImageIcon,
+  MyLocation as MyLocationIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
@@ -37,6 +41,7 @@ import { useState, useRef, useEffect } from "react";
 interface Message {
   id: string;
   text: string;
+  type: "text" | "image" | "location";
   sender: {
     id: string;
     name: string;
@@ -44,19 +49,27 @@ interface Message {
   };
   timestamp: string;
   isMe: boolean;
+  imageUrl?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
 }
 
 const mockMessages: Message[] = [
   {
     id: "1",
     text: "안녕하세요! 저녁 같이 드실 분 찾고 있어요",
+    type: "text",
     sender: { id: "user1", name: "김잇플" },
     timestamp: "10:00",
     isMe: false,
   },
   {
-    id: "2", 
+    id: "2",
     text: "안녕하세요! 5시에 만날까요?",
+    type: "text",
     sender: { id: "me", name: "나" },
     timestamp: "10:01",
     isMe: true,
@@ -64,6 +77,7 @@ const mockMessages: Message[] = [
   {
     id: "3",
     text: "좋아요! 홍대입구역 2번 출구에서 만나요",
+    type: "text",
     sender: { id: "user1", name: "김잇플" },
     timestamp: "10:30",
     isMe: false,
@@ -83,14 +97,18 @@ const chatRoomData: { [key: string]: any } = {
     currentParticipants: 2,
     postImage: "https://picsum.photos/seed/pizza/400/200",
     isMyPost: false, // 내가 작성한 게시글인지
-    otherUser: { id: "user1", name: "김잇플", avatar: "https://picsum.photos/seed/user1/40/40" },
-    status: 'active'
+    otherUser: {
+      id: "user1",
+      name: "김잇플",
+      avatar: "https://picsum.photos/seed/user1/40/40",
+    },
+    status: "active",
   },
   "2": {
     postId: "post-2",
     postTitle: "카페에서 수다떨어요",
     postContent: "근처 카페에서 커피 마시며 대화해요. 디저트도 같이!",
-    postCategory: "카페", 
+    postCategory: "카페",
     postLocation: "강남",
     venue: "강남역 스타벅스",
     meetingDate: "2024-12-19T15:00:00",
@@ -98,22 +116,26 @@ const chatRoomData: { [key: string]: any } = {
     currentParticipants: 2,
     isMyPost: true, // 내가 작성한 게시글
     otherUser: { id: "user2", name: "박카페" },
-    status: 'completed'
+    status: "completed",
   },
   "3": {
     postId: "post-3",
     postTitle: "쇼핑 같이 해요",
     postContent: "쇼핑하면서 구경하실 분! 같이 다녀요",
     postCategory: "쇼핑",
-    postLocation: "명동", 
+    postLocation: "명동",
     venue: "명동 쇼핑거리",
     meetingDate: "2024-12-21T14:00:00",
     maxParticipants: 5,
     currentParticipants: 3,
     postImage: "https://picsum.photos/seed/shopping/400/200",
     isMyPost: false,
-    otherUser: { id: "user3", name: "최쇼핑", avatar: "https://picsum.photos/seed/user3/40/40" },
-    status: 'active'
+    otherUser: {
+      id: "user3",
+      name: "최쇼핑",
+      avatar: "https://picsum.photos/seed/user3/40/40",
+    },
+    status: "active",
   },
 };
 
@@ -128,13 +150,23 @@ export default function ChatRoom() {
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
 
+  // 플러스 메뉴 상태
+  const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const roomData = roomId ? chatRoomData[roomId] : null;
-  
+
   if (!roomData) {
     return (
-      <Box display="flex" alignItems="center" justifyContent="center" height="100vh">
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        height="100vh"
+      >
         <Typography>채팅방을 찾을 수 없습니다.</Typography>
       </Box>
     );
@@ -154,17 +186,21 @@ export default function ChatRoom() {
     const message: Message = {
       id: Date.now().toString(),
       text: newMessage,
+      type: "text",
       sender: { id: "me", name: "나" },
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       isMe: true,
     };
 
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
     setNewMessage("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -189,27 +225,114 @@ export default function ChatRoom() {
     if (reportReason) {
       setReportDialogOpen(false);
       setMenuAnchorEl(null);
-      console.log("사용자 신고:", roomData.otherUser.name, "사유:", reportReason);
+      console.log(
+        "사용자 신고:",
+        roomData.otherUser.name,
+        "사유:",
+        reportReason
+      );
       // TODO: 실제 신고 로직 구현
       setReportReason("");
     }
   };
 
+  const handleLeaveRoom = () => {
+    setLeaveDialogOpen(false);
+    setMenuAnchorEl(null);
+    console.log("채팅방 나가기:", roomId);
+    // TODO: 실제 채팅방 나가기 로직 구현 (채팅 데이터 삭제 등)
+    navigate("/chat");
+  };
+
+  const handleImageShare = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string;
+        const message: Message = {
+          id: Date.now().toString(),
+          text: "이미지를 공유했습니다",
+          type: "image",
+          sender: { id: "me", name: "나" },
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          isMe: true,
+          imageUrl: imageUrl,
+        };
+        setMessages((prev) => [...prev, message]);
+      };
+      reader.readAsDataURL(file);
+    }
+    setPlusMenuOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleLocationShare = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const message: Message = {
+            id: Date.now().toString(),
+            text: "위치를 공유했습니다",
+            type: "location",
+            sender: { id: "me", name: "나" },
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isMe: true,
+            location: {
+              latitude,
+              longitude,
+              address: `위도: ${latitude.toFixed(6)}, 경도: ${longitude.toFixed(
+                6
+              )}`,
+            },
+          };
+          setMessages((prev) => [...prev, message]);
+        },
+        (error) => {
+          console.error("위치 정보를 가져올 수 없습니다:", error);
+          alert(
+            "위치 정보를 가져올 수 없습니다. 위치 서비스를 활성화해주세요."
+          );
+        }
+      );
+    } else {
+      alert("이 브라우저에서는 위치 서비스를 지원하지 않습니다.");
+    }
+    setPlusMenuOpen(false);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return '#4CAF50';
-      case 'completed': return '#9E9E9E';
-      case 'blocked': return '#F44336';
-      default: return '#9E9E9E';
+      case "active":
+        return "#4CAF50";
+      case "completed":
+        return "#9E9E9E";
+      case "blocked":
+        return "#F44336";
+      default:
+        return "#9E9E9E";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return '진행중';
-      case 'completed': return '완료';
-      case 'blocked': return '차단됨';
-      default: return '';
+      case "active":
+        return "진행중";
+      case "completed":
+        return "완료";
+      case "blocked":
+        return "차단됨";
+      default:
+        return "";
     }
   };
 
@@ -223,32 +346,36 @@ export default function ChatRoom() {
     const now = new Date();
     const diffTime = date.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return '오늘';
-    if (diffDays === 1) return '내일';
-    if (diffDays === -1) return '어제';
-    
-    return date.toLocaleDateString('ko-KR', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+
+    if (diffDays === 0) return "오늘";
+    if (diffDays === 1) return "내일";
+    if (diffDays === -1) return "어제";
+
+    return date.toLocaleDateString("ko-KR", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <AppBar position="static" sx={{ bgcolor: 'white', color: '#333' }} elevation={1}>
+      <AppBar
+        position="static"
+        sx={{ bgcolor: "white", color: "#333" }}
+        elevation={1}
+      >
         <Toolbar>
           <IconButton
             edge="start"
             onClick={() => navigate(-1)}
-            sx={{ mr: 1, color: '#E762A9' }}
+            sx={{ mr: 1, color: "#E762A9" }}
           >
             <ArrowBackIcon />
           </IconButton>
-          <Avatar 
+          <Avatar
             src={roomData.otherUser.avatar}
             sx={{ width: 32, height: 32, mr: 1 }}
           >
@@ -264,8 +391,8 @@ export default function ChatRoom() {
                 size="small"
                 sx={{
                   bgcolor: getStatusColor(roomData.status),
-                  color: 'white',
-                  fontSize: '0.7rem',
+                  color: "white",
+                  fontSize: "0.7rem",
                   height: 18,
                   borderRadius: 2,
                 }}
@@ -276,15 +403,15 @@ export default function ChatRoom() {
                 label={roomData.postCategory}
                 size="small"
                 sx={{
-                  bgcolor: '#E762A9',
-                  color: 'white',
-                  fontSize: '0.6rem',
+                  bgcolor: "#E762A9",
+                  color: "white",
+                  fontSize: "0.6rem",
                   height: 16,
                   borderRadius: 1,
                 }}
               />
               <Box display="flex" alignItems="center" gap={0.5}>
-                <LocationOn sx={{ fontSize: 10, color: '#E762A9' }} />
+                <LocationOn sx={{ fontSize: 10, color: "#E762A9" }} />
                 <Typography variant="caption" color="#E762A9">
                   {roomData.postLocation}
                 </Typography>
@@ -296,7 +423,7 @@ export default function ChatRoom() {
               )}
             </Box>
           </Box>
-          <IconButton onClick={handleMenuOpen} sx={{ color: '#E762A9' }}>
+          <IconButton onClick={handleMenuOpen} sx={{ color: "#E762A9" }}>
             <MoreVertIcon />
           </IconButton>
         </Toolbar>
@@ -308,13 +435,13 @@ export default function ChatRoom() {
         elevation={0}
         sx={{
           p: 2,
-          bgcolor: '#f8f9fa',
-          borderBottom: '1px solid #e8ecef',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          '&:hover': {
-            bgcolor: '#f1f3f5',
-          }
+          bgcolor: "#f8f9fa",
+          borderBottom: "1px solid #e8ecef",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+          "&:hover": {
+            bgcolor: "#f1f3f5",
+          },
         }}
       >
         <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -327,101 +454,119 @@ export default function ChatRoom() {
                   height: 40,
                   borderRadius: 2,
                   backgroundImage: `url(${roomData.postImage})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  flexShrink: 0
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  flexShrink: 0,
                 }}
               />
             )}
-            
+
             <Box flex={1} minWidth={0}>
               {/* 제목과 카테고리 */}
               <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                <Typography variant="subtitle2" fontWeight={600} color="#333" noWrap>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={600}
+                  color="#333"
+                  noWrap
+                >
                   {roomData.postTitle}
                 </Typography>
                 <Chip
                   label={roomData.postCategory}
                   size="small"
                   sx={{
-                    bgcolor: '#E762A9',
-                    color: 'white',
-                    fontSize: '0.7rem',
+                    bgcolor: "#E762A9",
+                    color: "white",
+                    fontSize: "0.7rem",
                     height: 18,
                     borderRadius: 1,
                     fontWeight: 500,
-                    flexShrink: 0
+                    flexShrink: 0,
                   }}
                 />
               </Box>
-              
+
               {/* 핵심 정보 */}
               <Box display="flex" alignItems="center" gap={1.5}>
                 <Box display="flex" alignItems="center" gap={0.5}>
-                  <LocationOn sx={{ fontSize: 14, color: '#E762A9' }} />
-                  <Typography variant="caption" color="#E762A9" fontWeight={500}>
+                  <LocationOn sx={{ fontSize: 14, color: "#E762A9" }} />
+                  <Typography
+                    variant="caption"
+                    color="#E762A9"
+                    fontWeight={500}
+                  >
                     {roomData.venue}
                   </Typography>
                 </Box>
                 {roomData.meetingDate && (
                   <Typography variant="caption" color="text.secondary">
-                    📅 {formatDateTime(roomData.meetingDate)} {new Date(roomData.meetingDate).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    📅 {formatDateTime(roomData.meetingDate)}{" "}
+                    {new Date(roomData.meetingDate).toLocaleTimeString(
+                      "ko-KR",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
                   </Typography>
                 )}
               </Box>
             </Box>
           </Box>
-          
+
           {/* 상태 및 힌트 */}
           <Box display="flex" alignItems="center" gap={1}>
-            <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ opacity: 0.7 }}
+            >
               터치하여 보기
             </Typography>
-            <Typography variant="caption" 
-              sx={{ 
-                bgcolor: roomData.isMyPost ? '#E3F2FD' : '#FFF3E0',
-                color: roomData.isMyPost ? '#1976D2' : '#F57C00',
+            <Typography
+              variant="caption"
+              sx={{
+                bgcolor: roomData.isMyPost ? "#E3F2FD" : "#FFF3E0",
+                color: roomData.isMyPost ? "#1976D2" : "#F57C00",
                 px: 1,
                 py: 0.5,
                 borderRadius: 1,
                 fontWeight: 600,
-                fontSize: '0.65rem'
+                fontSize: "0.65rem",
               }}
             >
-              {roomData.isMyPost ? '내작성' : '참여중'}
+              {roomData.isMyPost ? "내작성" : "참여중"}
             </Typography>
           </Box>
         </Box>
       </Paper>
 
       {/* Messages */}
-      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+      <Box sx={{ flex: 1, overflow: "auto", p: 1 }}>
         <List sx={{ p: 0 }}>
           {messages.map((message) => (
-            <ListItem 
+            <ListItem
               key={message.id}
-              sx={{ 
-                display: 'flex',
-                justifyContent: message.isMe ? 'flex-end' : 'flex-start',
+              sx={{
+                display: "flex",
+                justifyContent: message.isMe ? "flex-end" : "flex-start",
                 mb: 1,
-                px: 1
+                px: 1,
               }}
             >
               <Box
                 sx={{
-                  display: 'flex',
-                  flexDirection: message.isMe ? 'row-reverse' : 'row',
-                  alignItems: 'flex-end',
-                  maxWidth: '70%',
-                  gap: 1
+                  display: "flex",
+                  flexDirection: message.isMe ? "row-reverse" : "row",
+                  alignItems: "flex-end",
+                  maxWidth: "70%",
+                  gap: 1,
                 }}
               >
                 {!message.isMe && (
-                  <Avatar 
-                    src={message.sender.avatar} 
+                  <Avatar
+                    src={message.sender.avatar}
                     sx={{ width: 32, height: 32 }}
                   >
                     {message.sender.name.charAt(0)}
@@ -429,10 +574,10 @@ export default function ChatRoom() {
                 )}
                 <Box>
                   {!message.isMe && (
-                    <Typography 
-                      variant="caption" 
+                    <Typography
+                      variant="caption"
                       color="text.secondary"
-                      sx={{ ml: 1, mb: 0.5, display: 'block' }}
+                      sx={{ ml: 1, mb: 0.5, display: "block" }}
                     >
                       {message.sender.name}
                     </Typography>
@@ -441,26 +586,96 @@ export default function ChatRoom() {
                     elevation={1}
                     sx={{
                       p: 1.5,
-                      backgroundColor: message.isMe ? '#E762A9' : '#f5f5f5',
-                      color: message.isMe ? 'white' : '#333',
+                      backgroundColor: message.isMe ? "#E762A9" : "#f5f5f5",
+                      color: message.isMe ? "white" : "#333",
                       borderRadius: 2,
                       borderTopLeftRadius: message.isMe ? 2 : 0.5,
                       borderTopRightRadius: message.isMe ? 0.5 : 2,
                     }}
                   >
-                    <Typography variant="body2">
-                      {message.text}
-                    </Typography>
+                    {message.type === "text" && (
+                      <Typography variant="body2">{message.text}</Typography>
+                    )}
+                    {message.type === "image" && message.imageUrl && (
+                      <Box>
+                        <img
+                          src={message.imageUrl}
+                          alt="공유 이미지"
+                          style={{
+                            maxWidth: "200px",
+                            maxHeight: "200px",
+                            width: "100%",
+                            height: "auto",
+                            borderRadius: "8px",
+                            objectFit: "cover",
+                          }}
+                        />
+                        <Typography
+                          variant="caption"
+                          sx={{ mt: 1, display: "block", opacity: 0.8 }}
+                        >
+                          {message.text}
+                        </Typography>
+                      </Box>
+                    )}
+                    {message.type === "location" && message.location && (
+                      <Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            p: 1,
+                            bgcolor: message.isMe
+                              ? "rgba(255,255,255,0.1)"
+                              : "rgba(231,98,169,0.1)",
+                            borderRadius: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <LocationOn
+                            sx={{ color: message.isMe ? "white" : "#E762A9" }}
+                          />
+                          <Typography variant="body2" fontWeight={600}>
+                            위치 정보
+                          </Typography>
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontSize: "0.85rem" }}
+                        >
+                          {message.location.address}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            mt: 0.5,
+                            display: "block",
+                            opacity: 0.8,
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                          }}
+                          onClick={() => {
+                            const url = `https://www.google.com/maps?q=${
+                              message.location!.latitude
+                            },${message.location!.longitude}`;
+                            window.open(url, "_blank");
+                          }}
+                        >
+                          지도에서 보기
+                        </Typography>
+                      </Box>
+                    )}
                   </Paper>
-                  <Typography 
-                    variant="caption" 
+                  <Typography
+                    variant="caption"
                     color="text.secondary"
-                    sx={{ 
+                    sx={{
                       ml: message.isMe ? 0 : 1,
                       mr: message.isMe ? 1 : 0,
-                      mt: 0.5, 
-                      display: 'block',
-                      textAlign: message.isMe ? 'right' : 'left'
+                      mt: 0.5,
+                      display: "block",
+                      textAlign: message.isMe ? "right" : "left",
                     }}
                   >
                     {message.timestamp}
@@ -474,76 +689,168 @@ export default function ChatRoom() {
       </Box>
 
       {/* Message Input */}
-      <Paper 
-        elevation={3}
-        sx={{ 
-          p: 1, 
-          display: 'flex', 
-          alignItems: 'flex-end',
-          gap: 1,
-          borderRadius: 0
-        }}
-      >
-        <TextField
-          fullWidth
-          multiline
-          maxRows={4}
-          placeholder="메시지를 입력하세요..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          variant="outlined"
-          size="small"
-          sx={{
-            '& .MuiOutlinedInput-root': {
+      <Box sx={{ position: "relative" }}>
+        {/* 플러스 메뉴 */}
+        {plusMenuOpen && (
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: "100%",
+              left: 8,
+              mb: 1,
+              display: "flex",
+              gap: 1,
+              p: 1,
+              bgcolor: "white",
               borderRadius: 3,
-            }
-          }}
-        />
-        <IconButton 
-          onClick={handleSendMessage}
-          disabled={newMessage.trim() === ""}
+              boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+              border: "1px solid #e0e0e0",
+              animation: "slideUp 0.2s ease-out",
+              "@keyframes slideUp": {
+                from: {
+                  opacity: 0,
+                  transform: "translateY(10px)",
+                },
+                to: {
+                  opacity: 1,
+                  transform: "translateY(0)",
+                },
+              },
+            }}
+          >
+            <IconButton
+              onClick={() => fileInputRef.current?.click()}
+              sx={{
+                bgcolor: "#E762A9",
+                color: "white",
+                "&:hover": { bgcolor: "#D554A0" },
+                width: 48,
+                height: 48,
+              }}
+            >
+              <ImageIcon />
+            </IconButton>
+            <IconButton
+              onClick={handleLocationShare}
+              sx={{
+                bgcolor: "#4CAF50",
+                color: "white",
+                "&:hover": { bgcolor: "#45a049" },
+                width: 48,
+                height: 48,
+              }}
+            >
+              <MyLocationIcon />
+            </IconButton>
+          </Box>
+        )}
+
+        <Paper
+          elevation={3}
           sx={{
-            bgcolor: '#E762A9',
-            color: 'white',
-            '&:hover': {
-              bgcolor: '#D554A0',
-            },
-            '&:disabled': {
-              bgcolor: 'grey.300',
-              color: 'grey.500',
-            }
+            p: 1,
+            display: "flex",
+            alignItems: "flex-end",
+            gap: 1,
+            borderRadius: 0,
           }}
         >
-          <SendIcon />
-        </IconButton>
-      </Paper>
+          <IconButton
+            onClick={() => setPlusMenuOpen(!plusMenuOpen)}
+            sx={{
+              color: "#E762A9",
+              transform: plusMenuOpen ? "rotate(45deg)" : "rotate(0deg)",
+              transition: "transform 0.2s ease",
+            }}
+          >
+            <AddIcon />
+          </IconButton>
+
+          <TextField
+            fullWidth
+            multiline
+            maxRows={4}
+            placeholder="메시지를 입력하세요..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            variant="outlined"
+            size="small"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 3,
+              },
+            }}
+          />
+          <IconButton
+            onClick={handleSendMessage}
+            disabled={newMessage.trim() === ""}
+            sx={{
+              bgcolor: "#E762A9",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#D554A0",
+              },
+              "&:disabled": {
+                bgcolor: "grey.300",
+                color: "grey.500",
+              },
+            }}
+          >
+            <SendIcon />
+          </IconButton>
+        </Paper>
+
+        {/* 숨겨진 파일 입력 */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={handleImageShare}
+        />
+      </Box>
 
       {/* 메뉴 */}
       <Menu
         anchorEl={menuAnchorEl}
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
-        PaperProps={{
-          sx: { borderRadius: 2 }
+        slotProps={{
+          paper: { sx: { borderRadius: 2 } },
         }}
       >
-        <MenuItem 
+        <MenuItem
+          onClick={() => {
+            setLeaveDialogOpen(true);
+            handleMenuClose();
+          }}
+          sx={{ color: "#f44336" }}
+        >
+          <ExitToAppIcon sx={{ mr: 1, fontSize: 20 }} />
+          채팅방 나가기
+        </MenuItem>
+        <MenuItem
           onClick={() => {
             setReportDialogOpen(true);
             handleMenuClose();
           }}
-          sx={{ color: '#ff9800' }}
+          sx={{ color: "#ff9800" }}
         >
           <ReportIcon sx={{ mr: 1, fontSize: 20 }} />
           신고하기
         </MenuItem>
-        <MenuItem 
+        <MenuItem
           onClick={() => {
             setBlockDialogOpen(true);
             handleMenuClose();
           }}
-          sx={{ color: '#f44336' }}
+          sx={{ color: "#f44336" }}
         >
           <BlockIcon sx={{ mr: 1, fontSize: 20 }} />
           차단하기
@@ -551,36 +858,34 @@ export default function ChatRoom() {
       </Menu>
 
       {/* 차단 확인 다이얼로그 */}
-      <Dialog 
-        open={blockDialogOpen} 
+      <Dialog
+        open={blockDialogOpen}
         onClose={() => setBlockDialogOpen(false)}
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
-          사용자 차단
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>사용자 차단</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" mb={2}>
             <strong>{roomData.otherUser.name}</strong>님을 차단하시겠습니까?
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            • 차단된 사용자와는 대화할 수 없습니다<br/>
-            • 차단은 나의 설정에서 해제할 수 있습니다
+            • 차단된 사용자와는 대화할 수 없습니다
+            <br />• 차단은 나의 설정에서 해제할 수 있습니다
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => setBlockDialogOpen(false)}
-            sx={{ color: '#666' }}
+            sx={{ color: "#666" }}
           >
             취소
           </Button>
-          <Button 
-            onClick={handleBlockUser} 
+          <Button
+            onClick={handleBlockUser}
             variant="contained"
-            sx={{ 
-              bgcolor: '#f44336',
-              '&:hover': { bgcolor: '#d32f2f' }
+            sx={{
+              bgcolor: "#f44336",
+              "&:hover": { bgcolor: "#d32f2f" },
             }}
           >
             차단하기
@@ -589,78 +894,148 @@ export default function ChatRoom() {
       </Dialog>
 
       {/* 신고 다이얼로그 */}
-      <Dialog 
-        open={reportDialogOpen} 
+      <Dialog
+        open={reportDialogOpen}
         onClose={() => setReportDialogOpen(false)}
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
-          사용자 신고
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>사용자 신고</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" mb={3}>
-            <strong>{roomData.otherUser.name}</strong>님을 신고하는 이유를 선택해주세요
+            <strong>{roomData.otherUser.name}</strong>님을 신고하는 이유를
+            선택해주세요
           </Typography>
           <FormControl>
             <RadioGroup
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
             >
-              <FormControlLabel 
-                value="spam" 
-                control={<Radio sx={{ color: '#E762A9', '&.Mui-checked': { color: '#E762A9' } }} />} 
-                label="스팸/광고성 메시지" 
+              <FormControlLabel
+                value="spam"
+                control={
+                  <Radio
+                    sx={{
+                      color: "#E762A9",
+                      "&.Mui-checked": { color: "#E762A9" },
+                    }}
+                  />
+                }
+                label="스팸/광고성 메시지"
               />
-              <FormControlLabel 
-                value="harassment" 
-                control={<Radio sx={{ color: '#E762A9', '&.Mui-checked': { color: '#E762A9' } }} />} 
-                label="괴롭힘/욕설" 
+              <FormControlLabel
+                value="harassment"
+                control={
+                  <Radio
+                    sx={{
+                      color: "#E762A9",
+                      "&.Mui-checked": { color: "#E762A9" },
+                    }}
+                  />
+                }
+                label="괴롭힘/욕설"
               />
-              <FormControlLabel 
-                value="inappropriate" 
-                control={<Radio sx={{ color: '#E762A9', '&.Mui-checked': { color: '#E762A9' } }} />} 
-                label="부적절한 내용" 
+              <FormControlLabel
+                value="inappropriate"
+                control={
+                  <Radio
+                    sx={{
+                      color: "#E762A9",
+                      "&.Mui-checked": { color: "#E762A9" },
+                    }}
+                  />
+                }
+                label="부적절한 내용"
               />
-              <FormControlLabel 
-                value="fraud" 
-                control={<Radio sx={{ color: '#E762A9', '&.Mui-checked': { color: '#E762A9' } }} />} 
-                label="사기/허위정보" 
+              <FormControlLabel
+                value="fraud"
+                control={
+                  <Radio
+                    sx={{
+                      color: "#E762A9",
+                      "&.Mui-checked": { color: "#E762A9" },
+                    }}
+                  />
+                }
+                label="사기/허위정보"
               />
-              <FormControlLabel 
-                value="other" 
-                control={<Radio sx={{ color: '#E762A9', '&.Mui-checked': { color: '#E762A9' } }} />} 
-                label="기타" 
+              <FormControlLabel
+                value="other"
+                control={
+                  <Radio
+                    sx={{
+                      color: "#E762A9",
+                      "&.Mui-checked": { color: "#E762A9" },
+                    }}
+                  />
+                }
+                label="기타"
               />
             </RadioGroup>
           </FormControl>
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => {
               setReportDialogOpen(false);
               setReportReason("");
             }}
-            sx={{ color: '#666' }}
+            sx={{ color: "#666" }}
           >
             취소
           </Button>
-          <Button 
+          <Button
             onClick={handleReportUser}
             disabled={!reportReason}
             variant="contained"
-            sx={{ 
-              bgcolor: '#ff9800',
-              '&:hover': { bgcolor: '#f57c00' }
+            sx={{
+              bgcolor: "#ff9800",
+              "&:hover": { bgcolor: "#f57c00" },
             }}
           >
             신고하기
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 채팅방 나가기 확인 다이얼로그 */}
+      <Dialog
+        open={leaveDialogOpen}
+        onClose={() => setLeaveDialogOpen(false)}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>채팅방 나가기</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" color="#f44336" fontWeight={600} mb={2}>
+            채팅방을 나가게 되면 모든 정보는 삭제됩니다.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            • 대화 내용이 모두 삭제됩니다
+            <br />
+            • 상대방과 더 이상 대화할 수 없습니다
+            <br />• 삭제된 정보는 복구할 수 없습니다
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setLeaveDialogOpen(false)}
+            sx={{ color: "#666" }}
+          >
+            취소
+          </Button>
+          <Button
+            onClick={handleLeaveRoom}
+            variant="contained"
+            sx={{
+              bgcolor: "#f44336",
+              "&:hover": { bgcolor: "#d32f2f" },
+            }}
+          >
+            확인
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
-
-

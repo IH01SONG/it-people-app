@@ -5,12 +5,7 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import logoSvg from "../assets/logo.png";
 
 // MUI 컴포넌트
-import {
-  Card,
-  Typography,
-  Box,
-  Button,
-} from "@mui/material";
+import { Card, Typography, Box, Button } from "@mui/material";
 
 // 타입 정의
 import type { Post } from "../types/home.types";
@@ -28,7 +23,12 @@ interface PostCardProps {
  * 게시글 카드 컴포넌트
  * 모임 게시글의 정보를 카드 형태로 표시하고 참여 신청 기능을 제공
  */
-export default function PostCard({ post, onJoinRequest, isApplied = false }: PostCardProps) {
+export default function PostCard({
+  post,
+  onJoinRequest,
+  isApplied = false,
+}: PostCardProps) {
+  console.log(post);
   return (
     <Card
       sx={{
@@ -66,17 +66,18 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
               color="text.secondary"
               fontWeight={600}
             >
-              {post.author}
+              {post.author.name}
             </Typography>
             <span className="text-xs text-gray-400">•</span>
             <Box display="flex" alignItems="center" gap={0.5}>
               <LocationOnIcon sx={{ fontSize: 12, color: "#E91E63" }} />
-              <Typography
-                variant="caption"
-                color="#E91E63"
-                fontWeight={500}
-              >
-                {post.location.address || `${post.location.coordinates[1].toFixed(3)}, ${post.location.coordinates[0].toFixed(3)}`}
+              <Typography variant="caption" color="#E91E63" fontWeight={500}>
+                {typeof post.location === "string"
+                  ? post.location
+                  : post.location.address ||
+                    `${post.location.coordinates?.[1]?.toFixed(
+                      3
+                    )}, ${post.location.coordinates?.[0]?.toFixed(3)}`}
               </Typography>
             </Box>
           </Box>
@@ -86,7 +87,7 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
             >
               {post.category}
             </span>
-            {post.status === 'full' && (
+            {post.status === "full" && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
                 마감
               </span>
@@ -111,7 +112,7 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
         >
           {post.content}
         </Typography>
-        
+
         {/* 태그 표시 */}
         {post.tags && post.tags.length > 0 && (
           <Box display="flex" flexWrap="wrap" gap={0.5} mb={2}>
@@ -126,16 +127,13 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
           </Box>
         )}
 
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-        >
+        <Box display="flex" justifyContent="space-between" alignItems="center">
           <Box display="flex" alignItems="center" gap={2}>
             <Box display="flex" alignItems="center" gap={0.5}>
               <span className="text-xs text-gray-500">인원</span>
               <Typography variant="caption" color="text.secondary">
-                {post.participants.length}/{post.maxParticipants}명
+                {post.participants?.length || post.currentParticipants || 0}/
+                {post.maxParticipants}명
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
@@ -171,14 +169,14 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
               boxShadow: "0 2px 8px rgba(233, 30, 99, 0.3)",
             }}
             startIcon={
-              <img 
-                src={logoSvg} 
-                alt="잇플 로고" 
-                style={{ 
-                  width: "14px", 
+              <img
+                src={logoSvg}
+                alt="잇플 로고"
+                style={{
+                  width: "14px",
                   height: "14px",
-                  filter: "brightness(0) invert(1)"
-                }} 
+                  filter: "brightness(0) invert(1)",
+                }}
               />
             }
           >
