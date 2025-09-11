@@ -10,7 +10,7 @@ import PostCard from "../components/PostCard";
 import SearchModal from "../components/SearchModal";
 import NotificationModal from "../components/NotificationModal";
 import type { Post, Notification, Activity } from "../types/home.types";
-import { api } from "../utils/api";
+import { api } from "../lib/api";
 
 export default function Home() {
   const [searchOpen, setSearchOpen] = useState(false);

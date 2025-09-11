@@ -27,6 +27,9 @@ const LocationPermissionSettings = lazy(() => import("../pages/my/LocationPermis
 const NotificationSettings = lazy(() => import("../pages/my/NotificationSettings"));
 const FindCredentials = lazy(() => import("../pages/FindCredentials"));
 const PlaceDetail = lazy(() => import("../pages/map/PlaceDetail"));
+const ForgotPasswordRequest = lazy(() => import("../pages/ForgotPasswordRequest"));
+const ForgotPasswordVerify = lazy(() => import("../pages/ForgotPasswordVerify"));
+const ResetPassword = lazy(() => import("../pages/ResetPassword"));
 
 
 export default function AppRoutes() {
@@ -145,8 +148,14 @@ export default function AppRoutes() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+          
           {/* Find Credentials page (not protected) */}
           <Route path="/find-credentials" element={<FindCredentials />} />
+          
+          {/* Password Reset Flow (not protected) */}
+          <Route path="/forgot-password" element={<ForgotPasswordRequest />} />
+          <Route path="/forgot-password/verify" element={<ForgotPasswordVerify />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

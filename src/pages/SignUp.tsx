@@ -29,7 +29,7 @@ const SignUp: React.FC = () => {
   const [nameError, setNameError] = useState('');
   const [nicknameError, setNicknameError] = useState('');
   const [dateOfBirthError, setDateOfBirthError] = useState(''); // New state for date of birth error
-  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isEmailChecked, setIsEmailChecked] = useState(false); // isEmailVerified -> isEmailChecked
   const [isNicknameChecked, setIsNicknameChecked] = useState(false);
   const [nicknameCheckLoading, setNicknameCheckLoading] = useState(false);
   const [showAreaSelectionModal, setShowAreaSelectionModal] = useState(false);
@@ -43,8 +43,7 @@ const SignUp: React.FC = () => {
   const validatePassword = (pwd: string) =>
     pwd.length >= 6; // Password must be 6 characters or more
 
-  const handleEmailVerification = () => {
-    // Combine emailUsername and emailDomain to form the full email
+  const handleEmailCheck = async () => { // handleEmailVerification -> handleEmailCheck
     const fullEmail = emailDomain === 'custom' ? `${emailUsername}@${customEmailDomain}` : `${emailUsername}@${emailDomain}`;
     setEmail(fullEmail);
     if (!validateEmail(fullEmail)) {
@@ -52,9 +51,26 @@ const SignUp: React.FC = () => {
       return;
     }
     setEmailError('');
-    alert(`인증 이메일이 ${fullEmail}으로 전송되었습니다.`);
-    setIsEmailVerified(true);
-  };
+
+    try {
+      const response = await api.checkEmail(fullEmail);
+      if (response.isAvailable) { // response.available -> response.isAvailable
+        setIsEmailChecked(true);
+        alert(response.message || '사용 가능한 이메일입니다.'); // response.message 활용
+      } else {
+        setEmailError(response.message || '이미 사용 중인 이메일입니다.'); // response.message 활용
+        setIsEmailChecked(false);
+      }
+    } catch (error: any) {
+      console.error('이메일 중복 확인 실패:', error);
+      const errorMsg = error?.response?.data?.message || 
+                      error?.response?.data?.msg || 
+                      error?.message || 
+                      '이메일 중복 확인 중 오류가 발생했습니다.';
+      setEmailError(errorMsg);
+      setIsEmailChecked(false);
+    }
+  }; // End of handleEmailCheck
 
   const handleNicknameCheck = async () => {
     if (!nickname) {
@@ -71,15 +87,20 @@ const SignUp: React.FC = () => {
     setNicknameError('');
 
     try {
-      const response = await api.checkNickname(nickname);
-      
-      if (response.available) {
-        setIsNicknameChecked(true);
-        alert('사용 가능한 닉네임입니다.');
-      } else {
-        setNicknameError('이미 사용 중인 닉네임입니다.');
-        setIsNicknameChecked(false);
-      }
+      // 백엔드 명세에 닉네임 중복 확인 API가 없으므로 임시로 주석 처리
+      // const response = await api.checkNickname(nickname);
+      // if (response.available) {
+      //   setIsNicknameChecked(true);
+      //   alert('사용 가능한 닉네임입니다.');
+      // } else {
+      //   setNicknameError('이미 사용 중인 닉네임입니다.');
+      //   setIsNicknameChecked(false);
+      // }
+
+      // 닉네임 중복 확인 API가 없으므로 항상 사용 가능하다고 가정 (임시)
+      setIsNicknameChecked(true);
+      alert('사용 가능한 닉네임입니다.');
+
     } catch (error: any) {
       console.error('닉네임 중복 확인 실패:', error);
       const errorMsg = error?.response?.data?.message || 
@@ -95,33 +116,127 @@ const SignUp: React.FC = () => {
 
   const handleSignUp = async () => {
     let isValid = true;
+    const missingFields: string[] = [];
 
     // Combine emailUsername and emailDomain to form the full email for signup
     const fullEmail = emailDomain === 'custom' ? `${emailUsername}@${customEmailDomain}` : `${emailUsername}@${emailDomain}`;
     setEmail(fullEmail);
 
-    if (!emailUsername || !emailDomain || (emailDomain === 'custom' && !customEmailDomain)) { setEmailError('이메일 주소를 입력해주세요.'); isValid = false; }
-    else if (!validateEmail(fullEmail)) { setEmailError('유효한 이메일 주소를 입력해주세요.'); isValid = false; }
-    else if (!isEmailVerified) { setEmailError('이메일 인증을 완료해주세요.'); isValid = false; }
-    else setEmailError('');
+    // 디버깅을 위한 로그
+    console.log('=== 회원가입 폼 상태 ===');
+    console.log('emailUsername:', emailUsername);
+    console.log('emailDomain:', emailDomain);
+    console.log('customEmailDomain:', customEmailDomain);
+    console.log('fullEmail:', fullEmail);
+    console.log('isEmailChecked:', isEmailChecked);
+    console.log('password:', password);
+    console.log('confirmPassword:', confirmPassword);
+    console.log('name:', name);
+    console.log('nickname:', nickname);
+    console.log('isNicknameChecked:', isNicknameChecked);
+    console.log('dateOfBirth:', dateOfBirth);
+    console.log('selectedAutonomousDistrict:', selectedAutonomousDistrict);
+    console.log('selectedGeneralDistrict:', selectedGeneralDistrict);
 
-    if (!password) { setPasswordError('비밀번호를 입력해주세요.'); isValid = false; }
-    else if (!validatePassword(password)) { setPasswordError('비밀번호는 6자 이상이어야 합니다.'); isValid = false; }
-    else setPasswordError('');
+    // 이메일 검증
+    if (!emailUsername || !emailDomain || (emailDomain === 'custom' && !customEmailDomain)) { 
+      console.log('❌ 이메일 입력 누락');
+      setEmailError('이메일 주소를 입력해주세요.'); 
+      isValid = false; 
+      missingFields.push('이메일');
+    }
+    else if (!validateEmail(fullEmail)) { 
+      console.log('❌ 이메일 형식 오류');
+      setEmailError('유효한 이메일 주소를 입력해주세요.'); 
+      isValid = false; 
+    }
+    else if (!isEmailChecked) { 
+      console.log('❌ 이메일 중복 확인 미완료');
+      setEmailError('이메일 중복 확인을 완료해주세요.'); 
+      isValid = false; 
+      missingFields.push('이메일 중복 확인');
+    }
+    else {
+      console.log('✅ 이메일 검증 통과');
+      setEmailError('');
+    }
 
-    if (!confirmPassword) { setConfirmPasswordError('비밀번호를 재입력해주세요.'); isValid = false; }
-    else if (password !== confirmPassword) { setConfirmPasswordError('비밀번호가 일치하지 않습니다.'); isValid = false; }
-    else setConfirmPasswordError('');
+    // 비밀번호 검증
+    if (!password) { 
+      console.log('❌ 비밀번호 입력 누락');
+      setPasswordError('비밀번호를 입력해주세요.'); 
+      isValid = false; 
+      missingFields.push('비밀번호');
+    }
+    else if (!validatePassword(password)) { 
+      console.log('❌ 비밀번호 길이 부족');
+      setPasswordError('비밀번호는 6자 이상이어야 합니다.'); 
+      isValid = false; 
+    }
+    else {
+      console.log('✅ 비밀번호 검증 통과');
+      setPasswordError('');
+    }
 
-    if (!name) { setNameError('이름을 입력해주세요.'); isValid = false; }
-    else setNameError('');
+    // 비밀번호 확인 검증
+    if (!confirmPassword) { 
+      console.log('❌ 비밀번호 확인 입력 누락');
+      setConfirmPasswordError('비밀번호를 재입력해주세요.'); 
+      isValid = false; 
+      missingFields.push('비밀번호 확인');
+    }
+    else if (password !== confirmPassword) { 
+      console.log('❌ 비밀번호 불일치');
+      setConfirmPasswordError('비밀번호가 일치하지 않습니다.'); 
+      isValid = false; 
+    }
+    else {
+      console.log('✅ 비밀번호 확인 검증 통과');
+      setConfirmPasswordError('');
+    }
 
-    if (!nickname) { setNicknameError('닉네임을 입력해주세요.'); isValid = false; }
-    else if (nickname.length < 2 || nickname.length > 20) { setNicknameError('닉네임은 2자 이상 20자 이하이어야 합니다.'); isValid = false; }
-    else if (!isNicknameChecked) { setNicknameError('닉네임 중복 확인을 완료해주세요.'); isValid = false; }
-    else setNicknameError('');
+    // 이름 검증
+    if (!name) { 
+      console.log('❌ 이름 입력 누락');
+      setNameError('이름을 입력해주세요.'); 
+      isValid = false; 
+      missingFields.push('이름');
+    }
+    else {
+      console.log('✅ 이름 검증 통과');
+      setNameError('');
+    }
 
-    if (!dateOfBirth) { setDateOfBirthError('생년월일을 입력해주세요.'); isValid = false; }
+    // 닉네임 검증
+    if (!nickname) { 
+      console.log('❌ 닉네임 입력 누락');
+      setNicknameError('닉네임을 입력해주세요.'); 
+      isValid = false; 
+      missingFields.push('닉네임');
+    }
+    else if (nickname.length < 2 || nickname.length > 20) { 
+      console.log('❌ 닉네임 길이 오류');
+      setNicknameError('닉네임은 2자 이상 20자 이하이어야 합니다.'); 
+      isValid = false; 
+    }
+    else if (!isNicknameChecked) { 
+      console.log('❌ 닉네임 중복 확인 미완료');
+      setNicknameError('닉네임 중복 확인을 완료해주세요.'); 
+      isValid = false; 
+      missingFields.push('닉네임 중복 확인');
+    }
+    else {
+      console.log('✅ 닉네임 검증 통과');
+      setNicknameError('');
+    }
+
+    // 생년월일 검증
+    if (!dateOfBirth) { 
+      console.log('❌ 생년월일 입력 누락');
+      setDateOfBirthError('생년월일을 입력해주세요.'); 
+      isValid = false; 
+      missingFields.push('생년월일');
+    }
     else {
       const today = new Date();
       const birthDate = new Date(dateOfBirth);
@@ -130,28 +245,65 @@ const SignUp: React.FC = () => {
       if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      if (age < 14) { setDateOfBirthError('만 14세 이상만 가입할 수 있습니다.'); isValid = false; }
-      else setDateOfBirthError('');
+      if (age < 14) { 
+        console.log('❌ 나이 제한 (14세 미만)');
+        setDateOfBirthError('만 14세 이상만 가입할 수 있습니다.'); 
+        isValid = false; 
+      }
+      else {
+        console.log('✅ 생년월일 검증 통과');
+        setDateOfBirthError('');
+      }
     }
 
+    // 활동 지역 선택 검증
+    if (!selectedAutonomousDistrict || !selectedGeneralDistrict) {
+      console.log('❌ 활동 지역 선택 누락');
+      alert('활동 지역을 선택해주세요.');
+      setShowAreaSelectionModal(true);
+      return;
+    }
+    else {
+      console.log('✅ 활동 지역 검증 통과');
+    }
+
+    console.log('=== 최종 검증 결과 ===');
+    console.log('isValid:', isValid);
+    console.log('missingFields:', missingFields);
+
     if (!isValid) {
-      alert('입력한 정보를 다시 확인해주세요.');
+      const errorMessage = missingFields.length > 0 
+        ? `다음 항목을 확인해주세요: ${missingFields.join(', ')}`
+        : '입력한 정보를 다시 확인해주세요.';
+      console.log('에러 메시지:', errorMessage);
+      alert(errorMessage);
       return;
     }
 
     try {
-      // ✅ 서버가 기대하는 키에 맞춰 매핑 (dateOfBirth -> birth)
+      // ✅ 백엔드 API 명세에 맞춘 payload
       const payload = {
         email,
         password,
         name,
-        birth: dateOfBirth,
-        nickname, // 서버가 받으면 저장, 아니면 무시
-        // 선택사항: 지역도 서버가 받는다면 아래 포함
-        // autonomousDistrict: selectedAutonomousDistrict,
-        // generalDistrict: selectedGeneralDistrict,
+        birthDate: dateOfBirth, // birth 대신 birthDate 사용
+        nickname,
+        activityRegion: {
+          city: selectedAutonomousDistrict || '',
+          district: selectedGeneralDistrict || '',
+          fullAddress: `${selectedAutonomousDistrict || ''} ${selectedGeneralDistrict || ''}`.trim()
+        }
       };
 
+      console.log('=== API 명세에 맞춘 payload ===');
+      console.log('email:', email, typeof email);
+      console.log('password:', password, typeof password);
+      console.log('name:', name, typeof name);
+      console.log('birthDate:', dateOfBirth, typeof dateOfBirth);
+      console.log('nickname:', nickname, typeof nickname);
+      console.log('activityRegion:', payload.activityRegion);
+      console.log('전체 payload:', JSON.stringify(payload, null, 2));
+      
       await api.signup(payload as any);
       // 회원가입 성공
       alert('회원가입이 완료되었습니다.');
@@ -164,12 +316,25 @@ const SignUp: React.FC = () => {
       // 기본: 로그인 페이지로 이동
       navigate('/login', { replace: true });
     } catch (error: any) {
+      console.error('=== 회원가입 에러 상세 ===');
+      console.error('에러 객체:', error);
+      console.error('에러 상태 코드:', error?.response?.status);
+      console.error('에러 상태 텍스트:', error?.response?.statusText);
+      console.error('서버 응답 헤더:', error?.response?.headers);
+      console.error('서버 응답 데이터:', error?.response?.data);
+      console.error('요청 URL:', error?.config?.url);
+      console.error('요청 메서드:', error?.config?.method);
+      console.error('요청 헤더:', error?.config?.headers);
+      console.error('요청 데이터:', error?.config?.data);
+      
       const serverMsg =
         error?.response?.data?.message ||
         error?.response?.data?.msg ||
         error?.message ||
         '회원가입 중 오류가 발생했습니다.';
-      alert(serverMsg);
+      
+      console.log('표시할 에러 메시지:', serverMsg);
+      alert(`서버 에러 (${error?.response?.status}): ${serverMsg}`);
     }
   };
 
@@ -248,8 +413,8 @@ const SignUp: React.FC = () => {
           {emailError && (
             <Typography color="error" variant="body2">{emailError}</Typography>
           )}
-          <Button variant="contained" color="primary" onClick={handleEmailVerification} disabled={isEmailVerified} sx={{ whiteSpace: 'nowrap', px: 2 }}>
-            {isEmailVerified ? '인증 완료' : '이메일 인증'}
+          <Button variant="contained" color="primary" onClick={handleEmailCheck} disabled={isEmailChecked} sx={{ whiteSpace: 'nowrap', px: 2 }}>
+            {isEmailChecked ? '확인 완료' : '이메일 중복 확인'}
           </Button>
 
           <Button variant="outlined" color="primary" fullWidth onClick={() => setShowAreaSelectionModal(true)} sx={{ mt: 2, mb: 1 }}>

@@ -40,7 +40,7 @@ const FindCredentials: React.FC = () => {
   const navigate = useNavigate();
   const [value, setValue] = useState(0); // State for tab selection
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
 
@@ -53,6 +53,10 @@ const FindCredentials: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [resetPwStep, setResetPwStep] = useState<'email' | 'verify' | 'new-password'>('email');
+  
+  // 비밀번호 검증을 위한 상태
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   const handleFindId = () => {
     if (!findIdName || !findIdDob) {
@@ -84,15 +88,62 @@ const FindCredentials: React.FC = () => {
     }
   };
 
+  const validatePassword = (password: string) => {
+    // 비밀번호는 8자 이상, 문자, 숫자, 특수문자 포함
+    const hasMinLength = password.length >= 8;
+    const hasLetter = /[a-zA-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    return hasMinLength && hasLetter && hasNumber && hasSpecialChar;
+  };
+
+  const handlePasswordChange = (password: string) => {
+    setNewPassword(password);
+    if (password && !validatePassword(password)) {
+      setPasswordError('비밀번호는 8자 이상, 문자, 숫자, 특수문자를 포함해야 합니다.');
+    } else {
+      setPasswordError('');
+    }
+  };
+
+  const handleConfirmPasswordChange = (confirmPassword: string) => {
+    setConfirmNewPassword(confirmPassword);
+    if (confirmPassword && newPassword !== confirmPassword) {
+      setConfirmPasswordError('비밀번호가 일치하지 않습니다.');
+    } else {
+      setConfirmPasswordError('');
+    }
+  };
+
   const handleResetPassword = () => {
-    if (newPassword !== confirmNewPassword) {
-      alert('새 비밀번호가 일치하지 않습니다.');
+    let isValid = true;
+
+    if (!newPassword) {
+      setPasswordError('새 비밀번호를 입력해주세요.');
+      isValid = false;
+    } else if (!validatePassword(newPassword)) {
+      setPasswordError('비밀번호는 8자 이상, 문자, 숫자, 특수문자를 포함해야 합니다.');
+      isValid = false;
+    } else {
+      setPasswordError('');
+    }
+
+    if (!confirmNewPassword) {
+      setConfirmPasswordError('비밀번호 확인을 입력해주세요.');
+      isValid = false;
+    } else if (newPassword !== confirmNewPassword) {
+      setConfirmPasswordError('비밀번호가 일치하지 않습니다.');
+      isValid = false;
+    } else {
+      setConfirmPasswordError('');
+    }
+
+    if (!isValid) {
+      alert('입력한 정보를 다시 확인해주세요.');
       return;
     }
-    if (!newPassword || newPassword.length < 8) {
-      alert('새 비밀번호는 8자 이상이어야 합니다.');
-      return;
-    }
+
     alert('비밀번호가 성공적으로 재설정되었습니다.');
     setNewPassword('');
     setConfirmNewPassword('');
@@ -103,7 +154,16 @@ const FindCredentials: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', p: 2, display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ 
+        bgcolor: 'primary.main', 
+        color: 'primary.contrastText', 
+        p: 2, 
+        display: 'flex', 
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: { xs: '100%', sm: '600px' },
+        mx: 'auto'
+      }}>
         <IconButton onClick={() => navigate(-1)} color="inherit">
           <ArrowBackIcon />
         </IconButton>
@@ -183,13 +243,19 @@ const FindCredentials: React.FC = () => {
 
           {resetPwStep === 'new-password' && (
             <>
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
+                새로운 비밀번호를 설정해주세요.
+              </Typography>
               <TextField
                 label="새 비밀번호 (문자, 숫자, 특수문자 포함 8~20자)"
                 variant="outlined"
                 fullWidth
                 type="password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(e) => handlePasswordChange(e.target.value)}
+                error={!!passwordError}
+                helperText={passwordError}
+                sx={{ mb: 2 }}
               />
               <TextField
                 label="새 비밀번호 확인"
@@ -197,10 +263,22 @@ const FindCredentials: React.FC = () => {
                 fullWidth
                 type="password"
                 value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                onChange={(e) => handleConfirmPasswordChange(e.target.value)}
+                error={!!confirmPasswordError}
+                helperText={confirmPasswordError}
+                sx={{ mb: 2 }}
               />
-              <Button variant="contained" fullWidth onClick={handleResetPassword}>
-                저장
+              <Button 
+                variant="contained" 
+                fullWidth 
+                onClick={handleResetPassword}
+                sx={{ 
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                비밀번호 재설정
               </Button>
             </>
           )}

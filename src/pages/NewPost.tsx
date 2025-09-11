@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 
 // 로고 이미지
 import logoSvg from "../assets/logo.png";
-import { api } from "../utils/api";
+import { api } from "../lib/api";
 
 export default function NewPost() {
   const navigate = useNavigate();
