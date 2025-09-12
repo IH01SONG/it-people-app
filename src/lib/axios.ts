@@ -9,6 +9,15 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// 토큰을 즉시 설정할 수 있는 함수 추가
+export const setAuthToken = (token: string | null) => {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common['Authorization'];
+  }
+};
+
 api.interceptors.request.use((cfg) => {
   const t = localStorage.getItem("access_token");
   if (t) {

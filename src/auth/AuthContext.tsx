@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
+import { setAuthToken } from '../lib/axios';
 import { createSocket } from '../lib/socket';
 
 type User = { id: string; email: string; name?: string };
@@ -22,6 +23,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = localStorage.getItem('access_token');
     if (!token) return;
 
+    // 토큰을 axios 헤더에 즉시 설정
+    setAuthToken(token);
+
     api.getMe()
       .then((me: User) => {
         setUser(me);
@@ -32,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         localStorage.removeItem('access_token');
+        setAuthToken(null);
         setUser(null);
       });
   }, []);
@@ -39,6 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     const { token } = await api.login(email, password);
     localStorage.setItem('access_token', token);
+    
+    // 토큰을 axios 헤더에 즉시 설정
+    setAuthToken(token);
+    
     const me = await api.getMe();
     setUser(me);
 
@@ -49,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('access_token');
+    setAuthToken(null);
     setUser(null);
     socketRef.current?.disconnect();
   };

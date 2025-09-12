@@ -22,12 +22,8 @@ export default function Login() {
 
   const handleLogin = async () => {
     try {
-      // ✅ 컨텍스트가 우리 버전( login(email, password) )이라면:
-      // await login(email, password);
-
-      // 🔁 만약 컨텍스트가 없거나 시그니처가 다르면, 아래 대체 코드 사용:
-      const { token } = await api.login(email, password);
-      localStorage.setItem('access_token', token);
+      // AuthContext의 login 함수 사용 (토큰 설정과 인증 상태 업데이트를 한번에 처리)
+      await login(email, password);
 
       const to = location?.state?.from?.pathname ?? "/";
       navigate(to, { replace: true });
