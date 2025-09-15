@@ -35,6 +35,7 @@ export default function Map() {
   // 카카오 맵 SDK 로더
   const [mapLoading, mapError] = useKakaoLoader({
     appkey: import.meta.env.VITE_KAKAO_MAP_API_KEY || "0c537754f8fad9d1b779befd5d75dc07",
+    libraries: ["services"], // 필요한 라이브러리 명시적 지정
   });
 
   const [center, setCenter] = useState({
