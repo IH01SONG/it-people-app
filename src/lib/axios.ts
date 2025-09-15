@@ -33,6 +33,19 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     console.error("[API ERROR]", err?.response?.status, err?.response?.data || err.message);
+    
+    // 401 Unauthorized 에러 처리
+    if (err?.response?.status === 401) {
+      // 토큰이 유효하지 않은 경우 localStorage에서 제거
+      localStorage.removeItem('access_token');
+      delete api.defaults.headers.common['Authorization'];
+      
+      // 현재 페이지가 보호된 라우트인 경우에만 로그인 페이지로 리다이렉트
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+        window.location.href = '/login';
+      }
+    }
+    
     return Promise.reject(err);
   }
 );
