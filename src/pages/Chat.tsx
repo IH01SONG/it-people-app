@@ -1,7 +1,10 @@
-import { Box, Typography, List, ListItem, ListItemButton, ListItemAvatar, ListItemText, Avatar, Badge, Card, Chip } from "@mui/material";
-import { ChatBubbleOutline, LocationOn } from "@mui/icons-material";
+import { Box, Typography, Avatar, Badge, Card, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
+import { ChatBubbleOutline, LocationOn, MoreVert, Block, Person } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import AppHeader from "../components/AppHeader";
+import { useBlockUser } from "../contexts/BlockUserContext";
+import UserProfileModal from "../components/UserProfileModal";
 
 interface ItplChat {
   id: string;
@@ -71,9 +74,64 @@ const mockItplChats: ItplChat[] = [
 
 export default function Chat() {
   const navigate = useNavigate();
+  const { isUserBlocked, blockUser, unblockUser } = useBlockUser();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedUser, setSelectedUser] = useState<{id: string, name: string, email?: string} | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
 
   const handleChatClick = (chatId: string) => {
     navigate(`/chat/room/${chatId}`);
+  };
+
+  const handleUserClick = (event: React.MouseEvent<HTMLElement>, user: {id: string, name: string, email?: string}) => {
+    event.stopPropagation();
+    setSelectedUser(user);
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedUser(null);
+  };
+
+  const handleShowProfile = () => {
+    setShowProfileModal(true);
+    handleMenuClose();
+  };
+
+  const handleBlockUser = async () => {
+    if (!selectedUser) return;
+    
+    if (window.confirm(`${selectedUser.name} 사용자를 차단하시겠습니까?`)) {
+      setIsBlocking(true);
+      try {
+        await blockUser(selectedUser.id, selectedUser.name, selectedUser.email);
+        alert(`${selectedUser.name} 사용자가 차단되었습니다.`);
+      } catch (error) {
+        alert('사용자 차단에 실패했습니다.');
+      } finally {
+        setIsBlocking(false);
+        handleMenuClose();
+      }
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!selectedUser) return;
+    
+    if (window.confirm(`${selectedUser.name} 사용자의 차단을 해제하시겠습니까?`)) {
+      setIsBlocking(true);
+      try {
+        await unblockUser(selectedUser.id);
+        alert(`${selectedUser.name} 사용자의 차단이 해제되었습니다.`);
+      } catch (error) {
+        alert('차단 해제에 실패했습니다.');
+      } finally {
+        setIsBlocking(false);
+        handleMenuClose();
+      }
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -219,12 +277,34 @@ export default function Chat() {
                     </Avatar>
                     <Box flex={1}>
                       <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
-                        <Typography variant="subtitle2" fontWeight={600} color="#333">
-                          {chat.otherUser.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {chat.lastMessageTime}
-                        </Typography>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Typography 
+                            variant="subtitle2" 
+                            fontWeight={600} 
+                            color="#333"
+                            sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                            onClick={(e) => handleUserClick(e, chat.otherUser)}
+                          >
+                            {chat.otherUser.name}
+                          </Typography>
+                          {isUserBlocked(chat.otherUser.id) && (
+                            <Typography variant="caption" color="error.main" fontWeight={500}>
+                              (차단됨)
+                            </Typography>
+                          )}
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Typography variant="caption" color="text.secondary">
+                            {chat.lastMessageTime}
+                          </Typography>
+                          <IconButton 
+                            size="small" 
+                            onClick={(e) => handleUserClick(e, chat.otherUser)}
+                            sx={{ p: 0.5 }}
+                          >
+                            <MoreVert fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </Box>
                       <Typography 
                         variant="body2" 
@@ -244,6 +324,50 @@ export default function Chat() {
             ))}
           </div>
         )}
+
+        {/* 사용자 메뉴 */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+        >
+          <MenuItem onClick={handleShowProfile}>
+            <ListItemIcon>
+              <Person />
+            </ListItemIcon>
+            <ListItemText>프로필 보기</ListItemText>
+          </MenuItem>
+          {selectedUser && isUserBlocked(selectedUser.id) ? (
+            <MenuItem onClick={handleUnblockUser} disabled={isBlocking}>
+              <ListItemIcon>
+                <Person color="success" />
+              </ListItemIcon>
+              <ListItemText>차단 해제</ListItemText>
+            </MenuItem>
+          ) : (
+            <MenuItem onClick={handleBlockUser} disabled={isBlocking}>
+              <ListItemIcon>
+                <Block color="error" />
+              </ListItemIcon>
+              <ListItemText>사용자 차단</ListItemText>
+            </MenuItem>
+          )}
+        </Menu>
+
+        {/* 사용자 프로필 모달 */}
+        <UserProfileModal
+          open={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          user={selectedUser}
+        />
       </div>
     </div>
   );

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Collapse, List, ListItem, ListItemText, CircularProgress, Alert } from "@mui/material";
+import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Collapse, List, ListItem, ListItemText, CircularProgress, Alert, Avatar } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BlockIcon from '@mui/icons-material/Block';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { api } from '../../lib/api';
+import UserSearchModal from '../../components/UserSearchModal';
 
 const theme = createTheme({
   palette: {
@@ -33,8 +35,8 @@ const myItpleData = [
 ];
 
 const blockedUsersData = [
-  { id: 1, name: '차단 사용자 1' },
-  { id: 2, name: '차단 사용자 2' },
+  { id: '1', name: '차단 사용자 1', email: 'blocked1@example.com' },
+  { id: '2', name: '차단 사용자 2', email: 'blocked2@example.com' },
 ];
 
 const MyActivity: React.FC = () => {
@@ -42,9 +44,10 @@ const MyActivity: React.FC = () => {
   const [openMyItple, setOpenMyItple] = useState(false);
   const [openParticipatedItple, setOpenParticipatedItple] = useState(false);
   const [openBlockedUsers, setOpenBlockedUsers] = useState(false);
+  const [showUserSearchModal, setShowUserSearchModal] = useState(false);
   
   // 차단 사용자 목록을 state로 관리
-  const [blockedUsers, setBlockedUsers] = useState<Array<{id: number, name: string}>>([]);
+  const [blockedUsers, setBlockedUsers] = useState<Array<{id: string, name: string, email: string}>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +83,7 @@ const MyActivity: React.FC = () => {
   };
 
   // 차단 해제 처리
-  const handleUnblockUser = async (id: number, name: string) => {
+  const handleUnblockUser = async (id: string, name: string) => {
     if (window.confirm(`${name} 사용자의 차단을 해제하시겠습니까?`)) {
       setLoading(true);
       setError(null);
@@ -96,6 +99,14 @@ const MyActivity: React.FC = () => {
         setLoading(false);
       }
     }
+  };
+
+  // 사용자 차단 처리
+  const handleUserBlock = (userId: string, userName: string) => {
+    // 차단된 사용자를 목록에 추가
+    setBlockedUsers(prev => [...prev, { id: userId, name: userName, email: '' }]);
+    // 차단 사용자 목록을 열어서 새로 추가된 사용자를 보여줌
+    setOpenBlockedUsers(true);
   };
 
   // 컴포넌트 마운트 시 차단 사용자 목록 로드
@@ -227,25 +238,43 @@ const MyActivity: React.FC = () => {
             </Collapse>
 
             {/* 차단 사용자 목록 */}
-            <Button
-              variant="contained"
-              fullWidth
-              className="py-5 text-2xl font-semibold justify-between"
-              onClick={() => setOpenBlockedUsers(!openBlockedUsers)}
-              endIcon={openBlockedUsers ? <ExpandMoreIcon /> : <ChevronRightIcon />}
-              sx={{
-                backgroundColor: theme.palette.primary.main,
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: 2,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.dark,
-                  boxShadow: 4,
-                },
-              }}
-            >
-              <Typography variant="inherit" className="text-left flex-grow text-white">차단 사용자 목록</Typography>
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button
+                variant="contained"
+                fullWidth
+                className="py-5 text-2xl font-semibold justify-between"
+                onClick={() => setOpenBlockedUsers(!openBlockedUsers)}
+                endIcon={openBlockedUsers ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  color: 'white',
+                  borderRadius: 3,
+                  boxShadow: 2,
+                  '&:hover': {
+                    backgroundColor: theme.palette.primary.dark,
+                    boxShadow: 4,
+                  },
+                }}
+              >
+                <Typography variant="inherit" className="text-left flex-grow text-white">차단 사용자 목록</Typography>
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setShowUserSearchModal(true)}
+                sx={{
+                  minWidth: 'auto',
+                  px: 2,
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main,
+                  '&:hover': {
+                    backgroundColor: theme.palette.primary.main,
+                    color: 'white',
+                  },
+                }}
+              >
+                <PersonAddIcon />
+              </Button>
+            </Box>
             <Collapse in={openBlockedUsers} timeout="auto" unmountOnExit>
               <List component="div" disablePadding className="bg-gray-50 rounded-md shadow-inner w-full">
                 {loading && (
@@ -271,12 +300,22 @@ const MyActivity: React.FC = () => {
                 )}
                 {!loading && blockedUsers.map((user) => (
                   <ListItem key={user.id} className="border-b border-gray-200 last:border-b-0">
+                    <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                      {user.name.charAt(0)}
+                    </Avatar>
                     <ListItemText 
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Typography variant="body1" className="font-semibold">
-                            {user.name}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body1" className="font-semibold">
+                              {user.name}
+                            </Typography>
+                            {user.email && (
+                              <Typography variant="body2" color="text.secondary">
+                                {user.email}
+                              </Typography>
+                            )}
+                          </Box>
                           <IconButton
                             size="small"
                             onClick={() => handleUnblockUser(user.id, user.name)}
@@ -303,6 +342,13 @@ const MyActivity: React.FC = () => {
           </Stack>
         </Box>
       </Box>
+
+      {/* 사용자 검색 모달 */}
+      <UserSearchModal
+        open={showUserSearchModal}
+        onClose={() => setShowUserSearchModal(false)}
+        onUserBlock={handleUserBlock}
+      />
     </ThemeProvider>
   );
 };

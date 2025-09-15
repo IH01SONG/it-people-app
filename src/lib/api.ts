@@ -17,8 +17,9 @@ export const api = {
   getMe: () => axios.get('/auth/me').then(r => r.data),
 
   // 차단 사용자 관련 API
-  getBlockedUsers: () => axios.get('/users/blocked').then(r => r.data),
-  unblockUser: (userId: number) => axios.delete(`/users/blocked/${userId}`).then(r => r.data),
+  getBlockedUsers: () => axios.get('/users/me/blocked').then(r => r.data),
+  blockUser: (userId: string) => axios.post(`/users/block/${userId}`).then(r => r.data),
+  unblockUser: (userId: string) => axios.delete(`/users/block/${userId}`).then(r => r.data),
 
   // 이메일 중복 확인 API (기존 닉네임 중복 확인에서 변경)
   checkEmail: (email: string) => axios.post('/auth/check-email', { email }).then(r => r.data as { isAvailable: boolean; isValid: boolean; message: string; }),

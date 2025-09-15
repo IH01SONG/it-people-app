@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Avatar, TextField } from "@mui/material";
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import EditIcon from '@mui/icons-material/Edit';
+import { useAuth } from '../auth/AuthContext';
 
 const theme = createTheme({
   palette: {
@@ -22,7 +23,8 @@ const theme = createTheme({
 });
 
 const My: React.FC = () => {
-  const [nickname, setNickname] = useState('사용자 닉네임');
+  const { user, logout } = useAuth();
+  const [nickname, setNickname] = useState(user?.name || '사용자 닉네임');
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null); // State for profile image
   const navigate = useNavigate();
@@ -41,6 +43,13 @@ const My: React.FC = () => {
     setIsEditingNickname(false);
     alert('닉네임 저장됨: ' + nickname);
     // Implement logic to save nickname
+  };
+
+  const handleLogout = () => {
+    if (window.confirm('로그아웃 하시겠습니까?')) {
+      logout();
+      navigate('/');
+    }
   };
 
   return (
@@ -81,10 +90,13 @@ const My: React.FC = () => {
             </IconButton>
           </Box>
 
-          {/* Nickname Section */}
-          <Box className="flex items-center mb-10">
+          {/* User Info Section */}
+          <Box className="flex flex-col items-center mb-10">
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+              {user?.email}
+            </Typography>
             {isEditingNickname ? (
-              <>
+              <Box className="flex items-center">
                 <TextField
                   variant="outlined"
                   value={nickname}
@@ -100,16 +112,16 @@ const My: React.FC = () => {
                 >
                   저장
                 </Button>
-              </>
+              </Box>
             ) : (
-              <Typography variant="h4" className="font-bold mr-2" onClick={handleNicknameEdit} sx={{ cursor: 'pointer' }}>
-                {nickname}
-              </Typography>
-            )}
-            {!isEditingNickname && (
-              <IconButton size="small" onClick={handleNicknameEdit}>
-                <EditIcon />
-              </IconButton>
+              <Box className="flex items-center">
+                <Typography variant="h4" className="font-bold mr-2" onClick={handleNicknameEdit} sx={{ cursor: 'pointer' }}>
+                  {nickname}
+                </Typography>
+                <IconButton size="small" onClick={handleNicknameEdit}>
+                  <EditIcon />
+                </IconButton>
+              </Box>
             )}
           </Box>
 
@@ -186,6 +198,25 @@ const My: React.FC = () => {
               }}
             >
               계정관리
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              className="py-5 text-2xl font-semibold"
+              onClick={handleLogout}
+              sx={{
+                borderColor: theme.palette.primary.main,
+                color: theme.palette.primary.main,
+                borderRadius: 3,
+                boxShadow: 1,
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.main,
+                  color: 'white',
+                  boxShadow: 2,
+                },
+              }}
+            >
+              로그아웃
             </Button>
           </Stack>
         </Box>

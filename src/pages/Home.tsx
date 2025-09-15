@@ -237,6 +237,11 @@ export default function Home() {
     }
   };
 
+  const handleUserBlock = (userId: string, userName: string) => {
+    console.log("사용자 차단됨:", userId, userName);
+    // 차단된 사용자의 게시글을 필터링하거나 UI 업데이트
+  };
+
 
   return (
     <div className="w-full max-w-md mx-auto bg-white min-h-screen">
@@ -274,6 +279,7 @@ export default function Home() {
                 post={post} 
                 onJoinRequest={handleJoinRequest}
                 isApplied={appliedPosts.has(post.id)}
+                onUserBlock={handleUserBlock}
               />
             </div>
           ))}

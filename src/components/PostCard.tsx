@@ -1,5 +1,6 @@
 // MUI 아이콘
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 
 // 로고 이미지
 import logoSvg from "../assets/logo.png";
@@ -10,10 +11,21 @@ import {
   Typography,
   Box,
   Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Avatar,
 } from "@mui/material";
+import BlockIcon from "@mui/icons-material/Block";
+import PersonIcon from "@mui/icons-material/Person";
 
 // 타입 정의
 import type { Post } from "../types/home.types";
+import { useState } from "react";
+import { useBlockUser } from "../contexts/BlockUserContext";
+import UserProfileModal from "./UserProfileModal";
 
 /**
  * PostCard 컴포넌트 Props 정의
@@ -22,13 +34,66 @@ interface PostCardProps {
   post: Post; // 게시글 데이터
   onJoinRequest: (postId: string) => void; // 참여 신청 콜백
   isApplied?: boolean; // 신청 상태
+  onUserBlock?: (userId: string, userName: string) => void; // 사용자 차단 콜백
 }
 
 /**
  * 게시글 카드 컴포넌트
  * 모임 게시글의 정보를 카드 형태로 표시하고 참여 신청 기능을 제공
  */
-export default function PostCard({ post, onJoinRequest, isApplied = false }: PostCardProps) {
+export default function PostCard({ post, onJoinRequest, isApplied = false, onUserBlock }: PostCardProps) {
+  const { isUserBlocked, blockUser, unblockUser } = useBlockUser();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
+
+  const isBlocked = isUserBlocked(post.authorId);
+  const menuOpen = Boolean(anchorEl);
+
+  const handleAuthorClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleShowProfile = () => {
+    setShowProfileModal(true);
+    handleMenuClose();
+  };
+
+  const handleBlockUser = async () => {
+    if (window.confirm(`${post.author} 사용자를 차단하시겠습니까?`)) {
+      setIsBlocking(true);
+      try {
+        await blockUser(post.authorId, post.author);
+        onUserBlock?.(post.authorId, post.author);
+        alert(`${post.author} 사용자가 차단되었습니다.`);
+      } catch (error) {
+        alert('사용자 차단에 실패했습니다.');
+      } finally {
+        setIsBlocking(false);
+        handleMenuClose();
+      }
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (window.confirm(`${post.author} 사용자의 차단을 해제하시겠습니까?`)) {
+      setIsBlocking(true);
+      try {
+        await unblockUser(post.authorId);
+        alert(`${post.author} 사용자의 차단이 해제되었습니다.`);
+      } catch (error) {
+        alert('차단 해제에 실패했습니다.');
+      } finally {
+        setIsBlocking(false);
+        handleMenuClose();
+      }
+    }
+  };
   return (
     <Card
       sx={{
@@ -61,13 +126,25 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
           mb={2}
         >
           <Box display="flex" alignItems="center" gap={1}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              fontWeight={600}
-            >
-              {post.author}
-            </Typography>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.75rem' }}>
+                {post.author.charAt(0)}
+              </Avatar>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+                sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                onClick={handleAuthorClick}
+              >
+                {post.author}
+              </Typography>
+              {isBlocked && (
+                <Typography variant="caption" color="error.main" fontWeight={500}>
+                  (차단됨)
+                </Typography>
+              )}
+            </Box>
             <span className="text-xs text-gray-400">•</span>
             <Box display="flex" alignItems="center" gap={0.5}>
               <LocationOnIcon sx={{ fontSize: 12, color: "#E91E63" }} />
@@ -186,6 +263,55 @@ export default function PostCard({ post, onJoinRequest, isApplied = false }: Pos
           </Button>
         </Box>
       </Box>
+
+      {/* 사용자 메뉴 */}
+      <Menu
+        anchorEl={anchorEl}
+        open={menuOpen}
+        onClose={handleMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        <MenuItem onClick={handleShowProfile}>
+          <ListItemIcon>
+            <PersonIcon />
+          </ListItemIcon>
+          <ListItemText>프로필 보기</ListItemText>
+        </MenuItem>
+        {isBlocked ? (
+          <MenuItem onClick={handleUnblockUser} disabled={isBlocking}>
+            <ListItemIcon>
+              <PersonIcon color="success" />
+            </ListItemIcon>
+            <ListItemText>차단 해제</ListItemText>
+          </MenuItem>
+        ) : (
+          <MenuItem onClick={handleBlockUser} disabled={isBlocking}>
+            <ListItemIcon>
+              <BlockIcon color="error" />
+            </ListItemIcon>
+            <ListItemText>사용자 차단</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
+
+      {/* 사용자 프로필 모달 */}
+      <UserProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        user={{
+          id: post.authorId,
+          name: post.author,
+          email: undefined, // 게시글에서는 이메일 정보가 없음
+        }}
+        onUserBlock={onUserBlock}
+      />
     </Card>
   );
 }

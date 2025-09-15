@@ -97,39 +97,71 @@ export default function AppRoutes() {
               />
             </Route>
 
-            {/* My page - no auth required */}
+            {/* My page - requires auth */}
             <Route path="/my">
               <Route
                 index
-                element={<My />}
+                element={
+                  <ProtectedRoute>
+                    <My />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="settings"
-                element={<Settings />}
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="activity"
-                element={<MyActivity />}
+                element={
+                  <ProtectedRoute>
+                    <MyActivity />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="terms"
-                element={<TermsAndConditions />}
+                element={
+                  <ProtectedRoute>
+                    <TermsAndConditions />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="account-management"
-                element={<AccountManagement />}
+                element={
+                  <ProtectedRoute>
+                    <AccountManagement />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="personal-info-edit"
-                element={<PersonalInformationEdit />}
+                element={
+                  <ProtectedRoute>
+                    <PersonalInformationEdit />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="location-permission-settings"
-                element={<LocationPermissionSettings />}
+                element={
+                  <ProtectedRoute>
+                    <LocationPermissionSettings />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="notification-settings"
-                element={<NotificationSettings />}
+                element={
+                  <ProtectedRoute>
+                    <NotificationSettings />
+                  </ProtectedRoute>
+                }
               />
             </Route>
 
