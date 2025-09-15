@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Box, IconButton } from "@mui/material";
+import { Box, IconButton, CircularProgress } from "@mui/material";
+import { useKakaoLoader } from "react-kakao-maps-sdk";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 
 interface KakaoPlace {
@@ -54,6 +55,12 @@ export default function MapPicker({
   onLocationChange,
   searchKeyword,
 }: MapPickerProps) {
+  // 카카오맵 SDK 로더
+  const [mapLoading, mapError] = useKakaoLoader({
+    appkey: import.meta.env.VITE_KAKAO_MAP_API_KEY || "0c537754f8fad9d1b779befd5d75dc07",
+    libraries: ["services"],
+  });
+
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
@@ -83,6 +90,15 @@ export default function MapPicker({
   // 좌표로 상호명/주소 검색하는 함수 (지도 이동 없음) - debounce 적용
   const searchPlaceByCoords = useCallback(
     (lat: number, lng: number) => {
+      // 카카오맵이 로딩 중이거나 에러가 있으면 기본 좌표 표시
+      if (mapLoading || mapError) {
+        onLocationChange(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`, {
+          lat,
+          lng,
+        });
+        return;
+      }
+
       // 같은 좌표면 중복 검색 방지 (10m 이내)
       if (lastSearchCoordsRef.current) {
         const distance =
@@ -133,7 +149,7 @@ export default function MapPicker({
         });
       }, 500);
     },
-    [onLocationChange]
+    [mapLoading, mapError, onLocationChange]
   );
 
   // 키워드로 장소 검색하는 함수 (외부에서 호출)
@@ -142,6 +158,8 @@ export default function MapPicker({
       if (
         !keyword.trim() ||
         !map ||
+        mapLoading ||
+        mapError ||
         !window.kakao?.maps?.services ||
         isSearchingRef.current
       )
@@ -182,7 +200,7 @@ export default function MapPicker({
         searchOptions
       );
     },
-    [map, marker, onLocationChange]
+    [map, marker, mapLoading, mapError, onLocationChange]
   );
 
   // 외부에서 검색 키워드가 변경될 때 처리
@@ -204,6 +222,9 @@ export default function MapPicker({
   // 지도 초기화
   useEffect(() => {
     if (!mapRef.current || map) return;
+
+    // 카카오맵이 로딩 중이거나 에러가 있으면 대기
+    if (mapLoading || mapError) return;
 
     const initMap = () => {
       if (!window.kakao || !window.kakao.maps) {
@@ -296,7 +317,7 @@ export default function MapPicker({
     };
 
     initMap();
-  }, [searchPlaceByCoords, onLocationChange]);
+  }, [mapLoading, mapError, searchPlaceByCoords, onLocationChange]);
 
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
@@ -309,7 +330,7 @@ export default function MapPicker({
 
   // 현재 위치로 돌아가기
   const returnToCurrentLocation = () => {
-    if (!map || !marker) return;
+    if (!map || !marker || mapLoading || mapError) return;
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
@@ -342,8 +363,45 @@ export default function MapPicker({
           width: "100%",
           height: "250px",
           bgcolor: "#f5f5f5",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
-      />
+      >
+        {mapLoading && (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <CircularProgress size={40} sx={{ color: "#E762A9" }} />
+            <Box sx={{ color: "#666", fontSize: "0.9rem" }}>
+              지도를 로드하고 있어요...
+            </Box>
+          </Box>
+        )}
+        {mapError && (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+              color: "#666",
+            }}
+          >
+            <Box sx={{ fontSize: "0.9rem" }}>
+              지도를 불러올 수 없어요
+            </Box>
+            <Box sx={{ fontSize: "0.8rem", color: "#999" }}>
+              카카오맵 API 키를 확인해주세요
+            </Box>
+          </Box>
+        )}
+      </Box>
 
       {/* 현재 위치로 돌아가기 버튼 */}
       <IconButton
@@ -365,7 +423,7 @@ export default function MapPicker({
           },
           transition: "all 0.2s ease",
         }}
-        disabled={!map || !marker}
+        disabled={!map || !marker || mapLoading || mapError}
       >
         <MyLocationIcon sx={{ fontSize: 20 }} />
       </IconButton>

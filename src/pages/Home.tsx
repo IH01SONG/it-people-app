@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, CircularProgress } from "@mui/material";
+import { useKakaoLoader } from "react-kakao-maps-sdk";
 import AppHeader from "../components/AppHeader";
 import LocationHeader from "../components/LocationHeader";
 import MyActivities from "../components/MyActivities";
@@ -10,6 +11,12 @@ import type { Post, Notification, Activity } from "../types/home.types";
 import { api } from "../lib/api";
 
 export default function Home() {
+  // 카카오맵 SDK 로더
+  const [mapLoading, mapError] = useKakaoLoader({
+    appkey: import.meta.env.VITE_KAKAO_MAP_API_KEY || "0c537754f8fad9d1b779befd5d75dc07",
+    libraries: ["services"],
+  });
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState("위치 확인 중...");
@@ -24,6 +31,23 @@ export default function Home() {
   // 현재 위치를 가져오는 함수
   const getCurrentLocation = useCallback(async () => {
     setLocationLoading(true);
+
+    // 카카오맵이 로딩 중이면 대기
+    if (mapLoading) {
+      setCurrentLocation("지도 로딩 중...");
+      setLocationLoading(false);
+      return;
+    }
+
+    // 카카오맵 로딩 에러가 있으면 기본값 사용
+    if (mapError) {
+      console.error("카카오맵 로딩 에러:", mapError);
+      setCurrentLocation("홍대입구");
+      currentLocationRef.current = "홍대입구";
+      loadPosts(1);
+      setLocationLoading(false);
+      return;
+    }
 
     if (!navigator.geolocation) {
       console.error("Geolocation이 지원되지 않습니다.");
@@ -298,11 +322,13 @@ export default function Home() {
     loadMyActivities();
   }, [loadMyActivities]);
 
-  // 컴포넌트 마운트 시 현재 위치 가져오기 (한 번만 실행)
+  // 컴포넌트 마운트 시 현재 위치 가져오기 (카카오맵 로딩 완료 후)
   useEffect(() => {
-    getCurrentLocation();
+    if (!mapLoading && !mapError) {
+      getCurrentLocation();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 빈 의존성 배열로 마운트 시에만 실행
+  }, [mapLoading, mapError]); // 카카오맵 로딩 상태에 따라 실행
 
   // 위치가 변경될 때 게시글 새로고침 로직 제거 (무한 루프 방지)
   // 대신 컴포넌트 마운트 시에만 게시글을 로드
