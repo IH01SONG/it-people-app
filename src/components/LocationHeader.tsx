@@ -2,15 +2,10 @@
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import SearchIcon from "@mui/icons-material/Search";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
 // MUI 컴포넌트
-import {
-  IconButton,
-  Card,
-  Typography,
-  Box,
-  Badge,
-} from "@mui/material";
+import { IconButton, Card, Typography, Box, Badge } from "@mui/material";
 
 // 타입 정의
 import type { Notification } from "../types/home.types";
@@ -21,7 +16,8 @@ import type { Notification } from "../types/home.types";
 interface LocationHeaderProps {
   currentLocation: string; // 현재 선택된 위치
   notifications: Notification[]; // 알림 목록
-  onLocationChange: () => void; // 위치 변경 콜백
+  locationLoading?: boolean; // 위치 로딩 상태
+  onLocationRefresh?: () => void; // 현재 위치 새로고침 콜백
   onSearchOpen: () => void; // 검색 모달 열기 콜백
   onNotificationOpen: () => void; // 알림 모달 열기 콜백
 }
@@ -33,7 +29,8 @@ interface LocationHeaderProps {
 export default function LocationHeader({
   currentLocation,
   notifications,
-  onLocationChange,
+  locationLoading = false,
+  onLocationRefresh,
   onSearchOpen,
   onNotificationOpen,
 }: LocationHeaderProps) {
@@ -51,28 +48,38 @@ export default function LocationHeader({
         py: 1,
       }}
     >
-      <Box 
-        display="flex" 
-        alignItems="center" 
-        gap={1}
-        onClick={onLocationChange}
-        sx={{ 
-          cursor: 'pointer',
-          borderRadius: 2,
-          px: 1,
-          py: 0.5,
-          '&:hover': {
-            bgcolor: 'rgba(0,0,0,0.05)'
-          }
-        }}
-      >
+      <Box display="flex" alignItems="center" gap={1}>
         <LocationOnIcon color="primary" />
         <Typography fontWeight={700}>내 위치: {currentLocation}</Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-          (클릭하여 변경)
-        </Typography>
       </Box>
       <Box display="flex" alignItems="center" gap={1}>
+        {onLocationRefresh && (
+          <IconButton
+            onClick={onLocationRefresh}
+            disabled={locationLoading}
+            size="small"
+            sx={{
+              color: locationLoading ? "#ccc" : "#E762A9",
+              "&:hover": {
+                bgcolor: "rgba(231, 98, 169, 0.1)",
+              },
+            }}
+          >
+            <RefreshIcon
+              sx={{
+                animation: locationLoading ? "spin 1s linear infinite" : "none",
+                "@keyframes spin": {
+                  "0%": {
+                    transform: "rotate(0deg)",
+                  },
+                  "100%": {
+                    transform: "rotate(360deg)",
+                  },
+                },
+              }}
+            />
+          </IconButton>
+        )}
         <IconButton onClick={onSearchOpen}>
           <SearchIcon sx={{ color: "#666" }} />
         </IconButton>

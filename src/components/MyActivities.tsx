@@ -23,17 +23,18 @@ import type { Activity } from "../types/home.types";
  */
 interface MyActivitiesProps {
   activities: Activity[]; // 내 모임 활동 목록
+  loading?: boolean; // 로딩 상태
 }
 
 /**
  * 내 모임 활동 컴포넌트
  * 사용자가 참여하거나 주최하는 모임 활동들을 표시
  */
-export default function MyActivities({ activities }: MyActivitiesProps) {
+export default function MyActivities({ activities, loading = false }: MyActivitiesProps) {
   const [expanded, setExpanded] = useState(true); // 확장/축소 상태
 
-  // 활동이 없으면 컴포넌트를 렌더링하지 않음
-  if (activities.length === 0) {
+  // 로딩 중이거나 활동이 없으면 컴포넌트를 렌더링하지 않음
+  if (loading || activities.length === 0) {
     return null;
   }
 
