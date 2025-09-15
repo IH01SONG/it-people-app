@@ -1,235 +1,267 @@
 import { useState } from "react";
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  Button, 
-  Card, 
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
   Stepper,
   Step,
   StepLabel,
   IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Container,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useNavigate } from "react-router-dom";
 
 export default function Step1() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    title: "",
-    venue: "",
-    location: "",
-    category: "",
-    content: "",
-    meetingDate: "",
-    tags: [] as string[]
-  });
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
-  const hongdaeVenues = [
-    "파파존스 홍대점",
-    "블루보틀 홍대점", 
-    "스타벅스 홍대점",
-    "홍대 메가박스",
-    "홍대 AK&홍대",
-    "홍대 던킨도너츠",
-    "홍대 KFC",
-    "홍대 맥도날드",
-    "홍대 카페베네",
-    "홍대 이디야커피"
-  ];
+  const categories = ["자기개발", "봉사활동", "운동/스포츠", "문화/예술", "사교/인맥", "취미", "외국어", "맛집", "반려동물"];
 
-  const meetupCategories = [
-    "식사",
-    "카페/디저트", 
-    "스터디/코딩",
-    "게임",
-    "쇼핑",
-    "영화/문화",
-    "운동",
-    "기타"
-  ];
+  const getCategoryEmoji = (category: string): string => {
+    const emojiMap: Record<string, string> = {
+      자기개발: "📚",
+      봉사활동: "🤝",
+      "운동/스포츠": "🏃‍♂️",
+      "문화/예술": "🎨",
+      "사교/인맥": "👥",
+      취미: "🎯",
+      외국어: "🌍",
+      맛집: "🍽️",
+      반려동물: "🐕",
+    };
+    return emojiMap[category] || "📍";
+  };
+
+  const getCategoryDescription = (category: string): string => {
+    const descMap: Record<string, string> = {
+      자기개발: "함께 성장하고 발전해요",
+      봉사활동: "나눔과 베풂을 실천해요",
+      "운동/스포츠": "건강하게 운동해요",
+      "문화/예술": "문화생활을 함께해요",
+      "사교/인맥": "새로운 인맥을 만들어요",
+      취미: "재미있는 취미를 공유해요",
+      외국어: "언어를 배우고 교류해요",
+      맛집: "맛있는 식사를 함께해요",
+      반려동물: "반려동물과 함께해요",
+    };
+    return descMap[category] || "새로운 만남을 시작해요";
+  };
 
   const handleSubmit = () => {
-    if (formData.title.trim() && formData.venue && formData.category) {
-      // 위치 정보 추가
-      const formDataWithLocation = {
-        ...formData,
-        location: formData.venue ? `홍대입구역 ${formData.venue.split(' ')[0]}` : "홍대입구"
-      };
-      navigate('/new/step2', { state: formDataWithLocation });
+    if (selectedCategory) {
+      navigate("/new/step2", { state: { category: selectedCategory } });
     }
   };
 
-  const isFormValid = formData.title.trim().length > 0 && formData.venue && formData.category;
-
   return (
-    <div className="w-full max-w-md mx-auto px-4 pb-24 bg-white min-h-screen">
-      {/* 상단 헤더 */}
-      <div className="flex items-center justify-between py-4">
-        <IconButton onClick={() => navigate('/')}>
+    <Box
+      sx={{
+        bgcolor: "#ffffff",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        maxWidth: "600px",
+        margin: "0 auto",
+        "@media (min-width:600px)": {
+          maxWidth: "600px",
+        },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          bgcolor: "#E762A9",
+          color: "white",
+          p: 2.5,
+          display: "flex",
+          alignItems: "center",
+          boxShadow: "0 2px 8px rgba(231, 98, 169, 0.3)",
+        }}
+      >
+        <IconButton onClick={() => navigate("/")} sx={{ color: "white" }}>
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h6" fontWeight={600} color="#333">
-          새 모임 만들기
+        <Typography
+          variant="h6"
+          sx={{
+            flexGrow: 1,
+            textAlign: "center",
+            mr: 4,
+            fontWeight: 700,
+          }}
+        >
+          카테고리 선택
         </Typography>
-        <div className="w-10"></div>
-      </div>
-
-      {/* 프로그레스 */}
-      <Box mb={4}>
-        <Stepper activeStep={0} sx={{ mb: 2 }}>
-          <Step>
-            <StepLabel>기본 정보</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>상세 내용</StepLabel>
-          </Step>
-          <Step>
-            <StepLabel>완료</StepLabel>
-          </Step>
-        </Stepper>
       </Box>
 
-      {/* 메인 폼 카드 */}
-      <Card
-        sx={{
-          borderRadius: 4,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          p: 3,
-          mb: 3,
-          border: '1px solid rgba(0,0,0,0.05)'
-        }}
-      >
-        <Box mb={3}>
-          <div className="text-xl mb-2 text-center font-bold">모임 생성</div>
-          <Typography variant="h6" fontWeight={600} textAlign="center" mb={1}>
-            어떤 모임을 만들고 싶으신가요?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" textAlign="center">
-            홍대 근처에서 함께할 활동과 장소를 선택해주세요
-          </Typography>
+      <Container maxWidth="sm" sx={{ px: 3, py: 3, flex: 1 }}>
+        {/* 프로그레스 */}
+        <Box mb={4}>
+          <Stepper activeStep={0} sx={{ mb: 2 }}>
+            <Step>
+              <StepLabel>카테고리 선택</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>상세 정보</StepLabel>
+            </Step>
+            <Step>
+              <StepLabel>완료</StepLabel>
+            </Step>
+          </Stepper>
         </Box>
 
-        <Box component="form" sx={{ space: 3 }}>
-          <TextField
-            fullWidth
-            label="모임 제목"
-            placeholder="예: 홍대 피자집에서 저녁 같이 먹어요"
-            value={formData.title}
-            onChange={(e) => setFormData({...formData, title: e.target.value})}
-            sx={{ mb: 3 }}
-            required
-            multiline
-            rows={2}
-          />
+        {/* 안내 메시지 */}
+        <Typography
+          variant="h5"
+          fontWeight={700}
+          color="#333"
+          mb={2}
+          textAlign="center"
+        >
+          어떤 활동을 함께하고 싶나요?
+        </Typography>
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          mb={3}
+          textAlign="center"
+        >
+          관심있는 카테고리를 선택해주세요
+        </Typography>
 
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>만날 장소</InputLabel>
-            <Select
-              value={formData.venue}
-              label="만날 장소"
-              onChange={(e) => {
-                const venue = e.target.value;
-                setFormData({
-                  ...formData, 
-                  venue
-                });
+        {/* 카테고리 목록 */}
+        <Box mb={4}>
+          {categories.map((category: string) => (
+            <Card
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              sx={{
+                p: 3,
+                mb: 2,
+                cursor: "pointer",
+                borderRadius: 3,
+                border:
+                  selectedCategory === category
+                    ? "2px solid #E762A9"
+                    : "1px solid #e0e0e0",
+                bgcolor:
+                  selectedCategory === category
+                    ? "rgba(231, 98, 169, 0.05)"
+                    : "white",
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  borderColor: "#E762A9",
+                },
+                boxShadow:
+                  selectedCategory === category
+                    ? "0 4px 12px rgba(231, 98, 169, 0.2)"
+                    : "0 2px 6px rgba(0,0,0,0.05)",
               }}
             >
-              {hongdaeVenues.map((venue) => (
-                <MenuItem key={venue} value={venue}>
-                  {venue}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>카테고리</InputLabel>
-            <Select
-              value={formData.category}
-              label="카테고리"
-              onChange={(e) => setFormData({...formData, category: e.target.value})}
-            >
-              {meetupCategories.map((category) => (
-                <MenuItem key={category} value={category}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  bgcolor:
+                    selectedCategory === category ? "#E762A9" : "#f8f9fa",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  sx={{
+                    filter:
+                      selectedCategory === category
+                        ? "brightness(0) invert(1)"
+                        : "none",
+                  }}
+                >
+                  {getCategoryEmoji(category)}
+                </Typography>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  color={selectedCategory === category ? "#E762A9" : "#333"}
+                  mb={0.5}
+                >
                   {category}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            fullWidth
-            label="모임 설명"
-            placeholder="어떤 활동을 하고 싶은지, 언제 만날지 자세히 설명해주세요"
-            value={formData.content}
-            onChange={(e) => setFormData({...formData, content: e.target.value})}
-            multiline
-            rows={3}
-            sx={{ mb: 3 }}
-          />
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {getCategoryDescription(category)}
+                </Typography>
+              </Box>
+              {selectedCategory === category && (
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    bgcolor: "#E762A9",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Typography variant="body2" color="white" fontSize="16px">
+                    ✓
+                  </Typography>
+                </Box>
+              )}
+            </Card>
+          ))}
         </Box>
-      </Card>
-
-      {/* 예시 카드 */}
-      <Card
-        sx={{
-          borderRadius: 3,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
-          p: 3,
-          mb: 4,
-          background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-          border: '1px solid rgba(0,0,0,0.05)'
-        }}
-      >
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <div className="text-lg font-bold">예시</div>
-          <Typography variant="subtitle1" fontWeight={600}>
-            모임 예시
-          </Typography>
-        </Box>
-        <div className="space-y-2 text-sm text-gray-600">
-          <div>• "홍대 스타벅스에서 코딩 스터디 함께해요"</div>
-          <div>• "블루보틀에서 디저트 먹으면서 수다떨어요"</div>
-          <div>• "메가박스에서 영화 보고 싶은데 같이 가실 분"</div>
-          <div>• "AK홍대에서 쇼핑하고 맛집 투어 어떠세요?"</div>
-        </div>
-      </Card>
+      </Container>
 
       {/* 하단 버튼 */}
-      <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, p: 2, bgcolor: 'white', borderTop: 1, borderColor: 'divider' }}>
-        <div className="max-w-md mx-auto">
+      <Box
+        sx={{ p: 2, bgcolor: "white", borderTop: 1, borderColor: "divider" }}
+      >
+        <Container maxWidth="sm">
           <Button
             fullWidth
             variant="contained"
             onClick={handleSubmit}
-            disabled={!isFormValid}
+            disabled={!selectedCategory}
             sx={{
-              bgcolor: '#FFD700',
-              color: '#333',
-              fontWeight: 700,
-              borderRadius: 3,
-              py: 1.5,
-              '&:hover': {
-                bgcolor: '#FFC107',
+              bgcolor: "#E762A9",
+              "&:hover": {
+                bgcolor: "#D554A0",
+                transform: "translateY(-2px)",
+                boxShadow: "0 8px 24px rgba(231, 98, 169, 0.3)",
               },
-              '&:disabled': {
-                bgcolor: '#e0e0e0',
-                color: '#9e9e9e'
-              }
+              "&:disabled": {
+                bgcolor: "#e0e0e0",
+                color: "#9e9e9e",
+                transform: "none",
+                boxShadow: "none",
+              },
+              borderRadius: 4,
+              py: 2,
+              fontSize: "1.1rem",
+              fontWeight: 700,
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              boxShadow: "0 4px 16px rgba(231, 98, 169, 0.2)",
             }}
           >
             다음 단계로
           </Button>
-        </div>
+        </Container>
       </Box>
-    </div>
+    </Box>
   );
 }
-
-
