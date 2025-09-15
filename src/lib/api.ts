@@ -81,6 +81,14 @@ export const api = {
     updateProfile: (userData: any) =>
       axios.put('/users/me', userData).then(r => r.data),
 
+    // 프로필 이미지 업로드
+    uploadProfileImage: (formData: FormData) =>
+      axios.post('/users/me/profile-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }).then(r => r.data),
+
     // 내가 쓴 글
     getMyPosts: () => axios.get('/users/me/posts').then(r => r.data),
 
@@ -94,6 +102,10 @@ export const api = {
     // 사용자 차단 해제
     unblockUser: (userId: string) =>
       axios.delete(`/users/block/${userId}`).then(r => r.data),
+
+    // 계정 삭제
+    deleteAccount: () =>
+      axios.delete('/users/me').then(r => r.data),
   },
 
   // 참여 요청 관련 API

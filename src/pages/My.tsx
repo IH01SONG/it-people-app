@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Avatar, TextField } from "@mui/material";
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, TextField } from "@mui/material";
 import EditIcon from '@mui/icons-material/Edit';
 import { useAuth } from '../auth/AuthContext';
+import { api } from '../lib/api';
+import ProfileImageUpload from '../components/ProfileImageUpload';
 
 const theme = createTheme({
   palette: {
@@ -23,15 +24,35 @@ const theme = createTheme({
 });
 
 const My: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [nickname, setNickname] = useState(user?.name || '사용자 닉네임');
   const [isEditingNickname, setIsEditingNickname] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | null>(null); // State for profile image
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const handleProfileImageChange = () => {
-    alert('프로필 사진 수정');
-    // Implement logic to open file picker and update profileImage state
+  // 사용자 정보 로드
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        setLoading(true);
+        const userInfo = await api.users.getMe();
+        setNickname(userInfo.nickname || userInfo.name || '사용자 닉네임');
+        setProfileImage(userInfo.profileImage || null);
+      } catch (err) {
+        console.error('Failed to load user info:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      loadUserInfo();
+    }
+  }, [user]);
+
+  const handleProfileImageChange = (imageUrl: string | null) => {
+    setProfileImage(imageUrl);
   };
 
   const handleNicknameEdit = () => {
@@ -45,12 +66,6 @@ const My: React.FC = () => {
     // Implement logic to save nickname
   };
 
-  const handleLogout = () => {
-    if (window.confirm('로그아웃 하시겠습니까?')) {
-      logout();
-      navigate('/');
-    }
-  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -65,29 +80,13 @@ const My: React.FC = () => {
         {/* Main Content - 기존 구조 유지하면서 크기만 키움 */}
         <Box className="flex flex-col items-center w-full flex-1 px-6 py-6 justify-center">
           {/* Profile Section */}
-          <Box className="relative mb-10">
-            <Avatar
-              alt="프로필 이미지"
-              src={profileImage || "/placeholder-avatar.jpg"}
-              sx={{ width: 120, height: 120 }}
+          <Box className="mb-10">
+            <ProfileImageUpload
+              currentImage={profileImage}
+              onImageChange={handleProfileImageChange}
+              size={120}
+              disabled={loading}
             />
-            <IconButton
-              aria-label="프로필 사진 수정"
-              size="small"
-              sx={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                backgroundColor: theme.palette.primary.main,
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.dark,
-                },
-              }}
-              onClick={handleProfileImageChange}
-            >
-              <AddCircleIcon />
-            </IconButton>
           </Box>
 
           {/* User Info Section */}
@@ -198,25 +197,6 @@ const My: React.FC = () => {
               }}
             >
               계정관리
-            </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              className="py-5 text-2xl font-semibold"
-              onClick={handleLogout}
-              sx={{
-                borderColor: theme.palette.primary.main,
-                color: theme.palette.primary.main,
-                borderRadius: 3,
-                boxShadow: 1,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.main,
-                  color: 'white',
-                  boxShadow: 2,
-                },
-              }}
-            >
-              로그아웃
             </Button>
           </Stack>
         </Box>
