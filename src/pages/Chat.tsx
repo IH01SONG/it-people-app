@@ -153,7 +153,17 @@ export default function Chat() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white min-h-screen">
+    <Box
+      sx={{
+        bgcolor: "#fff",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        maxWidth: "600px", // Step2와 동일
+        margin: "0 auto",
+      }}
+    >
       <AppHeader />
       
       <div className="px-4 pb-24">
@@ -369,6 +379,6 @@ export default function Chat() {
           user={selectedUser}
         />
       </div>
-    </div>
+    </Box>
   );
 }

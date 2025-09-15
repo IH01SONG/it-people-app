@@ -1,6 +1,7 @@
 import Paper from "@mui/material/Paper";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
+import Box from "@mui/material/Box";
 import HomeIcon from "@mui/icons-material/Home";
 import MapIcon from "@mui/icons-material/Map";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
@@ -94,23 +95,28 @@ export default function BottomTabs() {
 
   return (
     <ThemeProvider theme={responsiveTheme}>
-      <Paper
-        elevation={8}
+      <Box
         sx={{
           position: "fixed",
+          bottom: 0,
           left: 0,
           right: 0,
-          bottom: 0,
           zIndex: 1000,
-          pb: "env(safe-area-inset-bottom)",
-          backgroundColor: "#ffffff",
-          borderTop: "1px solid #f0f0f0",
-          // 웹에서는 Container 너비에 맞춤
-          maxWidth: { xs: "100%", sm: "600px" }, // sm 브레이크포인트에서 Container maxWidth와 동일
-          left: { xs: 0, sm: "50%" },
-          transform: { xs: "none", sm: "translateX(-50%)" },
+          display: "flex",
+          justifyContent: "center", // 중앙 정렬
         }}
       >
+        <Box
+          sx={{
+            pb: "env(safe-area-inset-bottom)", // 노치 영역 대응
+            backgroundColor: "#ffffff",
+            borderTop: "1px solid #f0f0f0",
+            boxShadow: "0 -2px 8px rgba(0,0,0,0.1)",
+            // Step2와 완전히 동일한 너비 설정
+            width: "100%",
+            maxWidth: "600px", // Step2와 동일
+          }}
+        >
         <BottomNavigation
           value={currentIndex}
           onChange={(_, newValue: number) => {
@@ -180,7 +186,8 @@ export default function BottomTabs() {
             }}
           />
         </BottomNavigation>
-      </Paper>
+        </Box>
+      </Box>
     </ThemeProvider>
   );
 }

@@ -181,11 +181,15 @@ export default function Map() {
   }
 
   return (
-    <div
-      className="w-full max-w-md mx-auto min-h-screen flex flex-col"
-      style={{
-        background:
-          "linear-gradient(180deg, #f8f9fa 0%, #ffffff 50%, #f8f9fa 100%)",
+    <Box
+      sx={{
+        bgcolor: "linear-gradient(180deg, #f8f9fa 0%, #ffffff 50%, #f8f9fa 100%)",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        maxWidth: "600px", // Step2와 동일
+        margin: "0 auto",
       }}
     >
       <AppHeader />
@@ -774,6 +778,6 @@ export default function Map() {
           </Box>
         )}
       </Box>
-    </div>
+    </Box>
   );
 }

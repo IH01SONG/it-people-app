@@ -244,7 +244,17 @@ export default function Home() {
 
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white min-h-screen">
+    <Box
+      sx={{
+        bgcolor: "#fff",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        maxWidth: "600px", // Step2와 동일
+        margin: "0 auto",
+      }}
+    >
       {/* 공통 상단 헤더 */}
       <AppHeader />
 
@@ -325,6 +335,6 @@ export default function Home() {
           notifications={notifications}
         />
       </div>
-    </div>
+    </Box>
   );
 }
