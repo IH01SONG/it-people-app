@@ -1,6 +1,8 @@
 // MUI 아이콘
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 // 로고 이미지
 import logoSvg from "../assets/logo.png";
@@ -25,6 +27,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import type { Post } from "../types/home.types";
 import { useState } from "react";
 import { useBlockUser } from "../contexts/BlockUserContext";
+import { useAuth } from "../auth/AuthContext";
 import UserProfileModal from "./UserProfileModal";
 
 /**
@@ -35,19 +38,30 @@ interface PostCardProps {
   onJoinRequest: (postId: string) => void; // 참여 신청 콜백
   isApplied?: boolean; // 신청 상태
   onUserBlock?: (userId: string, userName: string) => void; // 사용자 차단 콜백
+  onEditPost?: (postId: string) => void; // 게시글 수정 콜백
+  onDeletePost?: (postId: string) => void; // 게시글 삭제 콜백
 }
 
 /**
  * 게시글 카드 컴포넌트
  * 모임 게시글의 정보를 카드 형태로 표시하고 참여 신청 기능을 제공
  */
-export default function PostCard({ post, onJoinRequest, isApplied = false, onUserBlock }: PostCardProps) {
+export default function PostCard({
+  post,
+  onJoinRequest,
+  isApplied = false,
+  onUserBlock,
+  onEditPost,
+  onDeletePost
+}: PostCardProps) {
+  const { user } = useAuth();
   const { isUserBlocked, blockUser, unblockUser } = useBlockUser();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
 
   const isBlocked = isUserBlocked(post.authorId);
+  const isMyPost = user && (user.email === post.author || user.id === post.authorId || user._id === post.authorId);
   const menuOpen = Boolean(anchorEl);
 
   const handleAuthorClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -278,26 +292,53 @@ export default function PostCard({ post, onJoinRequest, isApplied = false, onUse
           horizontal: 'left',
         }}
       >
-        <MenuItem onClick={handleShowProfile}>
-          <ListItemIcon>
-            <PersonIcon />
-          </ListItemIcon>
-          <ListItemText>프로필 보기</ListItemText>
-        </MenuItem>
-        {isBlocked ? (
-          <MenuItem onClick={handleUnblockUser} disabled={isBlocking}>
-            <ListItemIcon>
-              <PersonIcon color="success" />
-            </ListItemIcon>
-            <ListItemText>차단 해제</ListItemText>
-          </MenuItem>
+        {isMyPost ? (
+          // 내가 쓴 글일 때 수정/삭제 메뉴
+          <>
+            <MenuItem onClick={() => {
+              handleMenuClose();
+              onEditPost && onEditPost(post.id);
+            }}>
+              <ListItemIcon>
+                <EditIcon color="primary" />
+              </ListItemIcon>
+              <ListItemText>수정</ListItemText>
+            </MenuItem>
+            <MenuItem onClick={() => {
+              handleMenuClose();
+              onDeletePost && onDeletePost(post.id);
+            }}>
+              <ListItemIcon>
+                <DeleteIcon color="error" />
+              </ListItemIcon>
+              <ListItemText>삭제</ListItemText>
+            </MenuItem>
+          </>
         ) : (
-          <MenuItem onClick={handleBlockUser} disabled={isBlocking}>
-            <ListItemIcon>
-              <BlockIcon color="error" />
-            </ListItemIcon>
-            <ListItemText>사용자 차단</ListItemText>
-          </MenuItem>
+          // 다른 사람 글일 때 프로필 보기/차단 메뉴
+          <>
+            <MenuItem onClick={handleShowProfile}>
+              <ListItemIcon>
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText>프로필 보기</ListItemText>
+            </MenuItem>
+            {isBlocked ? (
+              <MenuItem onClick={handleUnblockUser} disabled={isBlocking}>
+                <ListItemIcon>
+                  <PersonIcon color="success" />
+                </ListItemIcon>
+                <ListItemText>차단 해제</ListItemText>
+              </MenuItem>
+            ) : (
+              <MenuItem onClick={handleBlockUser} disabled={isBlocking}>
+                <ListItemIcon>
+                  <BlockIcon color="error" />
+                </ListItemIcon>
+                <ListItemText>사용자 차단</ListItemText>
+              </MenuItem>
+            )}
+          </>
         )}
       </Menu>
 

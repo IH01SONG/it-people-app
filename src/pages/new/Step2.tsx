@@ -114,6 +114,16 @@ export default function Step2() {
       return;
     }
 
+    if (!formData.content.trim()) {
+      alert("내용을 입력해주세요.");
+      return;
+    }
+
+    if (formData.content.trim().length < 5) {
+      alert("내용은 최소 5자 이상 입력해주세요.");
+      return;
+    }
+
     try {
       // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
       const finalImages = images;
@@ -131,10 +141,10 @@ export default function Step2() {
       // 백엔드 API 스키마에 맞춘 게시글 데이터
       const postPayload = {
         title: formData.title,
+        content: formData.content, // 필수 필드로 변경
         tags: formData.tags,
         maxParticipants: formData.maxParticipants,
         // 선택적 필드들
-        ...(formData.content && { content: formData.content }),
         ...(locationData && { location: locationData }),
         // ...(formData.category && { category: formData.category }),
         ...(formData.venue && { venue: formData.venue }),
@@ -146,7 +156,7 @@ export default function Step2() {
       await api.posts.create(postPayload);
 
       alert("게시글이 성공적으로 작성되었습니다!");
-      navigate("/");
+      navigate("/", { state: { refreshPosts: true } });
     } catch (error: unknown) {
       console.error("게시글 생성 실패:", error);
 
