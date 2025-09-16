@@ -38,6 +38,12 @@ export default function Login() {
 
   const handleSignUpClick = () => navigate("/signup");
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Box className="flex flex-col items-center justify-center min-h-screen p-5 bg-white">
@@ -54,10 +60,12 @@ export default function Login() {
           <TextField
             label="이메일" variant="outlined" fullWidth
             value={email} onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
           <TextField
             label="비밀번호" type="password" variant="outlined" fullWidth
             value={password} onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
           <Button variant="contained" color="primary" fullWidth onClick={handleLogin} className="py-3 text-lg" sx={{ boxShadow: 3 }}>
             로그인

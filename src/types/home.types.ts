@@ -59,4 +59,5 @@ export interface Activity {
   category: string; // 모임 카테고리
   role: string; // 내 역할 (주최자, 참여자)
   createdAt: string; // 모임 생성 일시
+  authorId?: string; // 작성자 ID (차단 기능을 위해 추가)
 }

@@ -74,6 +74,7 @@ export function useMyActivities() {
             category: categoryName,
             role: "주최자",
             createdAt: postData.createdAt as string,
+            authorId: postData.authorId as string, // 작성자 ID 추가
           });
         });
       }
@@ -108,6 +109,7 @@ export function useMyActivities() {
             category: categoryName,
             role: "참여자",
             createdAt: postData.createdAt as string,
+            authorId: postData.authorId as string, // 작성자 ID 추가
           });
         });
       }
@@ -142,11 +144,21 @@ export function useMyActivities() {
     );
   }, []);
 
+  // 차단된 사용자와 관련된 활동 제거 (작성자 ID 기반)
+  const removeActivitiesByAuthorId = useCallback((authorId: string) => {
+    setMyActivities((prevActivities) =>
+      prevActivities.filter(
+        (activity) => activity.authorId !== authorId
+      )
+    );
+  }, []);
+
   return {
     myActivities,
     activitiesLoading,
     loadMyActivities,
     removeActivity,
     removeActivitiesByUserName,
+    removeActivitiesByAuthorId,
   };
 }

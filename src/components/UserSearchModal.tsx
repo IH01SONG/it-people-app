@@ -25,7 +25,7 @@ import { api } from '../lib/api';
 interface User {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   profileImage?: string;
 }
 
@@ -139,11 +139,11 @@ const UserSearchModal: React.FC<UserSearchModalProps> = ({ open, onClose, onUser
               <ListItem key={user.id} disablePadding>
                 <ListItemButton onClick={() => handleBlockUser(user)}>
                   <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                    {user.name.charAt(0)}
+                    {user.name ? user.name.charAt(0) : '?'}
                   </Avatar>
                   <ListItemText
-                    primary={user.name}
-                    secondary={user.email}
+                    primary={user.name || '알 수 없는 사용자'}
+                    secondary={user.email || ''}
                   />
                   <BlockIcon color="error" />
                 </ListItemButton>
