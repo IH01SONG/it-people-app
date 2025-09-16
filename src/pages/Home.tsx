@@ -158,6 +158,74 @@ export default function Home() {
     alert("게시글 수정 기능은 준비 중입니다.");
   };
 
+  // 내 모임 활동 수정
+  const handleEditActivity = (activityId: string) => {
+    console.log("활동 수정:", activityId);
+    alert("활동 수정 기능은 준비 중입니다.");
+  };
+
+  // 내 모임 활동 삭제
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!window.confirm("정말로 이 모임을 삭제하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      console.log("🗑️ 활동 삭제 시작:", activityId);
+      await api.posts.delete(activityId);
+
+      console.log("✅ 활동 삭제 성공");
+
+      // 내 활동 목록 새로고침
+      loadMyActivities();
+
+      // 게시글 목록도 새로고침 (삭제된 게시글이 있을 수 있음)
+      resetPosts();
+      loadPosts(1, currentCoordsRef.current, currentLocationRef.current);
+
+      alert("모임이 삭제되었습니다.");
+    } catch (error) {
+      console.error("❌ 활동 삭제 실패:", error);
+      alert("모임 삭제에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  // 참여 요청 수락
+  const handleAcceptRequest = async (activityId: string, requestId: string) => {
+    try {
+      console.log("✅ 참여 요청 수락 시작:", { activityId, requestId });
+      await api.joinRequests.accept(requestId);
+
+      console.log("✅ 참여 요청 수락 성공");
+
+      // 내 활동 목록 새로고침
+      loadMyActivities();
+
+      alert("참여 요청을 수락했습니다.");
+    } catch (error) {
+      console.error("❌ 참여 요청 수락 실패:", error);
+      alert("참여 요청 수락에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  // 참여 요청 거절
+  const handleRejectRequest = async (activityId: string, requestId: string) => {
+    try {
+      console.log("❌ 참여 요청 거절 시작:", { activityId, requestId });
+      await api.joinRequests.reject(requestId);
+
+      console.log("✅ 참여 요청 거절 성공");
+
+      // 내 활동 목록 새로고침 (거절된 요청 제거)
+      loadMyActivities();
+
+      alert("참여 요청을 거절했습니다.");
+    } catch (error) {
+      console.error("❌ 참여 요청 거절 실패:", error);
+      alert("참여 요청 거절에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
   // 카카오맵 로딩 중이면 로딩 스피너 표시
   if (mapLoading) {
     return (
@@ -213,7 +281,14 @@ export default function Home() {
           onNotificationOpen={() => setNotificationOpen(true)}
         />
 
-        <MyActivities activities={myActivities} loading={activitiesLoading} />
+        <MyActivities
+          activities={myActivities}
+          loading={activitiesLoading}
+          onEditActivity={handleEditActivity}
+          onDeleteActivity={handleDeleteActivity}
+          onAcceptRequest={handleAcceptRequest}
+          onRejectRequest={handleRejectRequest}
+        />
 
         {/* 내 위치 동네 모임 게시글 목록 */}
         <Box mb={2}>

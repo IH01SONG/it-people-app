@@ -40,9 +40,7 @@ export function usePosts() {
       tags: Array.isArray(backendPost.tags)
         ? backendPost.tags.map((tag: any) => typeof tag === 'object' ? tag.name : tag)
         : [],
-      image: Array.isArray(backendPost.images) && backendPost.images.length > 0
-        ? backendPost.images[0] // 첫 번째 이미지 사용
-        : backendPost.image || (Array.isArray(backendPost.image) ? backendPost.image[0] : null),
+      image: backendPost.image,
       participants: backendPost.participants || [],
       maxParticipants: backendPost.maxParticipants,
       meetingDate: backendPost.meetingDate ? new Date(backendPost.meetingDate) : undefined,
@@ -126,22 +124,10 @@ export function usePosts() {
         if (backendPosts.length > 0) {
 
           // 백엔드 응답 데이터 구조 확인 (첫 번째 게시글만)
-          if (backendPosts.length > 0) {
-            console.log("🔍 첫 번째 게시글 원본 데이터:", JSON.stringify(backendPosts[0], null, 2));
-            console.log("🖼️ 이미지 필드 확인:", {
-              image: backendPosts[0].image,
-              images: backendPosts[0].images,
-              imageType: typeof backendPosts[0].image,
-              imagesType: typeof backendPosts[0].images,
-              imagesIsArray: Array.isArray(backendPosts[0].images)
-            });
-          }
+          // console.log("🔍 첫 번째 게시글 원본 데이터:", JSON.stringify(backendPosts[0], null, 2));
 
           // 백엔드 응답을 프론트엔드 타입으로 변환
-          const transformedPosts = backendPosts
-            .map(transformBackendPost)
-            // 최신순으로 정렬 (createdAt 기준 내림차순)
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const transformedPosts = backendPosts.map(transformBackendPost);
 
           console.log("✅ 게시글 로드 성공:", {
             postsCount: transformedPosts.length,
@@ -149,8 +135,7 @@ export function usePosts() {
             totalPages: response.totalPages,
             hasMore: apiHasMore,
             firstPost: transformedPosts[0]?.title,
-            firstPostImage: transformedPosts[0]?.image,
-            allPosts: transformedPosts.map((p: Post) => ({ id: p.id, title: p.title, hasImage: !!p.image }))
+            allPosts: transformedPosts.map((p: Post) => ({ id: p.id, title: p.title }))
           });
 
           setPosts((prevPosts) => {

@@ -6,28 +6,6 @@ export function useMyActivities() {
   const [myActivities, setMyActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
 
-  // 카테고리 ID를 카테고리 이름으로 변환하는 함수
-  const getCategoryName = (categoryId: string | object): string => {
-    // 카테고리 ID와 이름 매핑 (임시로 하드코딩, 나중에 API로 가져올 수 있음)
-    const categoryMap: { [key: string]: string } = {
-      '68c3bdd957c06e06e2706f9a': '운동',
-      '68c3bdd957c06e06e2706f9b': '스터디',
-      '68c3bdd957c06e06e2706f9c': '맛집',
-      '68c3bdd957c06e06e2706f9d': '문화',
-      '68c3bdd957c06e06e2706f9e': '친목',
-      '68c3bdd957c06e06e2706f9f': '게임',
-      '68c3bdd957c06e06e2706fa0': '여행',
-      '68c3bdd957c06e06e2706fa1': '기타',
-    };
-
-    if (typeof categoryId === 'string') {
-      return categoryMap[categoryId] || '기타';
-    } else if (typeof categoryId === 'object' && (categoryId as any).name) {
-      return (categoryId as any).name;
-    }
-    return '기타';
-  };
-
   // 내 활동 로드 함수
   const loadMyActivities = useCallback(async () => {
     setActivitiesLoading(true);
@@ -46,24 +24,8 @@ export function useMyActivities() {
       if (Array.isArray(myPosts)) {
         myPosts.forEach((post: unknown) => {
           const postData = post as Record<string, unknown>;
-
-          // 첫 번째 게시글 데이터 구조 확인을 위한 로그
-          if (activities.length === 0) {
-            console.log("🔍 첫 번째 내 게시글 데이터:", JSON.stringify(postData, null, 2));
-            console.log("🔍 postData.title:", postData.title);
-            console.log("🔍 postData.category:", postData.category);
-            console.log("🔍 postData._id:", postData._id);
-            console.log("🔍 postData.id:", postData.id);
-          }
-
-          // _id 또는 id 필드 확인
-          const postId = postData._id as string || postData.id as string;
-
-          // 카테고리 처리
-          const categoryName = getCategoryName(postData.category);
-
           activities.push({
-            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
+            id: Number(`my-${postData.id as string}`.replace("my-", "")) || 0,
             title: postData.title as string,
             status: postData.status === "active" ? "모집 중" : "완료",
             time: new Date(postData.meetingDate as string).toLocaleString(
@@ -71,7 +33,7 @@ export function useMyActivities() {
             ),
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
-            category: categoryName,
+            category: postData.category as string,
             role: "주최자",
             createdAt: postData.createdAt as string,
           });
@@ -82,22 +44,13 @@ export function useMyActivities() {
       console.log("🤝 참여한 모임 응답:", joinedPostsResponse);
       const joinedPosts = joinedPostsResponse?.posts || joinedPostsResponse || [];
       if (Array.isArray(joinedPosts)) {
-        joinedPosts.forEach((post: unknown, index: number) => {
+        joinedPosts.forEach((post: unknown) => {
           const postData = post as Record<string, unknown>;
-
-          // 첫 번째 참여 게시글 데이터 구조 확인을 위한 로그
-          if (index === 0) {
-            console.log("🔍 첫 번째 참여 게시글 데이터:", JSON.stringify(postData, null, 2));
-          }
-
-          // _id 또는 id 필드 확인
-          const postId = postData._id as string || postData.id as string;
-
-          // 카테고리 처리
-          const categoryName = getCategoryName(postData.category);
-
           activities.push({
-            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
+            id:
+              Number(
+                `joined-${postData.id as string}`.replace("joined-", "")
+              ) || 0,
             title: postData.title as string,
             status: postData.status === "active" ? "참여 중" : "완료",
             time: new Date(postData.meetingDate as string).toLocaleString(
@@ -105,7 +58,7 @@ export function useMyActivities() {
             ),
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
-            category: categoryName,
+            category: postData.category as string,
             role: "참여자",
             createdAt: postData.createdAt as string,
           });
@@ -127,7 +80,7 @@ export function useMyActivities() {
   }, []);
 
   // 내 활동에서 특정 활동 제거
-  const removeActivity = useCallback((activityId: string) => {
+  const removeActivity = useCallback((activityId: number) => {
     setMyActivities((prevActivities) =>
       prevActivities.filter((activity) => activity.id !== activityId)
     );
