@@ -55,7 +55,7 @@ export default function PostCard({
   onDeletePost
 }: PostCardProps) {
   const { user } = useAuth();
-  const { isUserBlocked, blockUser, unblockUser } = useBlockUser();
+  const { isUserBlocked, unblockUser } = useBlockUser();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
@@ -82,7 +82,7 @@ export default function PostCard({
     if (window.confirm(`${post.author} 사용자를 차단하시겠습니까?`)) {
       setIsBlocking(true);
       try {
-        await blockUser(post.authorId, post.author);
+        // 상위 컴포넌트에서 차단 처리하도록 콜백만 호출
         onUserBlock?.(post.authorId, post.author);
         alert(`${post.author} 사용자가 차단되었습니다.`);
       } catch (error) {

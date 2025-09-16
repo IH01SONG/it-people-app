@@ -40,7 +40,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   user, 
   onUserBlock 
 }) => {
-  const { isUserBlocked, blockUser, unblockUser } = useBlockUser();
+  const { isUserBlocked, unblockUser } = useBlockUser();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isBlocking, setIsBlocking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setIsBlocking(true);
       setError(null);
       try {
-        await blockUser(user.id, user.name, user.email);
+        // 상위 컴포넌트에서 차단 처리하도록 콜백만 호출
         onUserBlock?.(user.id, user.name);
         handleMenuClose();
         onClose();

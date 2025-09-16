@@ -12,6 +12,7 @@ import { api } from "../lib/api";
 import { useLocation as useLocationHook } from "../hooks/useLocation";
 import { useMyActivities } from "../hooks/useMyActivities";
 import { usePosts } from "../hooks/usePosts";
+import { useBlockUser } from "../contexts/BlockUserContext";
 
 export default function Home() {
   const location = useLocation();
@@ -32,6 +33,7 @@ export default function Home() {
     activitiesLoading,
     loadMyActivities,
     removeActivitiesByUserName,
+    removeActivitiesByAuthorId,
   } = useMyActivities();
 
   const {
@@ -46,6 +48,12 @@ export default function Home() {
     handleDeletePost,
     resetPosts,
   } = usePosts();
+
+  // 차단 사용자 관리
+  const { blockUser, blockedUsers } = useBlockUser();
+  
+  // 디버깅을 위한 로그
+  console.log('🔍 Home blockedUsers:', blockedUsers);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -90,6 +98,7 @@ export default function Home() {
   useEffect(() => {
     loadMyActivities();
   }, [loadMyActivities]);
+
 
   // 카카오맵 로딩 완료 후 현재 위치 가져오기
   useEffect(() => {
@@ -149,8 +158,22 @@ export default function Home() {
 
   // 사용자 차단 시 내 활동에서도 제거
   const handleUserBlock = async (userId: string, userName: string) => {
-    await handlePostUserBlock(userId);
-    removeActivitiesByUserName(userName);
+    try {
+      // 1. BlockUserContext를 통해 사용자 차단 (API 호출)
+      await blockUser(userId, userName);
+      
+      // 2. 홈에서 차단된 사용자의 게시글 제거 (UI만)
+      handlePostUserBlock(userId);
+      
+      // 3. 내 활동에서 차단된 사용자와 관련된 활동 제거
+      removeActivitiesByUserName(userName);
+      removeActivitiesByAuthorId(userId);
+      
+      console.log("✅ 사용자 차단 완료:", { userId, userName });
+    } catch (error) {
+      console.error("❌ 사용자 차단 실패:", error);
+      alert("사용자 차단에 실패했습니다. 다시 시도해주세요.");
+    }
   };
 
   const handleEditPost = (postId: string) => {
