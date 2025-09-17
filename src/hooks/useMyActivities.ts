@@ -32,6 +32,10 @@ export function useMyActivities() {
   const loadMyActivities = useCallback(async () => {
     setActivitiesLoading(true);
     try {
+      // 현재 사용자 정보 가져오기
+      const currentUser = await api.users.getMe();
+      const currentUserId = currentUser?._id || currentUser?.id;
+
       // 내가 쓴 글과 참여한 모임을 병렬로 가져옴
       const [myPostsResponse, joinedPostsResponse] = await Promise.all([
         api.users.getMyPosts(),
@@ -40,24 +44,36 @@ export function useMyActivities() {
 
       const activities: Activity[] = [];
 
+      // 로컬에서 삭제된 게시글 ID 목록 가져오기
+      const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
+
       // 내가 쓴 글을 활동으로 변환
-      console.log("📝 내가 쓴 글 응답:", myPostsResponse);
       const myPosts = myPostsResponse?.posts || myPostsResponse || [];
       if (Array.isArray(myPosts)) {
         myPosts.forEach((post: unknown) => {
           const postData = post as Record<string, unknown>;
 
-          // 첫 번째 게시글 데이터 구조 확인을 위한 로그
-          if (activities.length === 0) {
-            console.log("🔍 첫 번째 내 게시글 데이터:", JSON.stringify(postData, null, 2));
-            console.log("🔍 postData.title:", postData.title);
-            console.log("🔍 postData.category:", postData.category);
-            console.log("🔍 postData._id:", postData._id);
-            console.log("🔍 postData.id:", postData.id);
-          }
-
           // _id 또는 id 필드 확인
           const postId = postData._id as string || postData.id as string;
+
+          // authorId가 객체인 경우 처리
+          let authorId: string;
+          if (typeof postData.authorId === 'object' && postData.authorId) {
+            authorId = (postData.authorId as any)?._id || (postData.authorId as any)?.id;
+          } else {
+            authorId = postData.authorId as string || postData.author?.id || postData.author?._id;
+          }
+
+          // 삭제된 게시글 필터링
+          if (deletedPosts.includes(postId)) {
+            return;
+          }
+
+          // 보안 검사: 현재 사용자가 실제 작성자인지 확인
+          if (currentUserId && authorId && currentUserId !== authorId) {
+            console.warn("⚠️ 작성자 불일치 감지:", { postId, currentUserId, authorId });
+            return; // 해당 게시글 건너뛰기
+          }
 
           // 카테고리 처리
           const categoryName = getCategoryName(postData.category);
@@ -74,22 +90,17 @@ export function useMyActivities() {
             category: categoryName,
             role: "주최자",
             createdAt: postData.createdAt as string,
-            authorId: postData.authorId as string, // 작성자 ID 추가
+            authorId: authorId, // 검증된 작성자 ID 사용
           });
         });
       }
 
       // 참여한 모임을 활동으로 변환
-      console.log("🤝 참여한 모임 응답:", joinedPostsResponse);
       const joinedPosts = joinedPostsResponse?.posts || joinedPostsResponse || [];
       if (Array.isArray(joinedPosts)) {
         joinedPosts.forEach((post: unknown, index: number) => {
           const postData = post as Record<string, unknown>;
 
-          // 첫 번째 참여 게시글 데이터 구조 확인을 위한 로그
-          if (index === 0) {
-            console.log("🔍 첫 번째 참여 게시글 데이터:", JSON.stringify(postData, null, 2));
-          }
 
           // _id 또는 id 필드 확인
           const postId = postData._id as string || postData.id as string;
