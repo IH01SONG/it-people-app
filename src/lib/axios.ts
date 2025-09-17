@@ -24,15 +24,13 @@ api.interceptors.request.use((cfg) => {
     cfg.headers = cfg.headers || {};
     cfg.headers.Authorization = `Bearer ${t}`;
   }
-  // 디버깅: 최종 URL 확인
-  console.debug("[API]", (cfg.method || "get").toUpperCase(), (cfg.baseURL || "") + (cfg.url || ""));
   return cfg;
 });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    console.error("[API ERROR]", err?.response?.status, err?.response?.data || err.message);
+    console.error("API 오류:", err?.response?.status, err?.response?.data || err.message);
     
     // 401 Unauthorized 에러 처리
     if (err?.response?.status === 401) {
