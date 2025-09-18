@@ -6,13 +6,6 @@ import type { Activity } from "../types/home.types";
 const toStringSafe = (v: unknown, fallback = ""): string =>
   v == null ? fallback : String(v);
 
-const toNumberSafe = (v: unknown, fallback = 0): number => {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : fallback;
-};
-
-const getLen = (v: unknown): number =>
-  Array.isArray(v) ? v.length : 0;
 
 export function useMyActivities() {
   const [myActivities, setMyActivities] = useState<Activity[]>([]);
@@ -131,10 +124,10 @@ export function useMyActivities() {
             maxMembers: postData.maxParticipants as number,
             category: categoryName,
             role: "참여자",
-            createdAt: toStringSafe(p.createdAt, new Date().toISOString()),
-            authorId: toStringSafe(p.authorId ?? p._id ?? p.id, "unknown"),
+            createdAt: toStringSafe(postData.createdAt, new Date().toISOString()),
+            authorId: toStringSafe(postData.authorId ?? postData._id ?? postData.id, "unknown"),
           } as Activity);
-        }
+        });
       }
 
       // 날짜별로 정렬(최신 우선) — createdAt이 ISO 문자열이라는 가정
@@ -185,13 +178,3 @@ export function useMyActivities() {
   };
 }
 
-/** 간단 랜덤 ID (브라우저/노드 호환) */
-function cryptoRandomId() {
-  try {
-    // 브라우저
-    return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-  } catch {
-    // 노드/폴백
-    return Math.random().toString(36).slice(2);
-  }
-}

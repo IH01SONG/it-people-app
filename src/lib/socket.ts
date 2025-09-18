@@ -1,7 +1,7 @@
 import io from 'socket.io-client';
 
-// 소켓 서버 URL 설정 (백엔드 서버와 동일한 URL 사용)
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// 소켓 서버 URL 설정 (Vercel 프록시를 통해 연결)
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || '/api';
 
 export function createSocket(getToken: () => string | null) {
   const socket = io(SOCKET_URL, {
