@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { IconButton, Avatar, Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Alert, CircularProgress } from '@mui/material';
+import { IconButton, Avatar, Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Alert, CircularProgress } from '@mui/material';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';

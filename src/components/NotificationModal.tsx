@@ -60,9 +60,9 @@ export default function NotificationModal({
    * 알림 클릭 핸들러
    * 채팅방 ID가 있는 알림을 클릭하면 해당 채팅방으로 이동
    */
-  const handleNotificationClick = (notification: { chatRoomId?: string }) => {
-    if (notification.chatRoomId) {
-      navigate(`/chat/room/${notification.chatRoomId}`);
+  const handleNotificationClick = (notification: Notification) => {
+    if (notification.data?.chatRoomId) {
+      navigate(`/chat/room/${notification.data.chatRoomId}`);
       onClose();
     }
   };
@@ -129,7 +129,7 @@ export default function NotificationModal({
                     )}
                   </Box>
                   <Typography variant="body2" color="text.secondary" mb={1}>
-                    {notification.content}
+                    {notification.message}
                   </Typography>
                   <Box
                     display="flex"
@@ -137,15 +137,20 @@ export default function NotificationModal({
                     alignItems="center"
                   >
                     <Typography variant="caption" color="text.secondary">
-                      {notification.time}
+                      {new Date(notification.createdAt).toLocaleDateString("ko-KR", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </Typography>
-                    {notification.chatRoomId && (
+                    {notification.data?.chatRoomId && (
                       <Button
                         size="small"
                         variant="contained"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/chat/room/${notification.chatRoomId}`);
+                          navigate(`/chat/room/${notification.data?.chatRoomId}`);
                           onClose();
                         }}
                         sx={{

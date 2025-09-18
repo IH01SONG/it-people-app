@@ -92,7 +92,6 @@ const predefinedQuestions: ChatbotQuestion[] = [
 ];
 
 const Inquiry: React.FC = () => {
-  const [selectedQuestion, setSelectedQuestion] = useState<ChatbotQuestion | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('전체');
   const [formData, setFormData] = useState({
@@ -117,8 +116,8 @@ const Inquiry: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const handleQuestionClick = (question: ChatbotQuestion) => {
-    setSelectedQuestion(question);
+  const handleQuestionClick = (_question: ChatbotQuestion) => {
+    // setSelectedQuestion(question);
     setSubmitMessage(null); // Clear submit message when a question is clicked
   };
 
@@ -157,7 +156,7 @@ const Inquiry: React.FC = () => {
         message: '',
       });
       setFiles([]); // Clear selected files after submission
-      setSelectedQuestion(null); // Clear selected question after submission
+      // setSelectedQuestion(null); // Clear selected question after submission
     } catch (error) {
       console.error('Submission error:', error);
       setSubmitMessage('문의 전송 중 오류가 발생했습니다. 다시 시도해주세요.');
