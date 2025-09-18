@@ -79,11 +79,7 @@ export function useMyActivities() {
           const categoryName = getCategoryName(postData.category);
 
           activities.push({
-<<<<<<< HEAD
-            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
-=======
             id: Number(String(postData.id || 0)),
->>>>>>> feature/mypage
             title: postData.title as string,
             status: postData.status === "active" ? "모집 중" : "완료",
             time: postData.meetingDate 
@@ -94,11 +90,7 @@ export function useMyActivities() {
             category: categoryName,
             role: "주최자",
             createdAt: postData.createdAt as string,
-<<<<<<< HEAD
-            authorId: authorId, // 검증된 작성자 ID 사용
-=======
             authorId: (postData.authorId || postData._id || postData.id) as string, // 작성자 ID 추가
->>>>>>> feature/mypage
           });
         });
       }
@@ -117,11 +109,7 @@ export function useMyActivities() {
           const categoryName = getCategoryName(postData.category);
 
           activities.push({
-<<<<<<< HEAD
-            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
-=======
             id: Number(String(postData.id || 0)) + 10000, // 참여한 모임은 10000 이상의 ID
->>>>>>> feature/mypage
             title: postData.title as string,
             status: postData.status === "active" ? "참여 중" : "완료",
             time: postData.meetingDate 
