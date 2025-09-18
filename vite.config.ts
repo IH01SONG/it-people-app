@@ -12,17 +12,17 @@ export default defineConfig({
         target: TARGET,
         changeOrigin: true,
         secure: true,
-        configure: (proxy) => {
-          proxy.on("proxyReq", (proxyReq, req) => {
+        configure: (proxy: any) => {
+          proxy.on("proxyReq", (proxyReq: any, _req: any) => {
             // 🔧 서버의 Origin/CSRF 자체체크 우회: Origin/Referer를 타깃으로 통일
             proxyReq.setHeader("origin", TARGET);
             proxyReq.setHeader("referer", TARGET + "/");
             // 필요 시, Authorization 유지
           });
-          proxy.on("error", (err) => {
+          proxy.on("error", (err: any) => {
             console.log("❌ Proxy error:", err?.message || err);
           });
-          proxy.on("proxyRes", (proxyRes, req) => {
+          proxy.on("proxyRes", (proxyRes: any, req: any) => {
             console.log("✅ Response ←", proxyRes.statusCode, req.method, req.url);
           });
         },
@@ -34,8 +34,8 @@ export default defineConfig({
         ws: true,
         changeOrigin: true,
         secure: true,
-        configure: (proxy) => {
-          proxy.on("error", (err) => console.log("❌ WS Proxy error:", err?.message || err));
+        configure: (proxy: any) => {
+          proxy.on("error", (err: any) => console.log("❌ WS Proxy error:", err?.message || err));
         },
       },
     },

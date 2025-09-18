@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";       // 컨텍스트 사용 시
-import { api } from "../lib/api";                     // (대안) 직접 호출용
 import {
   Box, Button, TextField, Typography, Stack, createTheme, ThemeProvider
 } from "@mui/material";

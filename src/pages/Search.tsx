@@ -5,7 +5,6 @@ import {
   TextField, 
   Card, 
   Chip,
-  IconButton,
   InputAdornment
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";

@@ -87,18 +87,25 @@ export default function SearchResults() {
         title: template.title,
         content: template.content,
         author: `사용자${i + 1}`,
-        location: `${location} 근처`,
+        authorId: `user-${i + 1}`,
+        location: {
+          type: 'Point' as const,
+          coordinates: [126.978 + (Math.random() - 0.5) * 0.1, 37.5665 + (Math.random() - 0.5) * 0.1] as [number, number],
+          address: `${location} 근처`
+        },
         venue: `${location} ${template.category === '식사' ? '맛집' : template.category === '카페' ? '카페' : template.category === '쇼핑' ? '쇼핑몰' : '모임장소'}`,
         category: template.category,
-        image: Math.random() > 0.4 ? `https://picsum.photos/seed/${template.category}${i}/400/300` : null,
-        participants: Math.floor(Math.random() * 3) + 1,
+        tags: [template.category, '모임'],
+        image: Math.random() > 0.4 ? `https://picsum.photos/seed/${template.category}${i}/400/300` : undefined,
+        participants: [`user-${i + 1}`],
         maxParticipants: Math.floor(Math.random() * 3) + 4,
+        status: 'active' as const,
+        viewCount: Math.floor(Math.random() * 100),
         createdAt: new Date(createdAt).toISOString(),
-        expiresAt: template.expiresAt,
+        updatedAt: new Date(createdAt).toISOString(),
         isLiked: false,
-        isActive: template.expiresAt > now,
       };
-    }).filter(post => post.isActive);
+    });
   };
 
   // 검색 실행
@@ -112,8 +119,8 @@ export default function SearchResults() {
         post.title.toLowerCase().includes(lowerQuery) ||
         post.category.toLowerCase().includes(lowerQuery) ||
         post.content.toLowerCase().includes(lowerQuery) ||
-        post.location.toLowerCase().includes(lowerQuery) ||
-        post.venue.toLowerCase().includes(lowerQuery)
+        post.location.address?.toLowerCase().includes(lowerQuery) ||
+        post.venue?.toLowerCase().includes(lowerQuery)
       );
 
       // 필터 적용
@@ -343,7 +350,7 @@ export default function SearchResults() {
                       
                       <Box display="flex" alignItems="center" gap={2} mb={3}>
                         <Typography variant="body2" sx={{ color: '#666', fontWeight: 500 }}>
-                          위치: {post.location}
+                          위치: {post.location.address || `${post.location.coordinates[1].toFixed(3)}, ${post.location.coordinates[0].toFixed(3)}`}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#666', fontWeight: 500 }}>
                           장소: {post.venue}

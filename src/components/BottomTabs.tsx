@@ -1,4 +1,3 @@
-import Paper from "@mui/material/Paper";
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Box from "@mui/material/Box";
@@ -25,10 +24,7 @@ const responsiveTheme = createTheme({
       styleOverrides: {
         root: {
           // 모바일에서는 72px, 웹에서는 64px
-          height: {
-            xs: "72px", // 모바일
-            sm: "64px", // 태블릿/웹
-          },
+          height: "72px", // 모바일 기본값
           backgroundColor: "#ffffff",
           borderTop: "1px solid #f0f0f0",
         },
@@ -37,39 +33,24 @@ const responsiveTheme = createTheme({
     MuiBottomNavigationAction: {
       styleOverrides: {
         root: {
-          minWidth: {
-            xs: "60px", // 모바일
-            sm: "50px", // 웹
-          },
-          padding: {
-            xs: "8px 4px 6px 4px", // 모바일
-            sm: "6px 2px 4px 2px", // 웹
-          },
-          "&.Mui-selected": {
-            color: "#E762A9",
-            "& .MuiBottomNavigationAction-label": {
-              fontSize: {
-                xs: "11px", // 모바일
-                sm: "10px", // 웹
+          minWidth: "60px", // 모바일 기본값
+          padding: "8px 4px 6px 4px", // 모바일 기본값
+            "&.Mui-selected": {
+              color: "#E762A9",
+              "& .MuiBottomNavigationAction-label": {
+                fontSize: "11px", // 모바일 기본값
+                fontWeight: 600,
+                marginTop: "2px",
               },
-              fontWeight: 600,
-              marginTop: "2px",
             },
-          },
           "& .MuiBottomNavigationAction-label": {
-            fontSize: {
-              xs: "10px", // 모바일
-              sm: "9px", // 웹
-            },
+            fontSize: "10px", // 모바일 기본값
             fontWeight: 400,
             marginTop: "2px",
             lineHeight: 1.2,
           },
           "& .MuiSvgIcon-root": {
-            fontSize: {
-              xs: "24px", // 모바일
-              sm: "22px", // 웹
-            },
+            fontSize: "24px", // 모바일 기본값
             marginBottom: "2px",
           },
         },
@@ -124,19 +105,10 @@ export default function BottomTabs() {
           }}
           showLabels
           sx={{
-            height: {
-              xs: "72px", // 모바일
-              sm: "64px", // 웹
-            },
+          height: "72px", // 모바일 기본값
             "& .MuiBottomNavigationAction-root": {
-              minWidth: {
-                xs: "60px", // 모바일
-                sm: "50px", // 웹
-              },
-              padding: {
-                xs: "8px 4px 6px 4px", // 모바일
-                sm: "6px 2px 4px 2px", // 웹
-              },
+              minWidth: "60px", // 모바일 기본값
+              padding: "8px 4px 6px 4px", // 모바일 기본값
             },
           }}
         >

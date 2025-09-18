@@ -2,13 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Box, IconButton } from "@mui/material";
 import MyLocationIcon from "@mui/icons-material/MyLocation";
 
-interface KakaoPlace {
-  place_name: string;
-  x: string;
-  y: string;
-  [key: string]: any;
-}
-
 interface KakaoMaps {
   Map: any;
   LatLng: any;
@@ -56,29 +49,11 @@ export default function MapPicker({
 }: MapPickerProps) {
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
-    null
-  );
   const mapRef = useRef<HTMLDivElement>(null);
   const isSearchingRef = useRef(false);
   const lastSearchCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 거리 계산 함수
-  const getDistance = useCallback((pos1: any, pos2: any): number => {
-    const R = 6371e3; // 지구 반지름 (미터)
-    const φ1 = (pos1.getLat() * Math.PI) / 180;
-    const φ2 = (pos2.getLat() * Math.PI) / 180;
-    const Δφ = ((pos2.getLat() - pos1.getLat()) * Math.PI) / 180;
-    const Δλ = ((pos2.getLng() - pos1.getLng()) * Math.PI) / 180;
-
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c;
-  }, []);
 
   // 좌표로 상호명/주소 검색하는 함수 (지도 이동 없음) - debounce 적용
   const searchPlaceByCoords = useCallback(
@@ -175,7 +150,6 @@ export default function MapPicker({
               lat: parseFloat(place.y),
               lng: parseFloat(place.x),
             };
-            setCoords(newCoords);
             onLocationChange(place.place_name, newCoords);
           }
         },
@@ -236,7 +210,6 @@ export default function MapPicker({
           });
           markerInstance.setMap(mapInstance);
           setMarker(markerInstance);
-          setCoords({ lat, lng });
 
           // 지도 클릭 이벤트
           window.kakao.maps.event.addListener(
@@ -248,7 +221,6 @@ export default function MapPicker({
               const clickLng = latlng.getLng();
 
               markerInstance.setPosition(latlng);
-              setCoords({ lat: clickLat, lng: clickLng });
               searchPlaceByCoords(clickLat, clickLng);
             }
           );
@@ -259,7 +231,6 @@ export default function MapPicker({
             const dragLat = position.getLat();
             const dragLng = position.getLng();
 
-            setCoords({ lat: dragLat, lng: dragLng });
             searchPlaceByCoords(dragLat, dragLng);
           });
 
@@ -321,7 +292,6 @@ export default function MapPicker({
 
         map.setCenter(currentPosition);
         marker.setPosition(currentPosition);
-        setCoords({ lat: latitude, lng: longitude });
         onLocationChange("현재 위치", { lat: latitude, lng: longitude });
       });
     }
