@@ -54,14 +54,14 @@ export function useMyActivities() {
           const postData = post as Record<string, unknown>;
 
           // _id 또는 id 필드 확인
-          const postId = postData._id as string || postData.id as string;
+          const postId = (postData._id as string) || (postData.id as string);
 
           // authorId가 객체인 경우 처리
           let authorId: string;
           if (typeof postData.authorId === 'object' && postData.authorId) {
             authorId = (postData.authorId as any)?._id || (postData.authorId as any)?.id;
           } else {
-            authorId = postData.authorId as string || postData.author?.id || postData.author?._id;
+            authorId = (postData.authorId as string) || ((postData.author as any)?.id) || ((postData.author as any)?._id);
           }
 
           // 삭제된 게시글 필터링
@@ -76,10 +76,10 @@ export function useMyActivities() {
           }
 
           // 카테고리 처리
-          const categoryName = getCategoryName(postData.category);
+          const categoryName = getCategoryName(postData.category as string | object);
 
           activities.push({
-            id: Number(String(postData.id || 0)),
+            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
             title: postData.title as string,
             status: postData.status === "active" ? "모집 중" : "완료",
             time: postData.meetingDate 
@@ -90,7 +90,7 @@ export function useMyActivities() {
             category: categoryName,
             role: "주최자",
             createdAt: postData.createdAt as string,
-            authorId: (postData.authorId || postData._id || postData.id) as string, // 작성자 ID 추가
+            authorId: authorId, // 검증된 작성자 ID 사용
           });
         });
       }
@@ -98,18 +98,18 @@ export function useMyActivities() {
       // 참여한 모임을 활동으로 변환
       const joinedPosts = joinedPostsResponse?.posts || joinedPostsResponse || [];
       if (Array.isArray(joinedPosts)) {
-        joinedPosts.forEach((post: unknown, index: number) => {
+        joinedPosts.forEach((post: unknown) => {
           const postData = post as Record<string, unknown>;
 
 
           // _id 또는 id 필드 확인
-          const postId = postData._id as string || postData.id as string;
+          const postId = (postData._id as string) || (postData.id as string);
 
           // 카테고리 처리
-          const categoryName = getCategoryName(postData.category);
+          const categoryName = getCategoryName(postData.category as string | object);
 
           activities.push({
-            id: Number(String(postData.id || 0)) + 10000, // 참여한 모임은 10000 이상의 ID
+            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
             title: postData.title as string,
             status: postData.status === "active" ? "참여 중" : "완료",
             time: postData.meetingDate 
