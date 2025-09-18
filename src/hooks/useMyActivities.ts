@@ -25,18 +25,18 @@ export function useMyActivities() {
         myPosts.forEach((post: unknown) => {
           const postData = post as Record<string, unknown>;
           activities.push({
-            id: Number(`my-${postData.id as string}`.replace("my-", "")) || 0,
+            id: Number(String(postData.id || 0)),
             title: postData.title as string,
             status: postData.status === "active" ? "모집 중" : "완료",
-            time: new Date(postData.meetingDate as string).toLocaleString(
-              "ko-KR"
-            ),
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
+              : "미정",
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
             category: postData.category as string,
             role: "주최자",
             createdAt: postData.createdAt as string,
-            authorId: postData.authorId as string, // 작성자 ID 추가
+            authorId: (postData.authorId || postData._id || postData.id) as string, // 작성자 ID 추가
           });
         });
       }
@@ -48,21 +48,18 @@ export function useMyActivities() {
         joinedPosts.forEach((post: unknown) => {
           const postData = post as Record<string, unknown>;
           activities.push({
-            id:
-              Number(
-                `joined-${postData.id as string}`.replace("joined-", "")
-              ) || 0,
+            id: Number(String(postData.id || 0)) + 10000, // 참여한 모임은 10000 이상의 ID
             title: postData.title as string,
             status: postData.status === "active" ? "참여 중" : "완료",
-            time: new Date(postData.meetingDate as string).toLocaleString(
-              "ko-KR"
-            ),
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
+              : "미정",
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
             category: postData.category as string,
             role: "참여자",
             createdAt: postData.createdAt as string,
-            authorId: postData.authorId as string, // 작성자 ID 추가
+            authorId: (postData.authorId || postData._id || postData.id) as string, // 작성자 ID 추가
           });
         });
       }
@@ -74,7 +71,7 @@ export function useMyActivities() {
       );
       setMyActivities(activities);
     } catch (error) {
-      console.error("내 활동 로드 실패:", error);
+      console.error("내 활동 로드 실패:", error as Error);
       setMyActivities([]);
     } finally {
       setActivitiesLoading(false);
