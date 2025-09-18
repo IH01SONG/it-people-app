@@ -1,6 +1,5 @@
 // MUI 아이콘
 import LocationOnIcon from "@mui/icons-material/LocationOn";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
@@ -13,7 +12,6 @@ import {
   Typography,
   Box,
   Button,
-  IconButton,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -61,7 +59,7 @@ export default function PostCard({
   const [isBlocking, setIsBlocking] = useState(false);
 
   const isBlocked = isUserBlocked(post.authorId);
-  const isMyPost = user && (user.email === post.author || user.id === post.authorId || user._id === post.authorId);
+  const isMyPost = user && (user.email === post.author || user.id === post.authorId);
   const menuOpen = Boolean(anchorEl);
 
   const handleAuthorClick = (event: React.MouseEvent<HTMLElement>) => {

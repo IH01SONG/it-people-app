@@ -11,8 +11,6 @@ const AccountManagement: React.FC = () => {
   const navigate = useNavigate();
   const { logout, isAuthenticated } = useAuth();
   const [showAreaSelectionModal, setShowAreaSelectionModal] = useState(false);
-  const [selectedAutonomousDistrict, setSelectedAutonomousDistrict] = useState<string | null>(null);
-  const [selectedGeneralDistrict, setSelectedGeneralDistrict] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -49,19 +47,21 @@ const AccountManagement: React.FC = () => {
     }
   };
 
-  const handleAreaSelection = async (district: string, generalDistrict: string) => {
+  const handleAreaSelection = async (district: string | null, generalDistrict: string | null) => {
     try {
       setIsSavingArea(true);
       
       // API 호출로 지역 정보 저장
-      await api.users.updateProfile({
-        autonomousDistrict: district,
-        generalDistrict: generalDistrict
-      });
-      
-      // 성공 시 상태 업데이트
-      setSelectedAutonomousDistrict(district);
-      setSelectedGeneralDistrict(generalDistrict);
+      if (district && generalDistrict) {
+        await api.users.updateProfile({
+          autonomousDistrict: district,
+          generalDistrict: generalDistrict
+        });
+        
+        // 성공 시 상태 업데이트
+        // setSelectedAutonomousDistrict(district);
+        // setSelectedGeneralDistrict(generalDistrict);
+      }
       setShowAreaSelectionModal(false);
       
       alert('활동 지역이 성공적으로 설정되었습니다.');
