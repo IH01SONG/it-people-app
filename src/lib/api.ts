@@ -114,6 +114,10 @@ export const api = {
     create: (postId: string) =>
       axios.post(`/join-requests/posts/${postId}/request-join`).then(r => r.data),
 
+    // 특정 게시글의 참여 요청 목록 조회
+    getByPost: (postId: string) =>
+      axios.get(`/join-requests/posts/${postId}/requests`).then(r => r.data),
+
     // 참여 요청 수락
     accept: (requestId: string) =>
       axios.post(`/join-requests/${requestId}/accept`).then(r => r.data),

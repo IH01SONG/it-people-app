@@ -17,11 +17,21 @@ export default function Step1() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
-  const categories = ["자기개발", "봉사활동", "운동/스포츠", "문화/예술", "사교/인맥", "취미", "외국어", "맛집", "반려동물"];
+  const categories = [
+    "자기계발",
+    "봉사활동",
+    "운동/스포츠",
+    "문화/예술",
+    "사교/인맥",
+    "취미",
+    "외국어",
+    "맛집",
+    "반려동물",
+  ];
 
   const getCategoryEmoji = (category: string): string => {
     const emojiMap: Record<string, string> = {
-      자기개발: "📚",
+      자기계발: "📚",
       봉사활동: "🤝",
       "운동/스포츠": "🏃‍♂️",
       "문화/예술": "🎨",
@@ -36,7 +46,7 @@ export default function Step1() {
 
   const getCategoryDescription = (category: string): string => {
     const descMap: Record<string, string> = {
-      자기개발: "함께 성장하고 발전해요",
+      자기계발: "함께 성장하고 발전해요",
       봉사활동: "나눔과 베풂을 실천해요",
       "운동/스포츠": "건강하게 운동해요",
       "문화/예술": "문화생활을 함께해요",

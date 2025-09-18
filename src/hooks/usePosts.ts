@@ -1,12 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { api } from "../lib/api";
 import type { Post } from "../types/home.types";
-import { useBlockUser } from "../contexts/BlockUserContext";
 
 export function usePosts() {
-  // 차단된 사용자 관리
-  const { blockedUsers, isUserBlocked } = useBlockUser();
-  
   // 무한 스크롤 상태
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +40,9 @@ export function usePosts() {
       tags: Array.isArray(backendPost.tags)
         ? backendPost.tags.map((tag: any) => typeof tag === 'object' ? tag.name : tag)
         : [],
-      image: backendPost.image,
+      image: Array.isArray(backendPost.images) && backendPost.images.length > 0
+        ? backendPost.images[0] // 첫 번째 이미지 사용
+        : backendPost.image || (Array.isArray(backendPost.image) ? backendPost.image[0] : null),
       participants: backendPost.participants || [],
       maxParticipants: backendPost.maxParticipants,
       meetingDate: backendPost.meetingDate ? new Date(backendPost.meetingDate) : undefined,
@@ -107,7 +105,6 @@ export function usePosts() {
               location: location,
             });
 
-        console.log("📦 API 응답:", response);
 
         // API 응답이 배열인지 객체인지 확인
         let backendPosts: any[] = [];
@@ -126,80 +123,41 @@ export function usePosts() {
         }
 
         if (backendPosts.length > 0) {
-
-          // 백엔드 응답 데이터 구조 확인 (첫 번째 게시글만)
-          // console.log("🔍 첫 번째 게시글 원본 데이터:", JSON.stringify(backendPosts[0], null, 2));
+          // 로컬에서 삭제된 게시글 ID 목록 가져오기
+          const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
 
           // 백엔드 응답을 프론트엔드 타입으로 변환
-          const transformedPosts = backendPosts.map(transformBackendPost);
-          
-          // 차단된 사용자의 게시물 필터링
-          const filteredPosts = transformedPosts.filter(post => {
-            const isBlocked = isUserBlocked(post.authorId);
-            if (isBlocked) {
-              console.log(`🚫 차단된 사용자 게시물 제거: ${post.title} (작성자: ${post.author})`);
-            }
-            return !isBlocked;
-          });
+          const transformedPosts = backendPosts
+            .filter(post => !deletedPosts.includes(post._id)) // 삭제된 게시글 필터링
+            .map(transformBackendPost)
+            // 최신순으로 정렬 (createdAt 기준 내림차순)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-          console.log("✅ 게시글 로드 성공:", {
-            postsCount: transformedPosts.length,
-            filteredCount: filteredPosts.length,
-            blockedCount: transformedPosts.length - filteredPosts.length,
-            currentPage: response.currentPage,
-            totalPages: response.totalPages,
-            hasMore: apiHasMore,
-            firstPost: filteredPosts[0]?.title,
-            allPosts: filteredPosts.map((p: Post) => ({ id: p.id, title: p.title }))
-          });
 
           setPosts((prevPosts) => {
-            const newPosts = pageNum === 1 ? filteredPosts : [...prevPosts, ...filteredPosts];
-            console.log("📝 게시글 상태 업데이트:", {
-              prevCount: prevPosts.length,
-              newCount: newPosts.length,
-              isFirstPage: pageNum === 1,
-              newPostTitles: filteredPosts.map((p: Post) => p.title)
-            });
+            const newPosts = pageNum === 1 ? transformedPosts : [...prevPosts, ...transformedPosts];
             return newPosts;
           });
           setHasMore(apiHasMore);
         } else {
-          console.log("❌ 게시글 데이터가 없음", { response });
           if (pageNum === 1) {
             setPosts([]);
-            console.log("🗑️ 첫 번째 페이지에 게시글이 없어 목록 초기화");
           }
           setHasMore(false);
         }
       } catch (error) {
-        console.error("❌ 게시글 로드 실패:", error);
+        console.error("게시글 로드 실패:", error);
         if (pageNum === 1) {
           setPosts([]);
-          console.log("🗑️ 첫 번째 페이지 API 에러로 게시글 목록 초기화");
         }
         setHasMore(false);
       } finally {
         setLoading(false);
         loadingRef.current = false;
-        console.log("✅ loadPosts 완료:", { pageNum, timestamp: new Date().toISOString() });
       }
     },
-    [isUserBlocked]
+    []
   );
-
-  // 차단된 사용자가 변경될 때마다 기존 게시물에서 차단된 사용자의 게시물 제거
-  useEffect(() => {
-    if (blockedUsers.length > 0) {
-      setPosts(prevPosts => {
-        const filteredPosts = prevPosts.filter(post => !isUserBlocked(post.authorId));
-        if (filteredPosts.length !== prevPosts.length) {
-          console.log(`🧹 기존 게시물에서 차단된 사용자 게시물 제거: ${prevPosts.length - filteredPosts.length}개`);
-        }
-        return filteredPosts;
-      });
-    }
-  }, [blockedUsers, isUserBlocked]);
 
   // 무한 스크롤을 위한 페이지 변경 처리
   useEffect(() => {
@@ -230,13 +188,21 @@ export function usePosts() {
     }
   };
 
-  // 사용자 차단 (UI에서만 게시글 제거, API 호출은 상위 컴포넌트에서 처리)
-  const handleUserBlock = (userId: string) => {
-    console.log("UI에서 차단된 사용자의 게시글 제거:", userId);
-    // 차단된 사용자의 게시글을 목록에서 제거
-    setPosts((prevPosts) =>
-      prevPosts.filter((post) => post.authorId !== userId)
-    );
+  // 사용자 차단
+  const handleUserBlock = async (userId: string) => {
+    try {
+      const response = await api.users.blockUser(userId);
+
+      if (response.success) {
+        console.log("사용자 차단 완료");
+        // 차단된 사용자의 게시글을 목록에서 제거
+        setPosts((prevPosts) =>
+          prevPosts.filter((post) => post.authorId !== userId)
+        );
+      }
+    } catch (error) {
+      console.error("사용자 차단 실패:", error as Error);
+    }
   };
 
   // 게시글 삭제

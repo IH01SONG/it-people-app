@@ -117,7 +117,7 @@ export default function PostCard({
       }}
     >
       {post.image && (
-        <Box sx={{ height: 200, overflow: "hidden" }}>
+        <Box sx={{ height: 200, overflow: "hidden", position: "relative" }}>
           <img
             src={post.image}
             alt={post.title}
@@ -126,6 +126,12 @@ export default function PostCard({
               height: "100%",
               objectFit: "cover",
             }}
+            onError={(e) => {
+              // 이미지 로드 실패 시 숨김
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+            loading="lazy"
           />
         </Box>
       )}

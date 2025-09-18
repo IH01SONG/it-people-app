@@ -181,6 +181,90 @@ export default function Home() {
     alert("게시글 수정 기능은 준비 중입니다.");
   };
 
+  // 내 모임 활동 수정
+  const handleEditActivity = (activityId: string) => {
+    console.log("활동 수정:", activityId);
+    alert("활동 수정 기능은 준비 중입니다.");
+  };
+
+  // 내 모임 활동 삭제
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!window.confirm("정말로 이 모임을 삭제하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("로그인이 필요합니다. 다시 로그인해주세요.");
+        window.location.href = '/login';
+        return;
+      }
+
+      // 서버 삭제 시도 (실패해도 클라이언트에서 처리)
+      try {
+        await api.posts.delete(activityId);
+      } catch (error) {
+        // 서버 삭제 실패 시 클라이언트에서 영구 숨김 처리
+        console.warn("서버 삭제 실패, 클라이언트에서 숨김 처리:", error);
+      }
+
+      // 로컬 스토리지에 삭제된 게시글 ID 저장 (영구 숨김)
+      const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
+      if (!deletedPosts.includes(activityId)) {
+        deletedPosts.push(activityId);
+        localStorage.setItem('deletedPosts', JSON.stringify(deletedPosts));
+      }
+
+      // UI 새로고침
+      loadMyActivities();
+      resetPosts();
+      loadPosts(1, currentCoordsRef.current, currentLocationRef.current);
+
+      alert("모임이 삭제되었습니다.");
+
+    } catch (error) {
+      console.error("삭제 실패:", error);
+      alert("삭제에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  // 참여 요청 수락
+  const handleAcceptRequest = async (activityId: string, requestId: string) => {
+    try {
+      console.log("✅ 참여 요청 수락 시작:", { activityId, requestId });
+      await api.joinRequests.accept(requestId);
+
+      console.log("✅ 참여 요청 수락 성공");
+
+      // 내 활동 목록 새로고침
+      loadMyActivities();
+
+      alert("참여 요청을 수락했습니다.");
+    } catch (error) {
+      console.error("❌ 참여 요청 수락 실패:", error);
+      alert("참여 요청 수락에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  // 참여 요청 거절
+  const handleRejectRequest = async (activityId: string, requestId: string) => {
+    try {
+      console.log("❌ 참여 요청 거절 시작:", { activityId, requestId });
+      await api.joinRequests.reject(requestId);
+
+      console.log("✅ 참여 요청 거절 성공");
+
+      // 내 활동 목록 새로고침 (거절된 요청 제거)
+      loadMyActivities();
+
+      alert("참여 요청을 거절했습니다.");
+    } catch (error) {
+      console.error("❌ 참여 요청 거절 실패:", error);
+      alert("참여 요청 거절에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
   // 카카오맵 로딩 중이면 로딩 스피너 표시
   if (mapLoading) {
     return (
@@ -236,7 +320,14 @@ export default function Home() {
           onNotificationOpen={() => setNotificationOpen(true)}
         />
 
-        <MyActivities activities={myActivities} loading={activitiesLoading} />
+        <MyActivities
+          activities={myActivities}
+          loading={activitiesLoading}
+          onEditActivity={handleEditActivity}
+          onDeleteActivity={handleDeleteActivity}
+          onAcceptRequest={handleAcceptRequest}
+          onRejectRequest={handleRejectRequest}
+        />
 
         {/* 내 위치 동네 모임 게시글 목록 */}
         <Box mb={2}>

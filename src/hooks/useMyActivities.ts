@@ -18,10 +18,36 @@ export function useMyActivities() {
   const [myActivities, setMyActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
 
+  // 카테고리 ID를 카테고리 이름으로 변환하는 함수
+  const getCategoryName = (categoryId: string | object): string => {
+    // 카테고리 ID와 이름 매핑 (임시로 하드코딩, 나중에 API로 가져올 수 있음)
+    const categoryMap: { [key: string]: string } = {
+      '68c3bdd957c06e06e2706f9a': '운동',
+      '68c3bdd957c06e06e2706f9b': '스터디',
+      '68c3bdd957c06e06e2706f9c': '맛집',
+      '68c3bdd957c06e06e2706f9d': '문화',
+      '68c3bdd957c06e06e2706f9e': '친목',
+      '68c3bdd957c06e06e2706f9f': '게임',
+      '68c3bdd957c06e06e2706fa0': '여행',
+      '68c3bdd957c06e06e2706fa1': '기타',
+    };
+
+    if (typeof categoryId === 'string') {
+      return categoryMap[categoryId] || '기타';
+    } else if (typeof categoryId === 'object' && (categoryId as any).name) {
+      return (categoryId as any).name;
+    }
+    return '기타';
+  };
+
   // 내 활동 로드 함수
   const loadMyActivities = useCallback(async () => {
     setActivitiesLoading(true);
     try {
+      // 현재 사용자 정보 가져오기
+      const currentUser = await api.users.getMe();
+      const currentUserId = currentUser?._id || currentUser?.id;
+
       // 내가 쓴 글과 참여한 모임을 병렬로 가져옴
       const [myPostsResponse, joinedPostsResponse] = await Promise.all([
         api.users.getMyPosts(),
@@ -30,54 +56,80 @@ export function useMyActivities() {
 
       const activities: Activity[] = [];
 
-      // 내가 쓴 글을 활동으로 변환
-      // 응답 형태: { posts: [...] } 또는 그냥 [...]
-      const myPosts = (myPostsResponse?.posts ?? myPostsResponse) || [];
-      if (Array.isArray(myPosts)) {
-        for (const post of myPosts) {
-          const p = post as Record<string, unknown>;
+      // 로컬에서 삭제된 게시글 ID 목록 가져오기
+      const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
 
-          const rawId = p.id ?? p._id; // 백엔드에서 id 또는 _id 가능성
-          const id = toStringSafe(rawId, cryptoRandomId());
+      // 내가 쓴 글을 활동으로 변환
+      const myPosts = myPostsResponse?.posts || myPostsResponse || [];
+      if (Array.isArray(myPosts)) {
+        myPosts.forEach((post: unknown) => {
+          const postData = post as Record<string, unknown>;
+
+          // _id 또는 id 필드 확인
+          const postId = (postData._id as string) || (postData.id as string);
+
+          // authorId가 객체인 경우 처리
+          let authorId: string;
+          if (typeof postData.authorId === 'object' && postData.authorId) {
+            authorId = (postData.authorId as any)?._id || (postData.authorId as any)?.id;
+          } else {
+            authorId = (postData.authorId as string) || ((postData.author as any)?.id) || ((postData.author as any)?._id);
+          }
+
+          // 삭제된 게시글 필터링
+          if (deletedPosts.includes(postId)) {
+            return;
+          }
+
+          // 보안 검사: 현재 사용자가 실제 작성자인지 확인
+          if (currentUserId && authorId && currentUserId !== authorId) {
+            console.warn("⚠️ 작성자 불일치 감지:", { postId, currentUserId, authorId });
+            return; // 해당 게시글 건너뛰기
+          }
+
+          // 카테고리 처리
+          const categoryName = getCategoryName(postData.category as string | object);
 
           activities.push({
-            id, // ✅ string 보장
-            title: toStringSafe(p.title, "(제목 없음)"),
-            status: p.status === "active" ? "모집 중" : "완료",
-            time: p.meetingDate
-              ? new Date(String(p.meetingDate)).toLocaleString("ko-KR")
+            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
+            title: postData.title as string,
+            status: postData.status === "active" ? "모집 중" : "완료",
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
               : "미정",
-            members: getLen(p.participants),
-            maxMembers: toNumberSafe(p.maxParticipants, 0),
-            category: toStringSafe(p.category, "기타"),
+            members: Number((postData.participants as unknown[])?.length || 0),
+            maxMembers: postData.maxParticipants as number,
+            category: categoryName,
             role: "주최자",
-            createdAt: toStringSafe(p.createdAt, new Date().toISOString()),
-            authorId: toStringSafe(p.authorId ?? p._id ?? p.id, "unknown"),
-          } as Activity);
-        }
+            createdAt: postData.createdAt as string,
+            authorId: authorId, // 검증된 작성자 ID 사용
+          });
+        });
       }
 
       // 참여한 모임을 활동으로 변환
-      const joinedPosts =
-        (joinedPostsResponse?.posts ?? joinedPostsResponse) || [];
+      const joinedPosts = joinedPostsResponse?.posts || joinedPostsResponse || [];
       if (Array.isArray(joinedPosts)) {
-        for (const post of joinedPosts) {
-          const p = post as Record<string, unknown>;
+        joinedPosts.forEach((post: unknown) => {
+          const postData = post as Record<string, unknown>;
 
-          const rawId = p.id ?? p._id;
-          // 참여 항목은 prefix로 구분(예: "joined-<id>")
-          const id = "joined-" + toStringSafe(rawId, cryptoRandomId());
+
+          // _id 또는 id 필드 확인
+          const postId = (postData._id as string) || (postData.id as string);
+
+          // 카테고리 처리
+          const categoryName = getCategoryName(postData.category as string | object);
 
           activities.push({
-            id, // ✅ string 보장
-            title: toStringSafe(p.title, "(제목 없음)"),
-            status: p.status === "active" ? "참여 중" : "완료",
-            time: p.meetingDate
-              ? new Date(String(p.meetingDate)).toLocaleString("ko-KR")
+            id: postId, // 원래 MongoDB ObjectId를 그대로 사용
+            title: postData.title as string,
+            status: postData.status === "active" ? "참여 중" : "완료",
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
               : "미정",
-            members: getLen(p.participants),
-            maxMembers: toNumberSafe(p.maxParticipants, 0),
-            category: toStringSafe(p.category, "기타"),
+            members: Number((postData.participants as unknown[])?.length || 0),
+            maxMembers: postData.maxParticipants as number,
+            category: categoryName,
             role: "참여자",
             createdAt: toStringSafe(p.createdAt, new Date().toISOString()),
             authorId: toStringSafe(p.authorId ?? p._id ?? p.id, "unknown"),
@@ -102,10 +154,10 @@ export function useMyActivities() {
     }
   }, []);
 
-  // 내 활동에서 특정 활동 제거 (id는 string)
+  // 내 활동에서 특정 활동 제거
   const removeActivity = useCallback((activityId: string) => {
-    setMyActivities((prev) =>
-      prev.filter((activity) => activity.id !== activityId)
+    setMyActivities((prevActivities) =>
+      prevActivities.filter((activity) => activity.id !== activityId)
     );
   }, []);
 

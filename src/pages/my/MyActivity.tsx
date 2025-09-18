@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Collapse, List, ListItem, ListItemText, CircularProgress, Avatar } from "@mui/material";
+import { Box, Button, Typography, Stack, createTheme, ThemeProvider, IconButton, Collapse, List, ListItem, ListItemText, CircularProgress, Avatar, Chip } from "@mui/material";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BlockIcon from '@mui/icons-material/Block';
+import PersonIcon from '@mui/icons-material/Person';
+import GroupIcon from '@mui/icons-material/Group';
 import { useBlockUser } from '../../contexts/BlockUserContext';
+import { useMyActivities } from '../../hooks/useMyActivities';
+import { api } from '../../lib/api';
 
 const theme = createTheme({
   palette: {
@@ -26,13 +30,6 @@ const theme = createTheme({
   },
 });
 
-const myItpleData = [
-  { id: 1, title: '첫 번째 잇플 제목', date: '2023-01-15', participants: 5, isActive: true },
-  { id: 2, title: '두 번째 잇플 제목', date: '2023-02-20', participants: 12, isActive: false },
-  { id: 3, title: '세 번째 잇플 제목', date: '2023-03-10', participants: 8, isActive: true },
-];
-
-
 const MyActivity: React.FC = () => {
   const navigate = useNavigate();
   const [openMyItple, setOpenMyItple] = useState(false);
@@ -42,28 +39,40 @@ const MyActivity: React.FC = () => {
   // BlockUserContext 사용
   const { blockedUsers, unblockUser, cleanInvalidUsers, isLoading } = useBlockUser();
   
+  // 내 활동 데이터 관리
+  const { myActivities, activitiesLoading, loadMyActivities, removeActivity } = useMyActivities();
+  
   // 디버깅을 위한 로그
   console.log('🔍 MyActivity blockedUsers:', blockedUsers);
 
-  // 컴포넌트 마운트 시 유효하지 않은 사용자 제거
+  // 컴포넌트 마운트 시 유효하지 않은 사용자 제거 및 내 활동 로드
   useEffect(() => {
     if (blockedUsers.length > 0) {
       cleanInvalidUsers();
     }
-  }, [blockedUsers.length, cleanInvalidUsers]);
+    loadMyActivities();
+  }, [blockedUsers.length, cleanInvalidUsers, loadMyActivities]);
 
   const handleBack = () => {
     navigate(-1); // Go back to the previous page
   };
 
-  const handleEditItple = (id: number) => {
-    alert(`잇플 ${id} 수정하기`);
-    // 실제로는 수정 페이지로 이동
+  const handleEditItple = (id: string) => {
+    // 게시글 수정 페이지로 이동 (추후 구현)
+    navigate(`/posts/${id}/edit`);
   };
 
-  const handleDeleteItple = (id: number) => {
-    alert(`잇플 ${id} 삭제하기`);
-    // 실제로는 삭제 확인 후 삭제 처리
+  const handleDeleteItple = async (id: string) => {
+    if (window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+      try {
+        await api.posts.delete(id);
+        removeActivity(id);
+        alert('게시글이 삭제되었습니다.');
+      } catch (error) {
+        console.error('게시글 삭제 실패:', error);
+        alert('게시글 삭제에 실패했습니다. 다시 시도해주세요.');
+      }
+    }
   };
 
   // 차단 해제 처리
@@ -117,18 +126,46 @@ const MyActivity: React.FC = () => {
             </Button>
             <Collapse in={openMyItple} timeout="auto" unmountOnExit>
               <List component="div" disablePadding className="bg-gray-50 rounded-md shadow-inner w-full">
-                {myItpleData.map((itple) => (
-                  <ListItem key={itple.id} className="border-b border-gray-200 last:border-b-0">
+                {activitiesLoading && (
+                  <ListItem>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', py: 2 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  </ListItem>
+                )}
+                {!activitiesLoading && myActivities.filter(activity => activity.role === '주최자').length === 0 && (
+                  <ListItem>
+                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', width: '100%', py: 2 }}>
+                      내가 만든 잇플이 없습니다.
+                    </Typography>
+                  </ListItem>
+                )}
+                {!activitiesLoading && myActivities
+                  .filter(activity => activity.role === '주최자')
+                  .map((activity) => (
+                    <ListItem key={activity.id} className="border-b border-gray-200 last:border-b-0">
                     <ListItemText
                       primary={
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                              <PersonIcon sx={{ color: theme.palette.primary.main, fontSize: 20 }} />
                           <Typography variant="body1" className="font-semibold">
-                            제목: {itple.title}
+                                {activity.title}
                           </Typography>
+                              <Chip 
+                                label={activity.category} 
+                                size="small" 
+                                sx={{ 
+                                  backgroundColor: theme.palette.primary.light,
+                                  color: 'white',
+                                  fontSize: '0.75rem'
+                                }} 
+                              />
+                            </Box>
                           <Box sx={{ display: 'flex', gap: 1 }}>
                             <IconButton
                               size="small"
-                              onClick={() => handleEditItple(itple.id)}
+                                onClick={() => handleEditItple(activity.id)}
                               sx={{
                                 color: theme.palette.primary.main,
                                 '&:hover': {
@@ -140,15 +177,11 @@ const MyActivity: React.FC = () => {
                             </IconButton>
                             <IconButton
                               size="small"
-                              onClick={() => handleDeleteItple(itple.id)}
-                              disabled={itple.isActive}
+                                onClick={() => handleDeleteItple(activity.id)}
                               sx={{
-                                color: itple.isActive ? 'gray' : '#dc2626',
+                                  color: '#dc2626',
                                 '&:hover': {
-                                  backgroundColor: itple.isActive ? 'transparent' : '#fef2f2',
-                                },
-                                '&.Mui-disabled': {
-                                  color: 'gray',
+                                    backgroundColor: '#fef2f2',
                                 },
                               }}
                             >
@@ -160,15 +193,15 @@ const MyActivity: React.FC = () => {
                       secondary={
                         <React.Fragment>
                           <Typography component="span" variant="body2" color="text.primary">
-                            일자: {itple.date}
+                              모임일: {activity.time}
                           </Typography>
                           <br />
                           <Typography component="span" variant="body2" color="text.primary">
-                            인원: {itple.participants}명
+                              참여자: {activity.members}/{activity.maxMembers}명
                           </Typography>
                           <br />
-                          <Typography component="span" variant="body2" color={itple.isActive ? 'success.main' : 'text.secondary'}>
-                            상태: {itple.isActive ? '진행중' : '완료'}
+                            <Typography component="span" variant="body2" color={activity.status === '모집 중' ? 'success.main' : 'text.secondary'}>
+                              상태: {activity.status}
                           </Typography>
                         </React.Fragment>
                       }
@@ -199,9 +232,64 @@ const MyActivity: React.FC = () => {
               <Typography variant="inherit" className="text-left flex-grow text-white">참여한 잇플</Typography>
             </Button>
             <Collapse in={openParticipatedItple} timeout="auto" unmountOnExit>
-              <Box className="p-4 bg-gray-50 rounded-md shadow-inner text-gray-600 w-full">
-                <Typography variant="body2">참여한 잇플 목록은 추후 '참여하기' 탭에서 구현될 예정입니다.</Typography>
+              <List component="div" disablePadding className="bg-gray-50 rounded-md shadow-inner w-full">
+                {activitiesLoading && (
+                  <ListItem>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', py: 2 }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  </ListItem>
+                )}
+                {!activitiesLoading && myActivities.filter(activity => activity.role === '참여자').length === 0 && (
+                  <ListItem>
+                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', width: '100%', py: 2 }}>
+                      참여한 잇플이 없습니다.
+                    </Typography>
+                  </ListItem>
+                )}
+                {!activitiesLoading && myActivities
+                  .filter(activity => activity.role === '참여자')
+                  .map((activity) => (
+                    <ListItem key={activity.id} className="border-b border-gray-200 last:border-b-0">
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                              <GroupIcon sx={{ color: theme.palette.primary.main, fontSize: 20 }} />
+                              <Typography variant="body1" className="font-semibold">
+                                {activity.title}
+                              </Typography>
+                              <Chip 
+                                label={activity.category} 
+                                size="small" 
+                                sx={{ 
+                                  backgroundColor: theme.palette.primary.light,
+                                  color: 'white',
+                                  fontSize: '0.75rem'
+                                }} 
+                              />
+                            </Box>
               </Box>
+                        }
+                        secondary={
+                          <React.Fragment>
+                            <Typography component="span" variant="body2" color="text.primary">
+                              모임일: {activity.time}
+                            </Typography>
+                            <br />
+                            <Typography component="span" variant="body2" color="text.primary">
+                              참여자: {activity.members}/{activity.maxMembers}명
+                            </Typography>
+                            <br />
+                            <Typography component="span" variant="body2" color={activity.status === '참여 중' ? 'success.main' : 'text.secondary'}>
+                              상태: {activity.status}
+                            </Typography>
+                          </React.Fragment>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+              </List>
             </Collapse>
 
             {/* 차단 사용자 목록 */}

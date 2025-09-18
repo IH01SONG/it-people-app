@@ -50,7 +50,7 @@ export interface Notification {
  * 내 모임 활동 데이터 타입
  */
 export interface Activity {
-  id: number; // 활동 고유 ID
+  id: string; // 활동 고유 ID (MongoDB ObjectId)
   title: string; // 모임 제목
   status: string; // 모임 상태 (참여 중, 대기 중, 모집 완료 등)
   time: string; // 모임 시간
