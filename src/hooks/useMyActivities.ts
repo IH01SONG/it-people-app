@@ -79,18 +79,26 @@ export function useMyActivities() {
           const categoryName = getCategoryName(postData.category);
 
           activities.push({
+<<<<<<< HEAD
             id: postId, // 원래 MongoDB ObjectId를 그대로 사용
+=======
+            id: Number(String(postData.id || 0)),
+>>>>>>> feature/mypage
             title: postData.title as string,
             status: postData.status === "active" ? "모집 중" : "완료",
-            time: new Date(postData.meetingDate as string).toLocaleString(
-              "ko-KR"
-            ),
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
+              : "미정",
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
             category: categoryName,
             role: "주최자",
             createdAt: postData.createdAt as string,
+<<<<<<< HEAD
             authorId: authorId, // 검증된 작성자 ID 사용
+=======
+            authorId: (postData.authorId || postData._id || postData.id) as string, // 작성자 ID 추가
+>>>>>>> feature/mypage
           });
         });
       }
@@ -109,18 +117,22 @@ export function useMyActivities() {
           const categoryName = getCategoryName(postData.category);
 
           activities.push({
+<<<<<<< HEAD
             id: postId, // 원래 MongoDB ObjectId를 그대로 사용
+=======
+            id: Number(String(postData.id || 0)) + 10000, // 참여한 모임은 10000 이상의 ID
+>>>>>>> feature/mypage
             title: postData.title as string,
             status: postData.status === "active" ? "참여 중" : "완료",
-            time: new Date(postData.meetingDate as string).toLocaleString(
-              "ko-KR"
-            ),
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
+              : "미정",
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
             category: categoryName,
             role: "참여자",
             createdAt: postData.createdAt as string,
-            authorId: postData.authorId as string, // 작성자 ID 추가
+            authorId: (postData.authorId || postData._id || postData.id) as string, // 작성자 ID 추가
           });
         });
       }
@@ -132,7 +144,7 @@ export function useMyActivities() {
       );
       setMyActivities(activities);
     } catch (error) {
-      console.error("내 활동 로드 실패:", error);
+      console.error("내 활동 로드 실패:", error as Error);
       setMyActivities([]);
     } finally {
       setActivitiesLoading(false);
