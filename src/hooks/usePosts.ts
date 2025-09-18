@@ -16,6 +16,16 @@ export function usePosts() {
 
   // 백엔드 응답을 프론트엔드 Post 타입으로 변환하는 함수
   const transformBackendPost = (backendPost: any): Post => {
+    // 디버그: 이미지 첨부 테스트 게시글의 백엔드 데이터 확인
+    if (backendPost.title && backendPost.title.includes("이미지 첨부 테스트")) {
+      console.log(`🔍 백엔드 원본 데이터 - "${backendPost.title}":`, {
+        image: backendPost.image,
+        images: backendPost.images,
+        imageType: typeof backendPost.image,
+        imagesType: typeof backendPost.images,
+        fullData: backendPost
+      });
+    }
     // 작성자 정보 추출 (닉네임 우선, 없으면 이메일)
     let authorName = backendPost.author; // 기본값은 이메일
     if (typeof backendPost.authorId === 'object' && backendPost.authorId?.nickname) {
@@ -41,8 +51,8 @@ export function usePosts() {
         ? backendPost.tags.map((tag: any) => typeof tag === 'object' ? tag.name : tag)
         : [],
       image: Array.isArray(backendPost.images) && backendPost.images.length > 0
-        ? backendPost.images[0] // 첫 번째 이미지 사용
-        : backendPost.image || (Array.isArray(backendPost.image) ? backendPost.image[0] : null),
+        ? backendPost.images // 전체 이미지 배열 사용
+        : backendPost.image || null,
       participants: backendPost.participants || [],
       maxParticipants: backendPost.maxParticipants,
       meetingDate: backendPost.meetingDate ? new Date(backendPost.meetingDate) : undefined,
@@ -79,22 +89,13 @@ export function usePosts() {
   const loadPosts = useCallback(
     async (pageNum: number, coords?: { lat: number; lng: number } | null, location?: string) => {
       if (loadingRef.current) {
-        console.log("⏸️ 이미 로딩 중이므로 건너뛰기");
         return;
       }
-
-      console.log("🔄 loadPosts 호출됨:", {
-        pageNum,
-        location,
-        coords,
-        timestamp: new Date().toISOString()
-      });
 
       setLoading(true);
       loadingRef.current = true;
 
       try {
-        console.log("📍 API 요청 준비:", { coords, location, hasCoords: !!coords });
 
         // 현재 좌표가 있으면 주변 게시글을, 없으면 위치명으로 검색
         const response = coords
@@ -176,14 +177,12 @@ export function usePosts() {
         const newAppliedPosts = new Set(appliedPosts);
         newAppliedPosts.add(postId);
         setAppliedPosts(newAppliedPosts);
-        console.log("참여 신청 완료:", postId);
       }
     } catch (error) {
       console.error("참여 신청 실패:", error as Error);
       if (
         (error as { response?: { status: number } }).response?.status === 409
       ) {
-        console.log("이미 신청한 모임입니다.");
       }
     }
   };
@@ -194,7 +193,6 @@ export function usePosts() {
       const response = await api.users.blockUser(userId);
 
       if (response.success) {
-        console.log("사용자 차단 완료");
         // 차단된 사용자의 게시글을 목록에서 제거
         setPosts((prevPosts) =>
           prevPosts.filter((post) => post.authorId !== userId)
@@ -212,16 +210,13 @@ export function usePosts() {
     }
 
     try {
-      console.log("🗑️ 게시글 삭제 시작:", postId);
       await api.posts.delete(postId);
-
-      console.log("✅ 게시글 삭제 성공");
       // 게시글 목록에서 삭제된 게시글 제거
       setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
 
       alert("게시글이 삭제되었습니다.");
     } catch (error) {
-      console.error("❌ 게시글 삭제 실패:", error);
+      console.error("게시글 삭제 실패:", error);
       alert("게시글 삭제에 실패했습니다. 다시 시도해주세요.");
     }
   };

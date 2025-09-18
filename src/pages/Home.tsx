@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Typography, Box, CircularProgress } from "@mui/material";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import AppHeader from "../components/AppHeader";
 import LocationHeader from "../components/LocationHeader";
 import MyActivities from "../components/MyActivities";
@@ -16,6 +16,7 @@ import { useBlockUser } from "../contexts/BlockUserContext";
 
 export default function Home() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // 커스텀 훅들 사용
   const {
@@ -50,10 +51,7 @@ export default function Home() {
   } = usePosts();
 
   // 차단 사용자 관리
-  const { blockUser, blockedUsers } = useBlockUser();
-  
-  // 디버깅을 위한 로그
-  console.log('🔍 Home blockedUsers:', blockedUsers);
+  const { blockUser } = useBlockUser();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -69,7 +67,6 @@ export default function Home() {
     setNotificationLoading(true);
     try {
       const response = await api.notifications.getAll();
-      console.log("🔔 알림 API 응답:", response);
       if (response && Array.isArray(response)) {
         setNotifications(response);
       } else if (response && response.notifications) {
@@ -102,47 +99,33 @@ export default function Home() {
 
   // 카카오맵 로딩 완료 후 현재 위치 가져오기
   useEffect(() => {
-    console.log("🔍 useEffect 실행:", { mapLoading, mapError, locationLoading });
-
     if (!mapLoading && !mapError) {
-      console.log("✅ 카카오맵 로딩 완료, 위치 확인 시작");
-
       // 위치 로딩 중이 아니면 이미 캐시된 위치가 있는 것
       if (!locationLoading) {
-        console.log("📍 위치 로딩 완료, 바로 게시글 로드");
         resetPosts();
         loadPosts(1, currentCoordsRef.current, currentLocationRef.current);
       } else {
-        console.log("⏳ 위치 로딩 중, getCurrentLocation 호출");
         getCurrentLocation().then(() => {
-          console.log("✅ getCurrentLocation 완료, 게시글 로드 시작");
           resetPosts();
           loadPosts(1, currentCoordsRef.current, currentLocationRef.current);
         });
       }
-    } else {
-      console.log("⏸️ 카카오맵 로딩 중 또는 에러:", { mapLoading, mapError });
     }
   }, [mapLoading, mapError, locationLoading, getCurrentLocation, resetPosts, loadPosts]);
 
   // 새 게시글 작성 후 돌아왔을 때 게시글 새로고침
   useEffect(() => {
     const state = location.state as { refreshPosts?: boolean } | null;
-    console.log("🔍 location.state 체크:", state);
 
     if (state?.refreshPosts) {
-      console.log("🔄 새 게시글 작성 후 돌아옴 - 새로고침 시작");
-
       // state 초기화를 위해 replace 사용
       window.history.replaceState({}, document.title);
 
       // 게시글 새로고침
       resetPosts();
-      console.log("📝 게시글 상태 초기화 완료, loadPosts(1) 호출");
       loadPosts(1, currentCoordsRef.current, currentLocationRef.current);
 
       // 내 활동도 새로고침
-      console.log("🎯 내 활동 새로고침 시작");
       loadMyActivities();
     }
   }, [location.state, loadPosts, loadMyActivities, resetPosts]);
@@ -169,7 +152,6 @@ export default function Home() {
       removeActivitiesByUserName(userName);
       removeActivitiesByAuthorId(userId);
       
-      console.log("✅ 사용자 차단 완료:", { userId, userName });
     } catch (error) {
       console.error("❌ 사용자 차단 실패:", error);
       alert("사용자 차단에 실패했습니다. 다시 시도해주세요.");
@@ -177,14 +159,12 @@ export default function Home() {
   };
 
   const handleEditPost = (postId: string) => {
-    console.log("게시글 수정:", postId);
-    alert("게시글 수정 기능은 준비 중입니다.");
+    navigate(`/edit/${postId}`);
   };
 
   // 내 모임 활동 수정
   const handleEditActivity = (activityId: string) => {
-    console.log("활동 수정:", activityId);
-    alert("활동 수정 기능은 준비 중입니다.");
+    navigate(`/edit/${activityId}`);
   };
 
   // 내 모임 활동 삭제
@@ -206,7 +186,6 @@ export default function Home() {
         await api.posts.delete(activityId);
       } catch (error) {
         // 서버 삭제 실패 시 클라이언트에서 영구 숨김 처리
-        console.warn("서버 삭제 실패, 클라이언트에서 숨김 처리:", error);
       }
 
       // 로컬 스토리지에 삭제된 게시글 ID 저장 (영구 숨김)
@@ -230,12 +209,9 @@ export default function Home() {
   };
 
   // 참여 요청 수락
-  const handleAcceptRequest = async (activityId: string, requestId: string) => {
+  const handleAcceptRequest = async (_activityId: string, requestId: string) => {
     try {
-      console.log("✅ 참여 요청 수락 시작:", { activityId, requestId });
       await api.joinRequests.accept(requestId);
-
-      console.log("✅ 참여 요청 수락 성공");
 
       // 내 활동 목록 새로고침
       loadMyActivities();
@@ -248,12 +224,9 @@ export default function Home() {
   };
 
   // 참여 요청 거절
-  const handleRejectRequest = async (activityId: string, requestId: string) => {
+  const handleRejectRequest = async (_activityId: string, requestId: string) => {
     try {
-      console.log("❌ 참여 요청 거절 시작:", { activityId, requestId });
       await api.joinRequests.reject(requestId);
-
-      console.log("✅ 참여 요청 거절 성공");
 
       // 내 활동 목록 새로고침 (거절된 요청 제거)
       loadMyActivities();

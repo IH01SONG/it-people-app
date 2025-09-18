@@ -71,7 +71,6 @@ export function useMyActivities() {
 
           // 보안 검사: 현재 사용자가 실제 작성자인지 확인
           if (currentUserId && authorId && currentUserId !== authorId) {
-            console.warn("⚠️ 작성자 불일치 감지:", { postId, currentUserId, authorId });
             return; // 해당 게시글 건너뛰기
           }
 

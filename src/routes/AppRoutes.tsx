@@ -14,6 +14,7 @@ const Map = lazy(() => import("../pages/Map"));
 const NewPost = lazy(() => import("../pages/NewPost"));
 const Step1 = lazy(() => import("../pages/new/Step1"));
 const Step2 = lazy(() => import("../pages/new/Step2"));
+const EditPost = lazy(() => import("../pages/EditPost"));
 const FeedbackResult = lazy(() => import("../pages/FeedbackResult"));
 const ChatRoom = lazy(() => import("../pages/chat/ChatRoom"));
 const Settings = lazy(() => import("../pages/my/Settings"));
@@ -54,7 +55,12 @@ export default function AppRoutes() {
               <Step2 />
             </ProtectedRoute>
           } />
-          
+          <Route path="/edit/:postId" element={
+            <ProtectedRoute>
+              <EditPost />
+            </ProtectedRoute>
+          } />
+
           <Route element={<RootLayout />}>
             {/* Home */}
             <Route path="/" element={<Home />} />

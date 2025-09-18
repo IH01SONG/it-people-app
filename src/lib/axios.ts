@@ -30,7 +30,9 @@ api.interceptors.request.use((cfg) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    console.error("API 오류:", err?.response?.status, err?.response?.data || err.message);
+    if (err?.response?.status !== 404) {
+      console.error("API 오류:", err?.response?.status, err?.response?.data || err.message);
+    }
     
     // 401 Unauthorized 에러 처리
     if (err?.response?.status === 401) {
