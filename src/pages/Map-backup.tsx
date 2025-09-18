@@ -387,7 +387,7 @@ export default function Map() {
             center={center}
             style={{ width: "100%", height: "100%" }}
             level={4}
-            onClick={(_, mouseEvent) => {
+            onClick={(_) => {
               setSelectedPost(null);
             }}
           >

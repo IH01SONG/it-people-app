@@ -14,7 +14,6 @@ import {
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ShareIcon from "@mui/icons-material/Share";
-import FavoriteIcon from "@mui/icons-material/Favorite";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -216,7 +215,7 @@ export default function FeedbackResult() {
           </Typography>
         </Box>
 
-        <Box display="flex" justify="space-between" gap={2}>
+        <Box display="flex" justifyContent="space-between" gap={2}>
           <Box flex={1} textAlign="center">
             <Typography variant="h6" fontWeight={700} color="#4CAF50">
               {feedbacks.filter(f => f.rating >= 4).length}

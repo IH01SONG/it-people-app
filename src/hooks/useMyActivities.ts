@@ -2,6 +2,11 @@ import { useState, useCallback } from "react";
 import { api } from "../lib/api";
 import type { Activity } from "../types/home.types";
 
+/** 안전 파싱 유틸 */
+const toStringSafe = (v: unknown, fallback = ""): string =>
+  v == null ? fallback : String(v);
+
+
 export function useMyActivities() {
   const [myActivities, setMyActivities] = useState<Activity[]>([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -54,14 +59,14 @@ export function useMyActivities() {
           const postData = post as Record<string, unknown>;
 
           // _id 또는 id 필드 확인
-          const postId = postData._id as string || postData.id as string;
+          const postId = (postData._id as string) || (postData.id as string);
 
           // authorId가 객체인 경우 처리
           let authorId: string;
           if (typeof postData.authorId === 'object' && postData.authorId) {
             authorId = (postData.authorId as any)?._id || (postData.authorId as any)?.id;
           } else {
-            authorId = postData.authorId as string || postData.author?.id || postData.author?._id;
+            authorId = (postData.authorId as string) || ((postData.author as any)?.id) || ((postData.author as any)?._id);
           }
 
           // 삭제된 게시글 필터링
@@ -75,15 +80,15 @@ export function useMyActivities() {
           }
 
           // 카테고리 처리
-          const categoryName = getCategoryName(postData.category);
+          const categoryName = getCategoryName(postData.category as string | object);
 
           activities.push({
             id: postId, // 원래 MongoDB ObjectId를 그대로 사용
             title: postData.title as string,
             status: postData.status === "active" ? "모집 중" : "완료",
-            time: new Date(postData.meetingDate as string).toLocaleString(
-              "ko-KR"
-            ),
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
+              : "미정",
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
             category: categoryName,
@@ -97,41 +102,44 @@ export function useMyActivities() {
       // 참여한 모임을 활동으로 변환
       const joinedPosts = joinedPostsResponse?.posts || joinedPostsResponse || [];
       if (Array.isArray(joinedPosts)) {
-        joinedPosts.forEach((post: unknown, index: number) => {
+        joinedPosts.forEach((post: unknown) => {
           const postData = post as Record<string, unknown>;
 
 
           // _id 또는 id 필드 확인
-          const postId = postData._id as string || postData.id as string;
+          const postId = (postData._id as string) || (postData.id as string);
 
           // 카테고리 처리
-          const categoryName = getCategoryName(postData.category);
+          const categoryName = getCategoryName(postData.category as string | object);
 
           activities.push({
             id: postId, // 원래 MongoDB ObjectId를 그대로 사용
             title: postData.title as string,
             status: postData.status === "active" ? "참여 중" : "완료",
-            time: new Date(postData.meetingDate as string).toLocaleString(
-              "ko-KR"
-            ),
+            time: postData.meetingDate 
+              ? new Date(postData.meetingDate as string).toLocaleString("ko-KR")
+              : "미정",
             members: Number((postData.participants as unknown[])?.length || 0),
             maxMembers: postData.maxParticipants as number,
             category: categoryName,
             role: "참여자",
-            createdAt: postData.createdAt as string,
-            authorId: postData.authorId as string, // 작성자 ID 추가
-          });
+            createdAt: toStringSafe(postData.createdAt, new Date().toISOString()),
+            authorId: toStringSafe(postData.authorId ?? postData._id ?? postData.id, "unknown"),
+          } as Activity);
         });
       }
 
-      // 날짜별로 정렬
+      // 날짜별로 정렬(최신 우선) — createdAt이 ISO 문자열이라는 가정
       activities.sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(a.createdAt).getTime() < new Date(b.createdAt).getTime()
+            ? 1
+            : -1
       );
+
       setMyActivities(activities);
     } catch (error) {
-      console.error("내 활동 로드 실패:", error);
+      console.error("내 활동 로드 실패:", error as Error);
       setMyActivities([]);
     } finally {
       setActivitiesLoading(false);
@@ -145,21 +153,17 @@ export function useMyActivities() {
     );
   }, []);
 
-  // 내 활동에서 사용자명으로 활동 제거
+  // 내 활동에서 사용자명으로 활동 제거(타이틀에 포함되는 경우)
   const removeActivitiesByUserName = useCallback((userName: string) => {
-    setMyActivities((prevActivities) =>
-      prevActivities.filter(
-        (activity) => !activity.title.includes(userName)
-      )
+    setMyActivities((prev) =>
+      prev.filter((activity) => !activity.title.includes(userName))
     );
   }, []);
 
   // 차단된 사용자와 관련된 활동 제거 (작성자 ID 기반)
   const removeActivitiesByAuthorId = useCallback((authorId: string) => {
-    setMyActivities((prevActivities) =>
-      prevActivities.filter(
-        (activity) => activity.authorId !== authorId
-      )
+    setMyActivities((prev) =>
+      prev.filter((activity) => activity.authorId !== authorId)
     );
   }, []);
 
@@ -172,3 +176,4 @@ export function useMyActivities() {
     removeActivitiesByAuthorId,
   };
 }
+
