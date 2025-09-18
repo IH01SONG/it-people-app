@@ -105,7 +105,6 @@ export function usePosts() {
               location: location,
             });
 
-        console.log("📦 API 응답:", response);
 
         // API 응답이 배열인지 객체인지 확인
         let backendPosts: any[] = [];
@@ -124,65 +123,37 @@ export function usePosts() {
         }
 
         if (backendPosts.length > 0) {
-
-          // 백엔드 응답 데이터 구조 확인 (첫 번째 게시글만)
-          if (backendPosts.length > 0) {
-            console.log("🔍 첫 번째 게시글 원본 데이터:", JSON.stringify(backendPosts[0], null, 2));
-            console.log("🖼️ 이미지 필드 확인:", {
-              image: backendPosts[0].image,
-              images: backendPosts[0].images,
-              imageType: typeof backendPosts[0].image,
-              imagesType: typeof backendPosts[0].images,
-              imagesIsArray: Array.isArray(backendPosts[0].images)
-            });
-          }
+          // 로컬에서 삭제된 게시글 ID 목록 가져오기
+          const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
 
           // 백엔드 응답을 프론트엔드 타입으로 변환
           const transformedPosts = backendPosts
+            .filter(post => !deletedPosts.includes(post._id)) // 삭제된 게시글 필터링
             .map(transformBackendPost)
             // 최신순으로 정렬 (createdAt 기준 내림차순)
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-          console.log("✅ 게시글 로드 성공:", {
-            postsCount: transformedPosts.length,
-            currentPage: response.currentPage,
-            totalPages: response.totalPages,
-            hasMore: apiHasMore,
-            firstPost: transformedPosts[0]?.title,
-            firstPostImage: transformedPosts[0]?.image,
-            allPosts: transformedPosts.map((p: Post) => ({ id: p.id, title: p.title, hasImage: !!p.image }))
-          });
 
           setPosts((prevPosts) => {
             const newPosts = pageNum === 1 ? transformedPosts : [...prevPosts, ...transformedPosts];
-            console.log("📝 게시글 상태 업데이트:", {
-              prevCount: prevPosts.length,
-              newCount: newPosts.length,
-              isFirstPage: pageNum === 1,
-              newPostTitles: transformedPosts.map((p: Post) => p.title)
-            });
             return newPosts;
           });
           setHasMore(apiHasMore);
         } else {
-          console.log("❌ 게시글 데이터가 없음", { response });
           if (pageNum === 1) {
             setPosts([]);
-            console.log("🗑️ 첫 번째 페이지에 게시글이 없어 목록 초기화");
           }
           setHasMore(false);
         }
       } catch (error) {
-        console.error("❌ 게시글 로드 실패:", error);
+        console.error("게시글 로드 실패:", error);
         if (pageNum === 1) {
           setPosts([]);
-          console.log("🗑️ 첫 번째 페이지 API 에러로 게시글 목록 초기화");
         }
         setHasMore(false);
       } finally {
         setLoading(false);
         loadingRef.current = false;
-        console.log("✅ loadPosts 완료:", { pageNum, timestamp: new Date().toISOString() });
       }
     },
     []

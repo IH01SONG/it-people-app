@@ -268,6 +268,8 @@ export default function MyActivities({
                             bgcolor: "rgba(0,0,0,0.08)"
                           }
                         }}
+                        data-activity-id={item.id}
+                        data-author-id={item.authorId}
                       >
                         <MoreVertIcon fontSize="small" />
                       </IconButton>
