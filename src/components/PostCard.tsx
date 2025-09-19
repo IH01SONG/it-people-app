@@ -18,6 +18,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  IconButton,
   Avatar,
 } from "@mui/material";
 import BlockIcon from "@mui/icons-material/Block";

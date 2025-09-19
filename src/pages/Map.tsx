@@ -54,7 +54,6 @@ export default function Map() {
     currentLocation: locationName,
     currentCoords,
     getCurrentLocation: getLocation,
-    locationLoading,
   } = useLocationHook();
 
   const [center, setCenter] = useState({
@@ -106,7 +105,7 @@ export default function Map() {
     try {
       const response = await api.posts.getAll({ limit: 100 }); // 많은 게시글을 가져와서 카테고리 추출
       const allPosts = Array.isArray(response) ? response : response.posts || [];
-      const uniqueCategories = [...new Set(allPosts.map((post: any) => post.category).filter(Boolean))];
+      const uniqueCategories = [...new Set(allPosts.map((post: any) => post.category).filter(Boolean))] as string[];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error("카테고리 로드 실패:", error);

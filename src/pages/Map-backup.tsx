@@ -429,7 +429,7 @@ export default function Map() {
                   {selectedPost.image && (
                     <Box
                       component="img"
-                      src={selectedPost.image}
+                      src={Array.isArray(selectedPost.image) ? selectedPost.image[0] : selectedPost.image}
                       sx={{
                         width: '100%',
                         height: 120,

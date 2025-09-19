@@ -312,7 +312,7 @@ export default function SearchResults() {
                     {post.image && (
                       <Box
                         component="img"
-                        src={post.image}
+                        src={Array.isArray(post.image) ? post.image[0] : post.image}
                         alt={post.title}
                         sx={{
                           width: '100%',
