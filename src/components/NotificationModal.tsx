@@ -18,6 +18,9 @@ import {
 // 타입 정의
 import type { Notification } from "../types/home.types";
 
+// API
+import { api } from "../lib/api";
+
 /**
  * NotificationModal 컴포넌트 Props 정의
  */
@@ -25,6 +28,7 @@ interface NotificationModalProps {
   open: boolean; // 모달 열림 상태
   onClose: () => void; // 모달 닫기 콜백
   notifications: Notification[]; // 알림 목록
+  onRefreshNotifications?: () => void; // 알림 새로고침 콜백
 }
 
 // 오른쪽에서 나타나는 모달 스타일
@@ -53,6 +57,7 @@ export default function NotificationModal({
   open,
   onClose,
   notifications,
+  onRefreshNotifications,
 }: NotificationModalProps) {
   const navigate = useNavigate();
 
@@ -60,9 +65,27 @@ export default function NotificationModal({
    * 알림 클릭 핸들러
    * 채팅방 ID가 있는 알림을 클릭하면 해당 채팅방으로 이동
    */
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
+    // 읽지 않은 알림인 경우 읽음 처리
+    if (!notification.read) {
+      try {
+        await api.notifications.markAsRead(notification.id);
+        console.log('✅ 알림 읽음 처리 완료:', notification.id);
+        // 알림 목록 새로고침
+        if (onRefreshNotifications) {
+          onRefreshNotifications();
+        }
+      } catch (error) {
+        console.error('❌ 알림 읽음 처리 실패:', error);
+      }
+    }
+
     if (notification.data?.chatRoomId) {
       navigate(`/chat/room/${notification.data.chatRoomId}`);
+      onClose();
+    } else if (notification.data?.postId) {
+      // 게시글 관련 알림인 경우 해당 게시글로 이동 (구현 필요시)
+      console.log('게시글 관련 알림 클릭:', notification.data.postId);
       onClose();
     }
   };
@@ -179,6 +202,18 @@ export default function NotificationModal({
           <Button
             fullWidth
             variant="outlined"
+            onClick={async () => {
+              try {
+                await api.notifications.markAllAsRead();
+                console.log('✅ 모든 알림 읽음 처리 완료');
+                // 알림 목록 새로고침
+                if (onRefreshNotifications) {
+                  onRefreshNotifications();
+                }
+              } catch (error) {
+                console.error('❌ 모든 알림 읽음 처리 실패:', error);
+              }
+            }}
             sx={{
               borderColor: "#E91E63",
               color: "#E91E63",

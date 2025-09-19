@@ -86,9 +86,20 @@ export default function Home() {
 
 
 
-  // 컴포넌트 마운트 시 알림 로드
+  // 컴포넌트 마운트 시 알림 로드 및 주기적 폴링 설정
   useEffect(() => {
     loadNotifications();
+
+    // 30초마다 알림 새로고침 (실시간 알림 효과)
+    const notificationInterval = setInterval(() => {
+      loadNotifications();
+      console.log('🔔 알림 자동 새로고침');
+    }, 30000); // 30초 간격
+
+    // 컴포넌트 언마운트 시 인터벌 정리
+    return () => {
+      clearInterval(notificationInterval);
+    };
   }, [loadNotifications]);
 
   // 컴포넌트 마운트 시 내 활동 로드
@@ -382,6 +393,7 @@ export default function Home() {
           open={notificationOpen}
           onClose={() => setNotificationOpen(false)}
           notifications={notifications}
+          onRefreshNotifications={loadNotifications}
         />
       </div>
     </Box>

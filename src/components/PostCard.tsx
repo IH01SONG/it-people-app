@@ -432,38 +432,45 @@ export default function PostCard({
             </Box>
           </Box>
 
-          <Button
-            onClick={() => onJoinRequest(post.id)}
-            sx={{
-              bgcolor: isApplied ? "#C2185B" : "#E91E63",
-              color: "white",
-              borderRadius: 20,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.8rem",
-              fontWeight: 600,
-              minWidth: "auto",
-              "&:hover": {
-                bgcolor: isApplied ? "#9C1346" : "#C2185B",
-                transform: "scale(1.05)",
-              },
-              transition: "all 0.2s ease",
-              boxShadow: "0 2px 8px rgba(233, 30, 99, 0.3)",
-            }}
-            startIcon={
-              <img 
-                src={logoSvg} 
-                alt="잇플 로고" 
-                style={{ 
-                  width: "14px", 
-                  height: "14px",
-                  filter: "brightness(0) invert(1)"
-                }} 
-              />
-            }
-          >
-            잇플
-          </Button>
+          {!isMyPost && (
+            <Button
+              onClick={() => onJoinRequest(post.id)}
+              disabled={post.status === 'full'}
+              sx={{
+                bgcolor: isApplied ? "#C2185B" : post.status === 'full' ? "#CCCCCC" : "#E91E63",
+                color: "white",
+                borderRadius: 20,
+                px: 2,
+                py: 0.5,
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                minWidth: "auto",
+                "&:hover": {
+                  bgcolor: post.status === 'full' ? "#CCCCCC" : isApplied ? "#9C1346" : "#C2185B",
+                  transform: post.status === 'full' ? "none" : "scale(1.05)",
+                },
+                "&:disabled": {
+                  bgcolor: "#CCCCCC",
+                  color: "#999999",
+                },
+                transition: "all 0.2s ease",
+                boxShadow: post.status === 'full' ? "none" : "0 2px 8px rgba(233, 30, 99, 0.3)",
+              }}
+              startIcon={
+                <img
+                  src={logoSvg}
+                  alt="잇플 로고"
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    filter: "brightness(0) invert(1)"
+                  }}
+                />
+              }
+            >
+              {post.status === 'full' ? '마감' : isApplied ? '신청됨' : '잇플'}
+            </Button>
+          )}
         </Box>
       </Box>
 

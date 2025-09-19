@@ -21,6 +21,7 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
+import { getDefaultImageByCategory } from "../utils/defaultImages";
 
 interface FormData {
   title: string;
@@ -38,7 +39,7 @@ export default function EditPost() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newTag, setNewTag] = useState("");
-  const [images, setImages] = useState<string[]>([]);
+  // 이미지 상태 제거 - 카테고리별 기본 이미지만 사용
 
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -67,39 +68,7 @@ export default function EditPost() {
     return categories.find((cat) => cat.id === formData.category);
   };
 
-  // 카테고리별 기본 이미지 매핑
-  const getDefaultImageByCategory = (categoryId: string): string => {
-    const defaultImages: { [key: string]: string } = {
-      // 자기계발 - 책, 공부, 성장 관련
-      '68c3bdd957c06e06e2706f85': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=center',
-
-      // 봉사활동 - 손을 맞잡는 모습, 도움
-      '68c3bdd957c06e06e2706f86': 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400&h=300&fit=crop&crop=center',
-
-      // 운동/스포츠 - 운동하는 모습
-      '68c3bdd957c06e06e2706f9a': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center',
-
-      // 문화/예술 - 미술관, 문화활동
-      '68c3bdd957c06e06e2706f9d': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop&crop=center',
-
-      // 사교/인맥 - 사람들이 모인 모습
-      '68c3bdd957c06e06e2706f9e': 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop&crop=center',
-
-      // 취미 - 다양한 취미활동
-      '68c3bdd957c06e06e2706f87': 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=400&h=300&fit=crop&crop=center',
-
-      // 외국어 - 언어학습, 대화
-      '68c3bdd957c06e06e2706f88': 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=300&fit=crop&crop=center',
-
-      // 맛집 - 음식, 식당
-      '68c3bdd957c06e06e2706f9c': 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&crop=center',
-
-      // 반려동물 - 강아지, 고양이
-      '68c3bdd957c06e06e2706fa1': 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=300&fit=crop&crop=center',
-    };
-
-    return defaultImages[categoryId] || defaultImages['68c3bdd957c06e06e2706fa1']; // 기본값은 '반려동물' 카테고리 이미지
-  };
+  // getDefaultImageByCategory 함수는 utils/defaultImages.ts에서 import
 
   // 게시글 데이터 로드
   useEffect(() => {
@@ -114,9 +83,30 @@ export default function EditPost() {
         const post = posts.find((p: { _id?: string; id?: string }) => (p._id || p.id) === postId);
 
         if (!post) {
-          alert("게시글을 찾을 수 없습니다.");
+          alert("본인이 작성한 게시글 중에서 해당 게시글을 찾을 수 없습니다.");
           navigate("/");
           return;
+        }
+
+        // 게시글 소유권 확인
+        try {
+          const currentUser = await api.getMe();
+          const postAuthorId = post.author?._id || post.author?.id || post.author;
+          const currentUserId = currentUser._id || currentUser.id;
+
+          // 게시글 소유권 확인 (이메일과 ID 모두 체크)
+          const isOwner = postAuthorId === currentUserId ||
+                         post.author?.email === currentUser.email ||
+                         postAuthorId === currentUser.email ||
+                         post.author === currentUserId;
+
+          if (!isOwner) {
+            alert('본인이 작성한 게시글만 수정할 수 있습니다.');
+            navigate('/');
+            return;
+          }
+        } catch (userError) {
+          console.error('현재 사용자 정보 조회 실패:', userError);
         }
 
         // 폼 데이터 설정
@@ -135,14 +125,7 @@ export default function EditPost() {
           tags: Array.isArray(post.tags) ? post.tags : [],
         });
 
-        // 이미지 설정
-        if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-          setImages(post.images);
-        } else if (post.image) {
-          setImages(Array.isArray(post.image) ? post.image : [post.image]);
-        } else {
-          setImages([]);
-        }
+        // 이미지는 카테고리별 기본 이미지만 사용 (수정 불가)
       } catch (error) {
         console.error("게시글 로드 실패:", error);
         alert("게시글을 불러오는데 실패했습니다.");
@@ -200,17 +183,23 @@ export default function EditPost() {
     try {
       setSaving(true);
 
-      // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
-      let finalImages = images;
-      if (finalImages.length === 0 && formData.category) {
+      // 토큰 확인
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        alert("인증 토큰이 없습니다. 다시 로그인해주세요.");
+        navigate('/login');
+        return;
+      }
+
+      // 카테고리에 맞는 기본 이미지 자동 추가
+      let finalImageUrls: string[] = [];
+      if (formData.category) {
         const defaultImage = getDefaultImageByCategory(formData.category);
-        finalImages = [defaultImage];
-        console.log(`📷 카테고리 '${formData.category}'에 맞는 기본 이미지 추가:`, defaultImage);
+        finalImageUrls = [defaultImage];
       }
 
       const updateData = {
         title: formData.title.trim(),
-        content: formData.content.trim(),
         venue: formData.venue.trim(),
         category: formData.category,
         maxParticipants: formData.maxParticipants,
@@ -218,16 +207,39 @@ export default function EditPost() {
           ? new Date(formData.meetingDate).toISOString()
           : undefined,
         tags: formData.tags,
-        ...(finalImages.length > 0 && { images: finalImages }),
+        content: formData.content.trim(),
+        // 이미지 필드 - 백엔드 호환성을 위해 둘 다 전송
+        ...(finalImageUrls.length > 0 && {
+          imageUrls: finalImageUrls,
+          images: finalImageUrls // 백엔드 호환성을 위해 추가
+        }),
       };
+
+      // 백엔드 API 호출 전 디버깅
+      console.log('🚀 전송할 수정 데이터:', JSON.stringify(updateData, null, 2));
 
       await api.posts.update(postId!, updateData);
 
       alert("게시글이 수정되었습니다.");
       navigate("/", { state: { refreshPosts: true } });
-    } catch (error) {
+    } catch (error: any) {
       console.error("게시글 수정 실패:", error);
-      alert("게시글 수정에 실패했습니다. 다시 시도해주세요.");
+
+      // 403 오류 처리
+      if (error?.response?.status === 403) {
+        const errorMsg = error?.response?.data?.message || "이 게시글을 수정할 권한이 없습니다.";
+        alert(`권한 오류: ${errorMsg}`);
+      }
+      // 401 오류 처리
+      else if (error?.response?.status === 401) {
+        alert("인증이 만료되었습니다. 다시 로그인해주세요.");
+        localStorage.removeItem('access_token');
+        navigate('/login');
+      }
+      else {
+        const errorMsg = error?.response?.data?.message || "게시글 수정에 실패했습니다.";
+        alert(`오류: ${errorMsg}`);
+      }
     } finally {
       setSaving(false);
     }

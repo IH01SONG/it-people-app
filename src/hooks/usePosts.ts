@@ -11,8 +11,11 @@ export function usePosts() {
   const [page, setPage] = useState(1);
   const observer = useRef<IntersectionObserver | null>(null);
 
-  // 신청한 게시글 관리
-  const [appliedPosts, setAppliedPosts] = useState<Set<string>>(new Set());
+  // 신청한 게시글 관리 (localStorage에서 초기화)
+  const [appliedPosts, setAppliedPosts] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('appliedPosts');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
 
   // 백엔드 응답을 프론트엔드 Post 타입으로 변환하는 함수
   const transformBackendPost = (backendPost: any): Post => {
@@ -170,19 +173,74 @@ export function usePosts() {
 
   // 게시글 참여 신청
   const handleJoinRequest = async (postId: string) => {
-    try {
-      const response = await api.joinRequests.create(postId);
+    console.log('🚀 참여 신청 시작 - postId:', postId);
 
-      if (response.success) {
+    // 인증 토큰 확인
+    const token = localStorage.getItem('access_token');
+    console.log('🔑 토큰 상태:', token ? '존재함' : '없음');
+
+    if (!token) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    try {
+      // 먼저 posts.join API 시도
+      console.log('🔄 api.posts.join 시도...');
+      let response;
+      try {
+        response = await api.posts.join(postId);
+        console.log('✅ api.posts.join 성공:', response);
+      } catch (joinError: any) {
+        console.log('❌ api.posts.join 실패, joinRequests.create 시도...', joinError?.response?.status);
+        // posts.join이 실패하면 joinRequests.create 시도
+        response = await api.joinRequests.create(postId);
+        console.log('✅ api.joinRequests.create 성공:', response);
+      }
+
+      if (response.success || response.message) {
         const newAppliedPosts = new Set(appliedPosts);
         newAppliedPosts.add(postId);
         setAppliedPosts(newAppliedPosts);
+
+        // localStorage에 저장
+        localStorage.setItem('appliedPosts', JSON.stringify(Array.from(newAppliedPosts)));
+
+        // 참여 신청 알림 생성 시도 (현재 사용자 ID 가져오기)
+        try {
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          if (currentUser.id) {
+            console.log('📢 참여 신청 알림 생성 중...');
+            await api.notifications.createJoinRequestNotification(postId, currentUser.id);
+            console.log('✅ 참여 신청 알림 생성 완료');
+          }
+        } catch (notificationError) {
+          console.log('⚠️ 알림 생성 실패 (참여 신청은 성공):', notificationError);
+          // 알림 생성 실패는 참여 신청 성공에 영향을 주지 않음
+        }
+
+        alert("참여 신청이 완료되었습니다! 모임장에게 알림이 전송되었습니다.");
       }
-    } catch (error) {
-      console.error("참여 신청 실패:", error as Error);
-      if (
-        (error as { response?: { status: number } }).response?.status === 409
-      ) {
+    } catch (error: any) {
+      console.error("🚨 참여 신청 실패:", error);
+      console.error("🚨 오류 상태 코드:", error?.response?.status);
+      console.error("🚨 오류 응답 데이터:", error?.response?.data);
+      console.error("🚨 오류 URL:", error?.config?.url);
+      console.error("🚨 요청 메서드:", error?.config?.method);
+
+      // 구체적인 오류 메시지 처리
+      if (error?.response?.status === 409) {
+        alert("이미 참여 신청한 모임입니다.");
+      } else if (error?.response?.status === 400) {
+        const errorMsg = error?.response?.data?.message || "참여 신청에 실패했습니다.";
+        alert(errorMsg);
+      } else if (error?.response?.status === 401) {
+        alert("로그인이 필요합니다.");
+      } else if (error?.response?.status === 403) {
+        alert("참여 신청 권한이 없습니다. (본인이 작성한 게시글이거나 이미 마감된 모임일 수 있습니다)");
+      } else {
+        const errorMsg = error?.response?.data?.message || "참여 신청에 실패했습니다. 다시 시도해주세요.";
+        alert(errorMsg);
       }
     }
   };

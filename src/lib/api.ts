@@ -139,5 +139,9 @@ export const api = {
     // 모든 알림 읽음 처리
     markAllAsRead: () =>
       axios.post('/notifications/read-all').then(r => r.data),
+
+    // 참여 신청 알림 생성
+    createJoinRequestNotification: (postId: string, requesterId: string) =>
+      axios.post('/notifications/join-request', { postId, requesterId }).then(r => r.data),
   },
 };
