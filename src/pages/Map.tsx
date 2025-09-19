@@ -58,12 +58,11 @@ export default function Map() {
   } = useLocationHook();
 
   const [center, setCenter] = useState({
-    lat: 37.5502,
-    lng: 126.9235, // 홍대입구역
+    lat: 37.5502, // 서울 기본값 (현재 위치 로딩 전)
+    lng: 126.9235,
   });
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState("위치 로딩 중...");
   const [zoomLevel, setZoomLevel] = useState(6);
 
   const [filters, setFilters] = useState({
@@ -121,7 +120,7 @@ export default function Map() {
     getLocation(); // useLocationHook의 getCurrentLocation 사용
   }, [getLocation]);
 
-  // 위치 정보가 업데이트되면 지도 중심점과 현재 위치명 업데이트
+  // 위치 정보가 업데이트되면 지도 중심점 업데이트
   useEffect(() => {
     if (currentCoords) {
       setCenter({
@@ -129,10 +128,7 @@ export default function Map() {
         lng: currentCoords.lng,
       });
     }
-    if (locationName) {
-      setCurrentLocation(locationName);
-    }
-  }, [currentCoords, locationName]);
+  }, [currentCoords]);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -387,7 +383,7 @@ export default function Map() {
       {/* 지도 제목 */}
       <Box sx={{ px: 2, py: 1, bgcolor: "white" }}>
         <Typography variant="h6" fontWeight={600} color="#333">
-          {currentLocation} 지역 모임 지도
+          {locationName} 지역 모임 지도
         </Typography>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Typography variant="caption" color="text.secondary">

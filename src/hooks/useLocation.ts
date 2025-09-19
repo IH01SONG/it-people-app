@@ -3,6 +3,7 @@ import { useKakaoLoader } from "react-kakao-maps-sdk";
 
 export function useLocation() {
   const [currentLocation, setCurrentLocation] = useState("위치 확인 중...");
+  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(null);
   const currentCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
   const currentLocationRef = useRef<string>("위치 확인 중...");
   const [locationLoading, setLocationLoading] = useState(true);
@@ -55,6 +56,7 @@ export function useLocation() {
       const { latitude, longitude } = position.coords;
       const coords = { lat: latitude, lng: longitude };
       currentCoordsRef.current = coords;
+      setCurrentCoords(coords);
 
       // 주소 변환을 Promise로 래핑하여 완료 후 게시글 로드
       try {
@@ -114,6 +116,7 @@ export function useLocation() {
 
   return {
     currentLocation,
+    currentCoords,
     currentCoordsRef,
     currentLocationRef,
     locationLoading,
