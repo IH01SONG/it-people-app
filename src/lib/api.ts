@@ -130,9 +130,9 @@ export const api = {
     reject: (requestId: string) =>
       axios.post(`/join-requests/${requestId}/reject`).then(r => r.data),
 
-    // 참여 요청 취소
-    cancel: (postId: string) =>
-      axios.delete(`/join-requests/posts/${postId}/cancel`).then(r => r.data),
+    // 참여 요청 취소 (requestId로)
+    cancel: (requestId: string) =>
+      axios.delete(`/join-requests/${requestId}`).then(r => r.data),
   },
 
   // 알림 관련 API
