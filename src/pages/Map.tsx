@@ -780,7 +780,7 @@ export default function Map() {
               >
                 {selectedPost.status === 'full' ? '마감됨' :
                  selectedPost.status === 'completed' ? '종료됨' :
-                 appliedPosts.has(selectedPost.id) ? '신청됨' : '잇플'}
+                 appliedPosts.has(selectedPost.id) ? '참여 취소' : '잇플'}
               </Button>
             </Box>
           </Box>

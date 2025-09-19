@@ -70,6 +70,10 @@ export const api = {
     // 모임 참여 신청
     join: (postId: string) =>
       axios.post(`/posts/${postId}/join`).then(r => r.data),
+
+    // 모임 참여 취소
+    leave: (postId: string) =>
+      axios.post(`/posts/${postId}/leave`).then(r => r.data),
   },
 
   // 사용자 관련 API
@@ -125,6 +129,10 @@ export const api = {
     // 참여 요청 거절
     reject: (requestId: string) =>
       axios.post(`/join-requests/${requestId}/reject`).then(r => r.data),
+
+    // 참여 요청 취소
+    cancel: (postId: string) =>
+      axios.delete(`/join-requests/posts/${postId}/cancel`).then(r => r.data),
   },
 
   // 알림 관련 API
