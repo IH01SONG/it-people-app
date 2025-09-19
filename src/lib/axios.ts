@@ -24,6 +24,16 @@ api.interceptors.request.use((cfg) => {
     cfg.headers = cfg.headers || {};
     cfg.headers.Authorization = `Bearer ${t}`;
   }
+
+  // 참여 관련 API 호출 시 상세 로깅
+  if (cfg.url?.includes('/join')) {
+    console.log('🌐 [Axios Interceptor] 참여 API 요청 감지:');
+    console.log('📝 실제 HTTP 메소드:', cfg.method?.toUpperCase());
+    console.log('🔗 실제 요청 URL:', cfg.url);
+    console.log('📋 요청 헤더:', cfg.headers);
+    console.log('📦 요청 데이터:', cfg.data);
+  }
+
   return cfg;
 });
 

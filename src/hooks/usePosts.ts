@@ -171,9 +171,49 @@ export function usePosts() {
     }
   }, [page]);
 
+  // 컴포넌트 마운트 시 서버와 로컬 상태 동기화
+  useEffect(() => {
+    const syncParticipationStatus = async () => {
+      try {
+        const joinedPostsResponse = await api.users.getJoinedPosts();
+        const joinedPosts = joinedPostsResponse?.posts || joinedPostsResponse || [];
+
+        if (Array.isArray(joinedPosts)) {
+          const serverAppliedPosts = new Set<string>();
+          joinedPosts.forEach((post: any) => {
+            const postId = post._id || post.id;
+            if (postId) {
+              serverAppliedPosts.add(postId);
+            }
+          });
+
+          console.log('🔄 서버 참여 상태 동기화:', {
+            serverAppliedPosts: Array.from(serverAppliedPosts),
+            localAppliedPosts: Array.from(appliedPosts)
+          });
+
+          // 서버 상태로 로컬 상태 업데이트
+          setAppliedPosts(serverAppliedPosts);
+          localStorage.setItem('appliedPosts', JSON.stringify(Array.from(serverAppliedPosts)));
+        }
+      } catch (error) {
+        console.error('❌ 참여 상태 동기화 실패:', error);
+      }
+    };
+
+    syncParticipationStatus();
+  }, []); // 한 번만 실행
+
   // 게시글 참여 신청/취소
   const handleJoinRequest = async (postId: string) => {
     const isAlreadyApplied = appliedPosts.has(postId);
+
+    console.log('📋 참여 상태 확인:', {
+      postId,
+      isAlreadyApplied,
+      appliedPostsSize: appliedPosts.size,
+      appliedPostsArray: Array.from(appliedPosts)
+    });
 
     if (isAlreadyApplied) {
       // 참여 취소 로직
@@ -192,51 +232,89 @@ export function usePosts() {
       }
 
       try {
-        // 1. 해당 포스트의 참여 요청 목록 조회
-        console.log('🔍 해당 포스트의 참여 요청 목록 조회 중...');
-        const allRequests = await api.joinRequests.getByPost(postId);
-        console.log('📋 참여 요청 목록:', allRequests);
+        // 1. 저장된 requestId 확인
+        const requestIds = JSON.parse(localStorage.getItem('requestIds') || '{}');
+        const requestId = requestIds[postId];
 
-        // 2. 현재 사용자 정보 가져오기
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const currentUserId = currentUser.id;
+        console.log('🔍 저장된 requestId 확인:', { postId, requestId });
 
-        if (!currentUserId) {
-          alert('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
-          return;
+        if (requestId) {
+          // 저장된 requestId로 직접 참여 취소
+          console.log('🔄 저장된 requestId로 참여 취소 API 호출 중...');
+          console.log('🔗 요청 URL:', `/join-requests/${requestId}`);
+          await api.joinRequests.cancel(requestId);
+          console.log('✅ 참여 취소 성공');
+
+          // requestId 저장소에서 제거
+          delete requestIds[postId];
+          localStorage.setItem('requestIds', JSON.stringify(requestIds));
+          console.log('✅ requestId 저장소에서 제거:', postId);
+        } else {
+          console.log('⚠️ 저장된 requestId가 없음. 서버에서 조회 시도...');
+
+          // 저장된 requestId가 없으면 서버에서 조회 (기존 로직)
+          console.log('🔍 해당 포스트의 참여 요청 목록 조회 중...');
+          console.log('🔗 요청 URL:', `/join-requests/posts/${postId}/requests`);
+          const allRequests = await api.joinRequests.getByPost(postId);
+          console.log('📋 참여 요청 목록 전체:', allRequests);
+
+          // 현재 사용자 정보 가져오기
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const currentUserId = currentUser.id;
+          console.log('👤 현재 사용자 ID:', currentUserId);
+
+          if (!currentUserId) {
+            console.error('❌ 현재 사용자 ID가 없음');
+            alert('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+            return;
+          }
+
+          // 내 참여 요청 찾기
+          const myRequest = allRequests.find((req: any) =>
+            req.requester === currentUserId ||
+            req.requester?._id === currentUserId ||
+            req.requesterId === currentUserId
+          );
+
+          if (!myRequest) {
+            console.error('❌ 참여 요청을 찾을 수 없음');
+            alert('참여 요청을 찾을 수 없습니다. 이미 취소되었거나 처리된 요청일 수 있습니다.');
+            // 로컬 상태에서는 제거
+            const newAppliedPosts = new Set(appliedPosts);
+            newAppliedPosts.delete(postId);
+            setAppliedPosts(newAppliedPosts);
+            localStorage.setItem('appliedPosts', JSON.stringify(Array.from(newAppliedPosts)));
+
+            // 참여 취소한 게시글로 기록
+            const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');
+            if (!cancelledPosts.includes(postId)) {
+              cancelledPosts.push(postId);
+              localStorage.setItem('cancelledPosts', JSON.stringify(cancelledPosts));
+            }
+            return;
+          }
+
+          const foundRequestId = myRequest._id || myRequest.id;
+          console.log('✅ 서버에서 참여 요청 ID 찾음:', foundRequestId);
+
+          // 찾은 requestId로 참여 취소
+          console.log('🔄 찾은 requestId로 참여 취소 API 호출 중...');
+          await api.joinRequests.cancel(foundRequestId);
+          console.log('✅ 참여 취소 성공');
         }
-
-        // 3. 내 참여 요청 찾기
-        const myRequest = allRequests.find((req: any) =>
-          req.requester === currentUserId ||
-          req.requester?._id === currentUserId ||
-          req.requesterId === currentUserId
-        );
-
-        if (!myRequest) {
-          console.error('❌ 참여 요청을 찾을 수 없음');
-          alert('참여 요청을 찾을 수 없습니다. 이미 취소되었거나 처리된 요청일 수 있습니다.');
-          // 로컬 상태에서는 제거
-          const newAppliedPosts = new Set(appliedPosts);
-          newAppliedPosts.delete(postId);
-          setAppliedPosts(newAppliedPosts);
-          localStorage.setItem('appliedPosts', JSON.stringify(Array.from(newAppliedPosts)));
-          return;
-        }
-
-        const requestId = myRequest._id || myRequest.id;
-        console.log('✅ 참여 요청 ID 찾음:', requestId);
-
-        // 4. requestId로 참여 취소
-        console.log('🔄 참여 취소 API 호출 중...');
-        await api.joinRequests.cancel(requestId);
-        console.log('✅ 참여 취소 성공');
 
         // 5. 로컬 상태 업데이트
         const newAppliedPosts = new Set(appliedPosts);
         newAppliedPosts.delete(postId);
         setAppliedPosts(newAppliedPosts);
         localStorage.setItem('appliedPosts', JSON.stringify(Array.from(newAppliedPosts)));
+
+        // 6. 참여 취소한 게시글 기록 (내 활동에서 제외하기 위함)
+        const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');
+        if (!cancelledPosts.includes(postId)) {
+          cancelledPosts.push(postId);
+          localStorage.setItem('cancelledPosts', JSON.stringify(cancelledPosts));
+        }
 
         alert("참여 취소가 완료되었습니다.");
 
@@ -245,26 +323,34 @@ export function usePosts() {
         console.error("🚨 오류 상태 코드:", error?.response?.status);
         console.error("🚨 오류 응답 데이터:", error?.response?.data);
 
-        // 구체적인 오류 메시지 처리
-        if (error?.response?.status === 400) {
-          alert("이미 처리된 요청은 취소할 수 없습니다.");
-        } else if (error?.response?.status === 403) {
-          alert("참여 취소 권한이 없습니다.");
-        } else if (error?.response?.status === 404) {
-          alert("참여 요청을 찾을 수 없습니다. 이미 취소되었을 수 있습니다.");
-          // 로컬 상태에서는 제거
-          const newAppliedPosts = new Set(appliedPosts);
-          newAppliedPosts.delete(postId);
-          setAppliedPosts(newAppliedPosts);
-          localStorage.setItem('appliedPosts', JSON.stringify(Array.from(newAppliedPosts)));
+        // 모든 오류를 사용자에게 표시하여 팀원들과 상담할 수 있도록 함
+        const statusCode = error?.response?.status;
+        const errorData = error?.response?.data;
+        let errorMessage = "";
+
+        if (statusCode === 404) {
+          errorMessage = `참여 요청 조회 API가 존재하지 않습니다 (404). 백엔드 개발자에게 문의하세요.\n요청 URL: /join-requests/posts/${postId}/requests`;
+        } else if (statusCode === 400) {
+          errorMessage = "이미 처리된 요청은 취소할 수 없습니다.";
+        } else if (statusCode === 403) {
+          errorMessage = "참여 취소 권한이 없습니다.";
         } else {
-          const errorMsg = error?.response?.data?.message || "참여 취소에 실패했습니다. 다시 시도해주세요.";
-          alert(errorMsg);
+          errorMessage = errorData?.message || `참여 취소에 실패했습니다.\n상태 코드: ${statusCode}\n백엔드 개발자에게 문의하세요.`;
         }
+
+        alert(errorMessage);
       }
     } else {
       // 참여 신청 로직 (기존 코드)
       console.log('🚀 참여 신청 시작 - postId:', postId);
+
+      // 취소된 게시글 목록에서 제거 (재참여 허용)
+      const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');
+      if (cancelledPosts.includes(postId)) {
+        const newCancelledPosts = cancelledPosts.filter((id: string) => id !== postId);
+        localStorage.setItem('cancelledPosts', JSON.stringify(newCancelledPosts));
+        console.log('✅ cancelledPosts에서 제거하여 재참여 허용:', postId);
+      }
 
       // 인증 토큰 확인
       const token = localStorage.getItem('access_token');
@@ -276,29 +362,16 @@ export function usePosts() {
       }
 
       try {
-        // 먼저 posts.join API 시도
+        // API 문서에 명시된 posts.join API 사용
         console.log('🔄 api.posts.join 시도...');
         console.log('🔗 요청 URL:', `/posts/${postId}/join`);
-        let response;
-        try {
-          response = await api.posts.join(postId);
-          console.log('✅ api.posts.join 성공:', response);
-        } catch (joinError: any) {
-          console.log('❌ api.posts.join 실패 상세 정보:');
-          console.log('   - 상태 코드:', joinError?.response?.status);
-          console.log('   - 상태 텍스트:', joinError?.response?.statusText);
-          console.log('   - 응답 데이터:', joinError?.response?.data);
-          console.log('   - 요청 URL:', joinError?.config?.url);
-          console.log('   - 요청 메서드:', joinError?.config?.method);
-          console.log('   - 요청 헤더:', joinError?.config?.headers);
-          console.log('   - 전체 에러 객체:', joinError);
+        console.log('📝 예상 HTTP 메소드: POST');
+        console.log('📋 api.posts.join 함수 정의 확인:', api.posts.join.toString());
 
-          console.log('🔄 대안 API joinRequests.create 시도...');
-          console.log('🔗 대안 요청 URL:', `/join-requests/posts/${postId}/request-join`);
-          // posts.join이 실패하면 joinRequests.create 시도
-          response = await api.joinRequests.create(postId);
-          console.log('✅ api.joinRequests.create 성공:', response);
-        }
+        const response = await api.posts.join(postId);
+        console.log('✅ api.posts.join 성공:', response);
+        console.log('📊 응답 타입:', typeof response);
+        console.log('📋 응답 구조:', Object.keys(response || {}));
 
         if (response.success || response.message) {
           const newAppliedPosts = new Set(appliedPosts);
@@ -307,6 +380,22 @@ export function usePosts() {
 
           // localStorage에 저장
           localStorage.setItem('appliedPosts', JSON.stringify(Array.from(newAppliedPosts)));
+
+          // requestId 저장 (참여 취소 시 사용)
+          if (response.data && response.data.requestId) {
+            const requestIds = JSON.parse(localStorage.getItem('requestIds') || '{}');
+            requestIds[postId] = response.data.requestId;
+            localStorage.setItem('requestIds', JSON.stringify(requestIds));
+            console.log('✅ requestId 저장:', { postId, requestId: response.data.requestId });
+          }
+
+          // 재신청의 경우 cancelledPosts에서 제거
+          const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');
+          if (cancelledPosts.includes(postId)) {
+            const newCancelledPosts = cancelledPosts.filter((id: string) => id !== postId);
+            localStorage.setItem('cancelledPosts', JSON.stringify(newCancelledPosts));
+            console.log('✅ 재신청으로 인해 cancelledPosts에서 제거:', postId);
+          }
 
           // 참여 신청 알림 생성 시도 (현재 사용자 ID 가져오기)
           try {
@@ -340,6 +429,8 @@ export function usePosts() {
           alert("로그인이 필요합니다.");
         } else if (error?.response?.status === 403) {
           alert("참여 신청 권한이 없습니다. (본인이 작성한 게시글이거나 이미 마감된 모임일 수 있습니다)");
+        } else if (error?.response?.status === 404) {
+          alert("게시글을 찾을 수 없습니다.");
         } else {
           const errorMsg = error?.response?.data?.message || "참여 신청에 실패했습니다. 다시 시도해주세요.";
           alert(errorMsg);

@@ -38,6 +38,7 @@ interface MyActivitiesProps {
   onDeleteActivity?: (activityId: string) => void; // 활동 삭제 핸들러
   onAcceptRequest?: (activityId: string, requestId: string) => void; // 신청 수락 핸들러
   onRejectRequest?: (activityId: string, requestId: string) => void; // 신청 거절 핸들러
+  onCancelParticipation?: (activityId: string) => void; // 참여 취소 핸들러
 }
 
 /**
@@ -50,7 +51,8 @@ export default function MyActivities({
   onEditActivity,
   onDeleteActivity,
   onAcceptRequest,
-  onRejectRequest
+  onRejectRequest,
+  onCancelParticipation
 }: MyActivitiesProps) {
   const [expanded, setExpanded] = useState(true); // 확장/축소 상태
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -379,6 +381,7 @@ export default function MyActivities({
                       <Button
                         size="small"
                         variant="outlined"
+                        onClick={() => onCancelParticipation && onCancelParticipation(item.id)}
                         sx={{
                           fontSize: "0.7rem",
                           py: 0.5,

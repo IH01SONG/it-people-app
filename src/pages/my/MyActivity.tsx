@@ -9,6 +9,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import BlockIcon from '@mui/icons-material/Block';
 import PersonIcon from '@mui/icons-material/Person';
 import GroupIcon from '@mui/icons-material/Group';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { useBlockUser } from '../../contexts/BlockUserContext';
 import { useMyActivities } from '../../hooks/useMyActivities';
 import { api } from '../../lib/api';
@@ -40,7 +41,7 @@ const MyActivity: React.FC = () => {
   const { blockedUsers, unblockUser, cleanInvalidUsers, isLoading } = useBlockUser();
   
   // 내 활동 데이터 관리
-  const { myActivities, activitiesLoading, loadMyActivities, removeActivity } = useMyActivities();
+  const { myActivities, activitiesLoading, loadMyActivities, removeActivity, handleCancelParticipation } = useMyActivities();
   
   // 디버깅을 위한 로그
   console.log('🔍 MyActivity blockedUsers:', blockedUsers);
@@ -259,15 +260,29 @@ const MyActivity: React.FC = () => {
                               <Typography variant="body1" className="font-semibold">
                                 {activity.title}
                               </Typography>
-                              <Chip 
-                                label={activity.category} 
-                                size="small" 
-                                sx={{ 
+                              <Chip
+                                label={activity.category}
+                                size="small"
+                                sx={{
                                   backgroundColor: theme.palette.primary.light,
                                   color: 'white',
                                   fontSize: '0.75rem'
-                                }} 
+                                }}
                               />
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleCancelParticipation(activity.id)}
+                                sx={{
+                                  color: '#dc2626',
+                                  '&:hover': {
+                                    backgroundColor: '#fef2f2',
+                                  },
+                                }}
+                              >
+                                <CancelIcon />
+                              </IconButton>
                             </Box>
               </Box>
                         }

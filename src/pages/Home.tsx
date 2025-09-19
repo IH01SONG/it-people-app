@@ -35,6 +35,7 @@ export default function Home() {
     loadMyActivities,
     removeActivitiesByUserName,
     removeActivitiesByAuthorId,
+    handleCancelParticipation,
   } = useMyActivities();
 
   const {
@@ -86,20 +87,9 @@ export default function Home() {
 
 
 
-  // 컴포넌트 마운트 시 알림 로드 및 주기적 폴링 설정
+  // 컴포넌트 마운트 시 알림 로드 (한 번만)
   useEffect(() => {
     loadNotifications();
-
-    // 30초마다 알림 새로고침 (실시간 알림 효과)
-    const notificationInterval = setInterval(() => {
-      loadNotifications();
-      console.log('🔔 알림 자동 새로고침');
-    }, 30000); // 30초 간격
-
-    // 컴포넌트 언마운트 시 인터벌 정리
-    return () => {
-      clearInterval(notificationInterval);
-    };
   }, [loadNotifications]);
 
   // 컴포넌트 마운트 시 내 활동 로드
@@ -311,6 +301,7 @@ export default function Home() {
           onDeleteActivity={handleDeleteActivity}
           onAcceptRequest={handleAcceptRequest}
           onRejectRequest={handleRejectRequest}
+          onCancelParticipation={handleCancelParticipation}
         />
 
         {/* 내 위치 동네 모임 게시글 목록 */}
