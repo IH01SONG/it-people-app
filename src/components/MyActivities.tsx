@@ -60,34 +60,6 @@ export default function MyActivities({
   const [joinRequests, setJoinRequests] = useState<{[activityId: string]: any[]}>({});
   const [loadingRequests, setLoadingRequests] = useState<{[activityId: string]: boolean}>({});
 
-  // 남은 시간 계산 함수 (24시간 기준)
-  const getRemainingTime = (createdAt: string): string => {
-    const now = new Date();
-    const created = new Date(createdAt);
-
-    // Invalid Date 체크
-    if (isNaN(created.getTime())) {
-      return "시간 정보 없음";
-    }
-
-    const diffInMs = now.getTime() - created.getTime();
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-
-    if (diffInHours >= 24) {
-      return "만료됨";
-    }
-
-    const remainingHours = 24 - diffInHours;
-
-    if (remainingHours < 1) {
-      const remainingMinutes = Math.floor(remainingHours * 60);
-      return `${remainingMinutes}분 남음`;
-    } else {
-      const hours = Math.floor(remainingHours);
-      const minutes = Math.floor((remainingHours - hours) * 60);
-      return minutes > 0 ? `${hours}시간 ${minutes}분 남음` : `${hours}시간 남음`;
-    }
-  };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, activityId: string) => {
     event.stopPropagation();
@@ -298,9 +270,6 @@ export default function MyActivities({
                     >
                       {item.status}
                     </span>
-                    <Typography variant="caption" color="text.secondary">
-                      {getRemainingTime(item.createdAt)}
-                    </Typography>
                   </Box>
 
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
