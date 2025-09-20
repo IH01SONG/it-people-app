@@ -137,14 +137,6 @@ export default function PostCard({
       {(
         <Box sx={{ height: 250, overflow: "hidden", position: "relative" }}>
           {(() => {
-            // 디버그: 게시글 이미지 데이터 확인
-            if (post.title.includes("이미지 첨부 테스트")) {
-              console.log(`🔍 "${post.title}" 게시글 데이터:`, {
-                image: post.image,
-                imageType: typeof post.image,
-                imageLength: Array.isArray(post.image) ? post.image.length : 'not array'
-              });
-            }
 
             // 카테고리별 기본 이미지 함수
             const getDefaultImages = (category: string): string[] => {
@@ -213,7 +205,13 @@ export default function PostCard({
               images = [post.image];
             } else {
               // 기본 이미지는 첫 번째 이미지만 사용 (스와이핑 없음)
-              const defaultImages = getDefaultImages(post.category);
+              let categoryName = '기타';
+              if (typeof post.category === 'object' && post.category !== null) {
+                categoryName = post.category.name || post.category._id || '기타';
+              } else if (typeof post.category === 'string') {
+                categoryName = post.category;
+              }
+              const defaultImages = getDefaultImages(categoryName);
               images = [defaultImages[0]]; // 첫 번째 이미지만 사용
             }
 
@@ -364,7 +362,15 @@ export default function PostCard({
             <span
               className={`text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700`}
             >
-              {post.category}
+              {(() => {
+                if (typeof post.category === 'object' && post.category !== null) {
+                  return post.category.name || post.category._id || '기타';
+                } else if (typeof post.category === 'string') {
+                  return post.category;
+                } else {
+                  return '기타';
+                }
+              })()}
             </span>
             {post.status === 'full' && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
@@ -419,10 +425,6 @@ export default function PostCard({
               </Typography>
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="caption" color="text.secondary">
-                조회 {post.viewCount}
-              </Typography>
-              <span className="text-xs text-gray-400">•</span>
               <Typography variant="caption" color="text.secondary">
                 {new Date(post.createdAt).toLocaleDateString("ko-KR", {
                   month: "short",

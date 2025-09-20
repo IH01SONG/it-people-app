@@ -35,20 +35,40 @@ export const api = {
   // 게시글 관련 API
   posts: {
     // 게시글 목록 조회
-    getAll: (params?: { 
-      page?: number; 
-      limit?: number; 
-      location?: string; 
-      category?: string; 
+    getAll: (params?: {
+      page?: number;
+      limit?: number;
+      location?: string;
+      category?: string;
+      search?: string;
     }) => {
       const queryParams = new URLSearchParams();
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.location) queryParams.append('location', params.location);
       if (params?.category) queryParams.append('category', params.category);
-      
+      if (params?.search) queryParams.append('search', params.search);
+
       const query = queryParams.toString();
       return axios.get(`/posts${query ? `?${query}` : ''}`).then(r => r.data);
+    },
+
+    // 게시글 검색
+    search: (query: string, params?: {
+      page?: number;
+      limit?: number;
+      location?: string;
+      category?: string;
+    }) => {
+      const queryParams = new URLSearchParams();
+      queryParams.append('search', query);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.location) queryParams.append('location', params.location);
+      if (params?.category) queryParams.append('category', params.category);
+
+      const queryString = queryParams.toString();
+      return axios.get(`/posts?${queryString}`).then(r => r.data);
     },
 
     // 주변 게시글 조회
