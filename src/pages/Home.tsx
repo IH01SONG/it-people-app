@@ -42,10 +42,8 @@ export default function Home() {
     posts,
     loading,
     hasMore,
-    appliedPosts,
     lastPostElementRef,
     loadPosts,
-    handleJoinRequest,
     handleUserBlock: handlePostUserBlock,
     handleDeletePost,
     resetPosts,
@@ -134,11 +132,6 @@ export default function Home() {
   // 위치가 변경될 때 게시글 새로고침 로직 제거 (무한 루프 방지)
   // 대신 컴포넌트 마운트 시에만 게시글을 로드
 
-  // 참여 신청 시 내 활동 새로고침 추가
-  const handleJoinRequestWithRefresh = async (postId: string) => {
-    await handleJoinRequest(postId);
-    loadMyActivities();
-  };
 
   // 사용자 차단 시 내 활동에서도 제거
   const handleUserBlock = async (userId: string, userName: string) => {
@@ -338,8 +331,6 @@ export default function Home() {
               >
                 <PostCard
                   post={post}
-                  onJoinRequest={handleJoinRequestWithRefresh}
-                  isApplied={appliedPosts.has(post.id)}
                   onUserBlock={handleUserBlock}
                   onEditPost={handleEditPost}
                   onDeletePost={handleDeletePost}

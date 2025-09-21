@@ -217,29 +217,36 @@ export function useMyActivities() {
       } else {
         console.log('⚠️ [MyActivities] 저장된 requestId가 없음. 서버에서 조회 시도...');
 
-        // 저장된 requestId가 없으면 서버에서 조회 (기존 로직)
-        console.log('🔍 [MyActivities] 해당 포스트의 참여 요청 목록 조회 중...');
-        console.log('🔗 [MyActivities] 요청 URL:', `/join-requests/posts/${postId}/requests`);
-        const allRequests = await api.joinRequests.getByPost(postId);
-        console.log('📋 [MyActivities] 참여 요청 목록 전체:', allRequests);
+        // 저장된 requestId가 없으면 getSent API로 내가 보낸 요청들에서 찾기
+        console.log('🔍 [MyActivities] 내가 보낸 참여 요청 목록 조회 중...');
+        console.log('🔗 [MyActivities] 요청 URL:', `/join-requests/sent`);
 
-        // 현재 사용자 정보 가져오기
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const currentUserId = currentUser.id;
-        console.log('👤 [MyActivities] 현재 사용자 ID:', currentUserId);
+        // 현재 사용자 정보 먼저 확보
+        let currentUserId;
+        try {
+          const currentUser = await api.getMe();
+          currentUserId = currentUser?._id || currentUser?.id;
+          console.log('👤 [MyActivities] 현재 사용자 ID:', currentUserId);
 
-        if (!currentUserId) {
-          console.error('❌ [MyActivities] 현재 사용자 ID가 없음');
+          if (!currentUserId) {
+            throw new Error('사용자 ID를 찾을 수 없습니다.');
+          }
+        } catch (userError) {
+          console.error('❌ [MyActivities] 현재 사용자 정보 조회 실패:', userError);
           alert('사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
           return;
         }
 
-        // 내 참여 요청 찾기
-        const myRequest = allRequests.find((req: any) =>
-          req.requester === currentUserId ||
-          req.requester?._id === currentUserId ||
-          req.requesterId === currentUserId
-        );
+        const sentRequests = await api.joinRequests.getSent({ status: 'pending' });
+        console.log('📋 [MyActivities] 내가 보낸 참여 요청 목록:', sentRequests);
+
+        // 해당 postId에 대한 내 참여 요청 찾기
+        const requests = sentRequests.requests || sentRequests;
+        const myRequest = Array.isArray(requests) ? requests.find((req: any) =>
+          (req.post?._id === postId || req.post === postId || req.postId === postId) &&
+          (req.requester?._id === currentUserId || req.requester === currentUserId) &&
+          req.status === 'pending'
+        ) : null;
 
         if (!myRequest) {
           console.error('❌ [MyActivities] 참여 요청을 찾을 수 없음');
@@ -285,7 +292,7 @@ export function useMyActivities() {
       let errorMessage = "";
 
       if (statusCode === 404) {
-        errorMessage = `참여 요청 조회 API가 존재하지 않습니다 (404). 백엔드 개발자에게 문의하세요.\n요청 URL: /join-requests/posts/${postId}/requests`;
+        errorMessage = `참여 요청을 찾을 수 없습니다 (404). 이미 취소되었거나 처리된 요청일 수 있습니다.`;
       } else if (statusCode === 400) {
         errorMessage = "이미 처리된 요청은 취소할 수 없습니다.";
       } else if (statusCode === 403) {

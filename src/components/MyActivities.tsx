@@ -86,23 +86,42 @@ export default function MyActivities({
     handleMenuClose();
   };
 
-  // 특정 활동의 참여 요청 목록 로드
+  // 특정 활동의 참여 요청 목록 로드 (getReceived API 사용)
   const loadJoinRequests = useCallback(async (activityId: string) => {
     setLoadingRequests(prev => ({ ...prev, [activityId]: true }));
     try {
-      const requests = await api.joinRequests.getByPost(activityId);
-      const requestsArray = Array.isArray(requests) ? requests : requests.requests || [];
+      console.log('🔍 [MyActivities] 받은 참여 요청 목록 조회 중... activityId:', activityId);
+
+      // 현재 사용자 정보 확보
+      const currentUser = await api.getMe();
+      const currentUserId = currentUser?._id || currentUser?.id;
+
+      if (!currentUserId) {
+        throw new Error('사용자 정보를 찾을 수 없습니다.');
+      }
+
+      // 내가 받은 참여 요청 중에서 해당 포스트에 대한 것만 필터링
+      const receivedRequests = await api.joinRequests.getReceived({ status: 'pending', limit: 50 });
+      const requests = receivedRequests?.data?.requests || receivedRequests?.requests || [];
+
+      console.log('📋 [MyActivities] 받은 요청 전체 개수:', requests.length);
+
+      // 해당 activityId(포스트ID)에 대한 요청들만 필터링
+      const filteredRequests = Array.isArray(requests) ? requests.filter((req: any) => {
+        const postMatch = req.post?._id === activityId || req.post === activityId || req.postId === activityId;
+        const statusMatch = req.status === 'pending';
+        return postMatch && statusMatch;
+      }) : [];
+
+      console.log(`✅ [MyActivities] 활동 ${activityId}에 대한 pending 요청 ${filteredRequests.length}개 발견`);
 
       setJoinRequests(prev => ({
         ...prev,
-        [activityId]: requestsArray
+        [activityId]: filteredRequests
       }));
     } catch (error) {
-      // 404 에러는 정상적인 상황 (참여 요청이 없음)이므로 로그를 출력하지 않음
-      const isNotFound = (error as any)?.response?.status === 404;
-      if (!isNotFound) {
-        console.error(`활동 ${activityId}의 참여 요청 로드 실패:`, error);
-      }
+      // 에러 처리 (요청이 없으면 빈 배열)
+      console.error(`❌ [MyActivities] 활동 ${activityId}의 참여 요청 로드 실패:`, error);
       setJoinRequests(prev => ({ ...prev, [activityId]: [] }));
     } finally {
       setLoadingRequests(prev => ({ ...prev, [activityId]: false }));

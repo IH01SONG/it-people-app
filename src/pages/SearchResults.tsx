@@ -203,9 +203,6 @@ export default function SearchResults() {
     performSearch('', filter);
   };
 
-  const handleJoinRequest = (postId: string) => {
-    console.log("참여 신청:", postId);
-  };
 
   return (
     <Box
@@ -360,8 +357,6 @@ export default function SearchResults() {
                   <PostCard
                     key={post.id || post._id || `search-result-${index}`}
                     post={post}
-                    onJoinRequest={handleJoinRequest}
-                    isApplied={false}
                   />
                 ))}
               </Box>

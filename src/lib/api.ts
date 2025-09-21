@@ -130,25 +130,49 @@ export const api = {
 
   // 참여 요청 관련 API
   joinRequests: {
-    // 참여 요청 보내기
-    create: (postId: string) =>
-      axios.post(`/join-requests/posts/${postId}/request-join`).then(r => r.data),
+    // 참여 요청 보내기 (기존 posts.join을 사용하거나 필요시 조정)
+    create: (postId: string, message?: string) =>
+      axios.post(`/join-requests`, { postId, message }).then(r => r.data),
 
-    // 특정 게시글의 참여 요청 목록 조회
-    getByPost: (postId: string) =>
-      axios.get(`/join-requests/posts/${postId}/requests`).then(r => r.data),
+    // 받은 참여 요청 목록
+    getReceived: (params?: { page?: number; limit?: number; status?: 'all' | 'pending' | 'approved' | 'rejected' | 'cancelled' }) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.append('page', String(params.page));
+      if (params?.limit) query.append('limit', String(params.limit));
+      if (params?.status) query.append('status', params.status);
+      const qs = query.toString();
+      return axios.get(`/join-requests/received${qs ? `?${qs}` : ''}`).then(r => r.data);
+    },
 
-    // 참여 요청 수락
-    accept: (requestId: string) =>
-      axios.post(`/join-requests/${requestId}/accept`).then(r => r.data),
+    // 보낸 참여 요청 목록
+    getSent: (params?: { page?: number; limit?: number; status?: 'all' | 'pending' | 'approved' | 'rejected' | 'cancelled' }) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.append('page', String(params.page));
+      if (params?.limit) query.append('limit', String(params.limit));
+      if (params?.status) query.append('status', params.status);
+      const qs = query.toString();
+      return axios.get(`/join-requests/sent${qs ? `?${qs}` : ''}`).then(r => r.data);
+    },
 
-    // 참여 요청 거절
+    // 요청 상세
+    getDetail: (requestId: string) =>
+      axios.get(`/join-requests/${requestId}`).then(r => r.data),
+
+    // 승인
+    approve: (requestId: string) =>
+      axios.post(`/join-requests/${requestId}/approve`).then(r => r.data),
+
+    // 거절
     reject: (requestId: string) =>
       axios.post(`/join-requests/${requestId}/reject`).then(r => r.data),
 
-    // 참여 요청 취소 (requestId로)
+    // 취소 (요청자 본인의 취소)
     cancel: (requestId: string) =>
       axios.delete(`/join-requests/${requestId}`).then(r => r.data),
+
+    // 읽음 상태 업데이트
+    markRead: (requestId: string) =>
+      axios.patch(`/join-requests/${requestId}/read`).then(r => r.data),
   },
 
   // 알림 관련 API
