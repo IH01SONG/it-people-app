@@ -13,6 +13,7 @@ import { useLocation as useLocationHook } from "../hooks/useLocation";
 import { useMyActivities } from "../hooks/useMyActivities";
 import { usePosts } from "../hooks/usePosts";
 import { useBlockUser } from "../contexts/BlockUserContext";
+import { useSocket } from "../hooks/useSocket";
 
 export default function Home() {
   const location = useLocation();
@@ -51,6 +52,14 @@ export default function Home() {
 
   // 차단 사용자 관리
   const { blockUser } = useBlockUser();
+
+  // 실시간 소켓 연결
+  const {
+    isConnected,
+    newNotification,
+    clearNewNotification,
+    requestNotificationPermission
+  } = useSocket();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -94,6 +103,31 @@ export default function Home() {
   useEffect(() => {
     loadMyActivities();
   }, [loadMyActivities]);
+
+  // 소켓 연결 후 브라우저 알림 권한 요청
+  useEffect(() => {
+    if (isConnected) {
+      requestNotificationPermission();
+    }
+  }, [isConnected, requestNotificationPermission]);
+
+  // 새로운 알림 수신 시 알림 목록 업데이트
+  useEffect(() => {
+    if (newNotification) {
+      console.log('🔔 새 알림 수신:', newNotification);
+
+      // 알림 목록 맨 앞에 추가
+      setNotifications(prev => [newNotification, ...prev]);
+
+      // 새 알림 상태 클리어
+      clearNewNotification();
+
+      // 참여 요청 관련 알림이면 내 활동도 새로고침
+      if (newNotification.type === 'join_request') {
+        loadMyActivities();
+      }
+    }
+  }, [newNotification, clearNewNotification, loadMyActivities]);
 
 
   // 카카오맵 로딩 완료 후 현재 위치 가져오기
@@ -203,9 +237,34 @@ export default function Home() {
   };
 
   // 참여 요청 수락
-  const handleAcceptRequest = async (_activityId: string, requestId: string) => {
+  const handleAcceptRequest = async (activityId: string, requestId: string) => {
     try {
-      await api.joinRequests.accept(requestId);
+      // 요청 승인
+      const response = await api.joinRequests.approve(requestId);
+
+      // 승인 알림 전송 (신청자에게)
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (currentUser.id) {
+          console.log('📢 참여 승인 알림 생성 중...');
+          await api.notifications.createRequestAcceptedNotification(requestId, activityId, currentUser.id);
+          console.log('✅ 참여 승인 알림 생성 완료');
+        }
+      } catch (notificationError) {
+        console.log('⚠️ 승인 알림 생성 실패 (승인은 성공):', notificationError);
+      }
+
+      // 채팅방 자동 생성 및 알림
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (currentUser.id && response?.chatRoomId) {
+          console.log('💬 채팅방 생성 알림 생성 중...');
+          await api.notifications.createChatRoomCreatedNotification(activityId, response.chatRoomId, currentUser.id);
+          console.log('✅ 채팅방 생성 알림 생성 완료');
+        }
+      } catch (chatError) {
+        console.log('⚠️ 채팅방 알림 생성 실패 (승인은 성공):', chatError);
+      }
 
       // 내 활동 목록 새로고침
       loadMyActivities();
@@ -218,9 +277,22 @@ export default function Home() {
   };
 
   // 참여 요청 거절
-  const handleRejectRequest = async (_activityId: string, requestId: string) => {
+  const handleRejectRequest = async (activityId: string, requestId: string) => {
     try {
+      // 요청 거절
       await api.joinRequests.reject(requestId);
+
+      // 거절 알림 전송 (신청자에게)
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (currentUser.id) {
+          console.log('📢 참여 거절 알림 생성 중...');
+          await api.notifications.createRequestRejectedNotification(requestId, activityId, currentUser.id);
+          console.log('✅ 참여 거절 알림 생성 완료');
+        }
+      } catch (notificationError) {
+        console.log('⚠️ 거절 알림 생성 실패 (거절은 성공):', notificationError);
+      }
 
       // 내 활동 목록 새로고침 (거절된 요청 제거)
       loadMyActivities();
@@ -276,6 +348,7 @@ export default function Home() {
           currentLocation={currentLocation}
           notifications={notifications}
           locationLoading={locationLoading}
+          isSocketConnected={isConnected}
           onLocationRefresh={() => {
             getCurrentLocation().then(() => {
               // 위치 새로고침과 함께 게시글도 새로고침

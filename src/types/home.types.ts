@@ -33,7 +33,7 @@ export interface Post {
 export interface Notification {
   id: string; // 알림 고유 ID
   userId: string; // 알림 받을 사용자 ID
-  type: 'join_request' | 'request_accepted' | 'request_rejected' | 'post_full' | 'post_reminder' | 'chat_message' | 'post_cancelled' | 'system'; // 알림 타입
+  type: 'join_request' | 'join_request_cancelled' | 'request_accepted' | 'request_rejected' | 'chat_message' | 'chat_room_created' | 'post_full' | 'post_reminder' | 'post_cancelled' | 'system'; // 알림 타입
   title: string; // 알림 제목
   message: string; // 알림 메시지
   data?: {

@@ -188,8 +188,28 @@ export const api = {
     markAllAsRead: () =>
       axios.post('/notifications/read-all').then(r => r.data),
 
-    // 참여 신청 알림 생성
+    // 1. 참여 신청 알림 생성 (모임장에게)
     createJoinRequestNotification: (postId: string, requesterId: string) =>
       axios.post('/notifications/join-request', { postId, requesterId }).then(r => r.data),
+
+    // 2. 참여 신청 취소 알림 생성 (모임장에게)
+    createJoinRequestCancelledNotification: (postId: string, requesterId: string) =>
+      axios.post('/notifications/join-request-cancelled', { postId, requesterId }).then(r => r.data),
+
+    // 3. 참여 승인 알림 생성 (신청자에게)
+    createRequestAcceptedNotification: (requestId: string, postId: string, requesterId: string) =>
+      axios.post('/notifications/request-accepted', { requestId, postId, requesterId }).then(r => r.data),
+
+    // 4. 참여 거절 알림 생성 (신청자에게)
+    createRequestRejectedNotification: (requestId: string, postId: string, requesterId: string) =>
+      axios.post('/notifications/request-rejected', { requestId, postId, requesterId }).then(r => r.data),
+
+    // 5. 채팅방 생성 알림 생성 (신청자에게)
+    createChatRoomCreatedNotification: (postId: string, chatRoomId: string, requesterId: string) =>
+      axios.post('/notifications/chat-room-created', { postId, chatRoomId, requesterId }).then(r => r.data),
+
+    // 6. 채팅 메시지 알림 생성 (참여자들에게)
+    createChatMessageNotification: (chatRoomId: string, senderId: string, message: string) =>
+      axios.post('/notifications/chat-message', { chatRoomId, senderId, message }).then(r => r.data),
   },
 };
