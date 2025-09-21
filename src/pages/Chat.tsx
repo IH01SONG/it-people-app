@@ -1,76 +1,13 @@
-import { Box, Typography, Avatar, Badge, Card, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
+import { Box, Typography, Avatar, Badge, Card, Chip, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from "@mui/material";
 import { ChatBubbleOutline, LocationOn, MoreVert, Block, Person } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AppHeader from "../components/AppHeader";
 import { useBlockUser } from "../contexts/BlockUserContext";
 import UserProfileModal from "../components/UserProfileModal";
+import { api } from "../lib/api";
+import type { ChatRoom } from "../types/home.types";
 
-interface ItplChat {
-  id: string;
-  postTitle: string;
-  postCategory: string;
-  postLocation: string;
-  otherUser: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
-  status: 'active' | 'completed' | 'blocked';
-  meetingDate?: string;
-}
-
-const mockItplChats: ItplChat[] = [
-  {
-    id: "1",
-    postTitle: "저녁 같이 먹을 사람?",
-    postCategory: "식사",
-    postLocation: "홍대입구",
-    otherUser: {
-      id: "user1",
-      name: "김잇플",
-      avatar: "https://picsum.photos/seed/user1/40/40",
-    },
-    lastMessage: "홍대입구역 2번 출구에서 만나요",
-    lastMessageTime: "10분 전",
-    unreadCount: 2,
-    status: 'active',
-    meetingDate: "오늘 17:00",
-  },
-  {
-    id: "2", 
-    postTitle: "카페에서 수다떨어요",
-    postCategory: "카페",
-    postLocation: "강남",
-    otherUser: {
-      id: "user2",
-      name: "박카페",
-    },
-    lastMessage: "감사했습니다! 다음에 또 만나요",
-    lastMessageTime: "어제",
-    unreadCount: 0,
-    status: 'completed',
-  },
-  {
-    id: "3",
-    postTitle: "쇼핑 같이 해요",
-    postCategory: "쇼핑",
-    postLocation: "명동",
-    otherUser: {
-      id: "user3",
-      name: "최쇼핑",
-      avatar: "https://picsum.photos/seed/user3/40/40",
-    },
-    lastMessage: "언제 시간 되세요?",
-    lastMessageTime: "1시간 전",
-    unreadCount: 1,
-    status: 'active',
-    meetingDate: "내일 14:00",
-  },
-];
 
 export default function Chat() {
   const navigate = useNavigate();
@@ -80,6 +17,43 @@ export default function Chat() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
 
+  // 채팅방 목록 상태
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 채팅방 목록 로드
+  const loadChatRooms = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      console.log('🔄 채팅방 목록 로드 중...');
+      const response = await api.chat.getRooms();
+
+      if (response && Array.isArray(response)) {
+        setChatRooms(response);
+      } else if (response && response.rooms) {
+        setChatRooms(response.rooms);
+      } else {
+        setChatRooms([]);
+      }
+
+      console.log('✅ 채팅방 목록 로드 완료:', response);
+      console.log('💡 첫 번째 채팅방 구조:', response[0]);
+    } catch (error) {
+      console.error('❌ 채팅방 목록 로드 실패:', error);
+      setError('채팅방 목록을 불러올 수 없습니다.');
+      setChatRooms([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 컴포넌트 마운트 시 채팅방 목록 로드
+  useEffect(() => {
+    loadChatRooms();
+  }, [loadChatRooms]);
+
   const handleChatClick = (chatId: string) => {
     navigate(`/chat/room/${chatId}`);
   };
@@ -88,6 +62,61 @@ export default function Chat() {
     event.stopPropagation();
     setSelectedUser(user);
     setAnchorEl(event.currentTarget);
+  };
+
+  // 상대방 사용자 정보 추출
+  const getOtherUser = (room: ChatRoom) => {
+    try {
+      const currentUserId = JSON.parse(localStorage.getItem('user') || '{}').id;
+      const otherUser = room.participants?.find(participant => participant.id !== currentUserId);
+
+      // 상대방을 찾지 못했거나 participants가 없는 경우 기본값 반환
+      if (!otherUser && room.participants?.length > 0) {
+        return room.participants[0];
+      }
+
+      // 기본 사용자 객체 반환 (name이 없는 경우 대비)
+      return otherUser || {
+        id: 'unknown',
+        name: '알 수 없는 사용자',
+        nickname: '',
+        email: '',
+        avatar: ''
+      };
+    } catch (error) {
+      console.error('getOtherUser 에러:', error);
+      return {
+        id: 'unknown',
+        name: '알 수 없는 사용자',
+        nickname: '',
+        email: '',
+        avatar: ''
+      };
+    }
+  };
+
+  // 시간 포맷팅
+  const formatLastMessageTime = (timestamp: string) => {
+    try {
+      if (!timestamp) return '';
+
+      const now = new Date();
+      const messageTime = new Date(timestamp);
+
+      // 유효하지 않은 날짜인 경우
+      if (isNaN(messageTime.getTime())) return '';
+
+      const diffMinutes = Math.floor((now.getTime() - messageTime.getTime()) / (1000 * 60));
+
+      if (diffMinutes < 1) return '방금 전';
+      if (diffMinutes < 60) return `${diffMinutes}분 전`;
+      if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}시간 전`;
+      if (diffMinutes < 2880) return '어제';
+      return messageTime.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+    } catch (error) {
+      console.error('시간 포맷팅 에러:', error);
+      return '';
+    }
   };
 
   const handleMenuClose = () => {
@@ -177,8 +206,44 @@ export default function Chat() {
           </Typography>
         </Box>
 
+        {/* Loading State */}
+        {loading && (
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress sx={{ color: '#E762A9' }} />
+          </Box>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '50vh',
+              p: 3
+            }}
+          >
+            <Typography variant="h6" color="error" textAlign="center" mb={1}>
+              오류가 발생했습니다
+            </Typography>
+            <Typography variant="body2" color="text.secondary" textAlign="center" mb={2}>
+              {error}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="primary"
+              sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+              onClick={loadChatRooms}
+            >
+              다시 시도
+            </Typography>
+          </Box>
+        )}
+
         {/* Chat List */}
-        {mockItplChats.length === 0 ? (
+        {!loading && !error && chatRooms.length === 0 ? (
           <Box 
             sx={{ 
               display: 'flex', 
@@ -199,10 +264,12 @@ export default function Chat() {
           </Box>
         ) : (
           <div className="space-y-3">
-            {mockItplChats.map((chat) => (
+            {chatRooms.map((room) => {
+              const otherUser = getOtherUser(room);
+              return (
               <Card
-                key={chat.id}
-                onClick={() => handleChatClick(chat.id)}
+                key={room.id}
+                onClick={() => handleChatClick(room.id)}
                 sx={{
                   borderRadius: 3,
                   boxShadow: "0 2px 12px rgba(231, 98, 169, 0.08)",
@@ -221,7 +288,7 @@ export default function Chat() {
                     <Box>
                       <Box display="flex" alignItems="center" gap={1} mb={0.5}>
                         <Chip
-                          label={chat.postCategory}
+                          label={room.postCategory}
                           size="small"
                           sx={{
                             bgcolor: '#E762A9',
@@ -235,34 +302,39 @@ export default function Chat() {
                         <Box display="flex" alignItems="center" gap={0.5}>
                           <LocationOn sx={{ fontSize: 12, color: '#E762A9' }} />
                           <Typography variant="caption" color="#E762A9" fontWeight={500}>
-                            {chat.postLocation}
+                            {room.postLocation}
                           </Typography>
                         </Box>
                       </Box>
                       <Typography variant="subtitle1" fontWeight={600} color="#333" mb={0.5}>
-                        {chat.postTitle}
+                        {room.postTitle}
                       </Typography>
-                      {chat.meetingDate && (
+                      {room.meetingDate && (
                         <Typography variant="caption" color="text.secondary">
-                          약속: {chat.meetingDate}
+                          약속: {new Date(room.meetingDate).toLocaleString('ko-KR', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </Typography>
                       )}
                     </Box>
                     <Box display="flex" alignItems="center" gap={1}>
                       <Chip
-                        label={getStatusText(chat.status)}
+                        label={getStatusText(room.status)}
                         size="small"
                         sx={{
-                          bgcolor: getStatusColor(chat.status),
+                          bgcolor: getStatusColor(room.status),
                           color: 'white',
                           fontSize: '0.7rem',
                           height: 18,
                           borderRadius: 2,
                         }}
                       />
-                      {chat.unreadCount > 0 && (
-                        <Badge 
-                          badgeContent={chat.unreadCount} 
+                      {room.unreadCount > 0 && (
+                        <Badge
+                          badgeContent={room.unreadCount}
                           sx={{
                             '& .MuiBadge-badge': {
                               bgcolor: '#E762A9',
@@ -279,25 +351,25 @@ export default function Chat() {
 
                   {/* 사용자 정보 및 메시지 */}
                   <Box display="flex" alignItems="center" gap={2}>
-                    <Avatar 
-                      src={chat.otherUser.avatar}
+                    <Avatar
+                      src={otherUser.avatar}
                       sx={{ width: 40, height: 40 }}
                     >
-                      {chat.otherUser.name.charAt(0)}
+                      {otherUser.name?.charAt(0) || '?'}
                     </Avatar>
                     <Box flex={1}>
                       <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
                         <Box display="flex" alignItems="center" gap={1}>
-                          <Typography 
-                            variant="subtitle2" 
-                            fontWeight={600} 
+                          <Typography
+                            variant="subtitle2"
+                            fontWeight={600}
                             color="#333"
                             sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                            onClick={(e) => handleUserClick(e, chat.otherUser)}
+                            onClick={(e) => handleUserClick(e, otherUser)}
                           >
-                            {chat.otherUser.name}
+                            {otherUser.name || '알 수 없는 사용자'}
                           </Typography>
-                          {isUserBlocked(chat.otherUser.id) && (
+                          {isUserBlocked(otherUser.id) && (
                             <Typography variant="caption" color="error.main" fontWeight={500}>
                               (차단됨)
                             </Typography>
@@ -305,33 +377,34 @@ export default function Chat() {
                         </Box>
                         <Box display="flex" alignItems="center" gap={1}>
                           <Typography variant="caption" color="text.secondary">
-                            {chat.lastMessageTime}
+                            {room.lastMessage ? formatLastMessageTime(room.lastMessage.timestamp) : ''}
                           </Typography>
-                          <IconButton 
-                            size="small" 
-                            onClick={(e) => handleUserClick(e, chat.otherUser)}
+                          <IconButton
+                            size="small"
+                            onClick={(e) => handleUserClick(e, otherUser)}
                             sx={{ p: 0.5 }}
                           >
                             <MoreVert fontSize="small" />
                           </IconButton>
                         </Box>
                       </Box>
-                      <Typography 
-                        variant="body2" 
+                      <Typography
+                        variant="body2"
                         color="text.secondary"
-                        sx={{ 
+                        sx={{
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'
                         }}
                       >
-                        {chat.lastMessage}
+                        {room.lastMessage?.text || '메시지가 없습니다.'}
                       </Typography>
                     </Box>
                   </Box>
                 </Box>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
 

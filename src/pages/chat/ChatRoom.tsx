@@ -31,95 +31,16 @@ import {
   LocationOn
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { api } from "../../lib/api";
+import type { ChatRoom, ChatMessage, ChatUser } from "../../types/home.types";
+import { useSocket } from "../../hooks/useSocket";
 
-interface Message {
-  id: string;
-  text: string;
-  sender: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  timestamp: string;
-  isMe: boolean;
-}
-
-const mockMessages: Message[] = [
-  {
-    id: "1",
-    text: "안녕하세요! 저녁 같이 드실 분 찾고 있어요",
-    sender: { id: "user1", name: "김잇플" },
-    timestamp: "10:00",
-    isMe: false,
-  },
-  {
-    id: "2", 
-    text: "안녕하세요! 5시에 만날까요?",
-    sender: { id: "me", name: "나" },
-    timestamp: "10:01",
-    isMe: true,
-  },
-  {
-    id: "3",
-    text: "좋아요! 홍대입구역 2번 출구에서 만나요",
-    sender: { id: "user1", name: "김잇플" },
-    timestamp: "10:30",
-    isMe: false,
-  },
-];
-
-const chatRoomData: { [key: string]: any } = {
-  "1": {
-    postId: "post-1",
-    postTitle: "저녁 같이 먹을 사람?",
-    postContent: "혼밥 싫어서 같이 드실 분 구해요! 맛있는 피자 같이 먹어요",
-    postCategory: "식사",
-    postLocation: "홍대입구",
-    venue: "홍대입구역 2번 출구 피자집",
-    meetingDate: "2024-12-20T17:00:00",
-    maxParticipants: 4,
-    currentParticipants: 2,
-    postImage: "https://picsum.photos/seed/pizza/400/200",
-    isMyPost: false, // 내가 작성한 게시글인지
-    otherUser: { id: "user1", name: "김잇플", avatar: "https://picsum.photos/seed/user1/40/40" },
-    status: 'active'
-  },
-  "2": {
-    postId: "post-2",
-    postTitle: "카페에서 수다떨어요",
-    postContent: "근처 카페에서 커피 마시며 대화해요. 디저트도 같이!",
-    postCategory: "카페", 
-    postLocation: "강남",
-    venue: "강남역 스타벅스",
-    meetingDate: "2024-12-19T15:00:00",
-    maxParticipants: 3,
-    currentParticipants: 2,
-    isMyPost: true, // 내가 작성한 게시글
-    otherUser: { id: "user2", name: "박카페" },
-    status: 'completed'
-  },
-  "3": {
-    postId: "post-3",
-    postTitle: "쇼핑 같이 해요",
-    postContent: "쇼핑하면서 구경하실 분! 같이 다녀요",
-    postCategory: "쇼핑",
-    postLocation: "명동", 
-    venue: "명동 쇼핑거리",
-    meetingDate: "2024-12-21T14:00:00",
-    maxParticipants: 5,
-    currentParticipants: 3,
-    postImage: "https://picsum.photos/seed/shopping/400/200",
-    isMyPost: false,
-    otherUser: { id: "user3", name: "최쇼핑", avatar: "https://picsum.photos/seed/user3/40/40" },
-    status: 'active'
-  },
-};
 
 export default function ChatRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -129,8 +50,93 @@ export default function ChatRoom() {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
 
-  const roomData = roomId ? chatRoomData[roomId] : null;
-  
+  // 채팅방 및 메시지 상태
+  const [roomData, setRoomData] = useState<ChatRoom | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [otherUser, setOtherUser] = useState<ChatUser | null>(null);
+
+  // 소켓 연결
+  const { socket } = useSocket();
+
+  // 채팅방 데이터 로드
+  const loadRoomData = useCallback(async () => {
+    if (!roomId) return;
+
+    setLoading(true);
+    try {
+      console.log('🔄 채팅방 정보 로드 중...', roomId);
+      const room = await api.chat.getRoom(roomId);
+      setRoomData(room);
+
+      // 상대방 사용자 정보 설정
+      const currentUserId = JSON.parse(localStorage.getItem('user') || '{}').id;
+      const other = room.participants.find((p: ChatUser) => p.id !== currentUserId);
+      setOtherUser(other || null);
+
+      console.log('✅ 채팅방 정보 로드 완료:', room);
+    } catch (error) {
+      console.error('❌ 채팅방 정보 로드 실패:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [roomId]);
+
+  // 메시지 목록 로드
+  const loadMessages = useCallback(async () => {
+    if (!roomId) return;
+
+    try {
+      console.log('🔄 메시지 목록 로드 중...', roomId);
+      const response = await api.chat.getMessages(roomId, { limit: 50 });
+
+      const messageList = response.messages || response.data || response || [];
+      setMessages(Array.isArray(messageList) ? messageList : []);
+
+      console.log('✅ 메시지 목록 로드 완료:', messageList);
+    } catch (error) {
+      console.error('❌ 메시지 목록 로드 실패:', error);
+      setMessages([]);
+    }
+  }, [roomId]);
+
+  // 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    if (roomId) {
+      loadRoomData();
+      loadMessages();
+    }
+  }, [roomId, loadRoomData, loadMessages]);
+
+  // 소켓 이벤트 처리
+  useEffect(() => {
+    if (!socket || !roomId) return;
+
+    // 채팅방 입장
+    socket.emit('join-room', roomId);
+
+    // 새 메시지 수신
+    const handleNewMessage = (message: ChatMessage) => {
+      console.log('📨 새 메시지 수신:', message);
+      setMessages(prev => [...prev, message]);
+    };
+
+    socket.on('new-message', handleNewMessage);
+
+    return () => {
+      socket.off('new-message', handleNewMessage);
+      socket.emit('leave-room', roomId);
+    };
+  }, [socket, roomId]);
+
+  if (loading) {
+    return (
+      <Box display="flex" alignItems="center" justifyContent="center" height="100vh">
+        <Typography>채팅방을 불러오는 중...</Typography>
+      </Box>
+    );
+  }
+
   if (!roomData) {
     return (
       <Box display="flex" alignItems="center" justifyContent="center" height="100vh">
@@ -147,19 +153,47 @@ export default function ChatRoom() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (newMessage.trim() === "") return;
+  const handleSendMessage = async () => {
+    if (newMessage.trim() === "" || !roomId || sendingMessage) return;
 
-    const message: Message = {
-      id: Date.now().toString(),
-      text: newMessage,
-      sender: { id: "me", name: "나" },
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMe: true,
-    };
+    setSendingMessage(true);
+    try {
+      console.log('📤 메시지 전송 중...', newMessage);
 
-    setMessages(prev => [...prev, message]);
-    setNewMessage("");
+      // API로 메시지 전송
+      const sentMessage = await api.chat.sendMessage(roomId, newMessage.trim());
+
+      // 채팅 메시지 알림 생성 (상대방에게)
+      try {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (currentUser.id && socket) {
+          console.log('📢 채팅 메시지 알림 생성 중...');
+          await api.notifications.createChatMessageNotification(roomId, currentUser.id, newMessage.trim());
+          console.log('✅ 채팅 메시지 알림 생성 완료');
+        }
+      } catch (notificationError) {
+        console.log('⚠️ 채팅 알림 생성 실패 (메시지는 성공):', notificationError);
+      }
+
+      // 소켓으로 실시간 전송
+      if (socket) {
+        socket.emit('send-message', {
+          roomId,
+          message: sentMessage
+        });
+      }
+
+      // 로컬 상태 업데이트 (이미 소켓으로 받을 수도 있지만 즉시 반영을 위해)
+      setMessages(prev => [...prev, sentMessage]);
+      setNewMessage("");
+
+      console.log('✅ 메시지 전송 완료:', sentMessage);
+    } catch (error) {
+      console.error('❌ 메시지 전송 실패:', error);
+      alert('메시지 전송에 실패했습니다.');
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -180,7 +214,7 @@ export default function ChatRoom() {
   const handleBlockUser = () => {
     setBlockDialogOpen(false);
     setMenuAnchorEl(null);
-    console.log("사용자 차단:", roomData.otherUser.name);
+    console.log("사용자 차단:", otherUser?.name);
     // TODO: 실제 차단 로직 구현
   };
 
@@ -188,7 +222,7 @@ export default function ChatRoom() {
     if (reportReason) {
       setReportDialogOpen(false);
       setMenuAnchorEl(null);
-      console.log("사용자 신고:", roomData.otherUser.name, "사유:", reportReason);
+      console.log("사용자 신고:", otherUser?.name, "사유:", reportReason);
       // TODO: 실제 신고 로직 구현
       setReportReason("");
     }
@@ -247,16 +281,16 @@ export default function ChatRoom() {
           >
             <ArrowBackIcon />
           </IconButton>
-          <Avatar 
-            src={roomData.otherUser.avatar}
+          <Avatar
+            src={otherUser?.avatar}
             sx={{ width: 32, height: 32, mr: 1 }}
           >
-            {roomData.otherUser.name.charAt(0)}
+            {otherUser?.name?.charAt(0) || '?'}
           </Avatar>
           <Box sx={{ flexGrow: 1 }}>
             <Box display="flex" alignItems="center" gap={1} mb={0.5}>
               <Typography variant="subtitle1" fontWeight={600} color="#333">
-                {roomData.otherUser.name}
+                {otherUser?.name || '사용자'}
               </Typography>
               <Chip
                 label={getStatusText(roomData.status)}
@@ -290,7 +324,12 @@ export default function ChatRoom() {
               </Box>
               {roomData.meetingDate && (
                 <Typography variant="caption" color="text.secondary">
-                  • {roomData.meetingDate}
+                  • {new Date(roomData.meetingDate).toLocaleString('ko-KR', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </Typography>
               )}
             </Box>
@@ -364,10 +403,7 @@ export default function ChatRoom() {
                 </Box>
                 {roomData.meetingDate && (
                   <Typography variant="caption" color="text.secondary">
-                    📅 {formatDateTime(roomData.meetingDate)} {new Date(roomData.meetingDate).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    📅 {formatDateTime(roomData.meetingDate)}
                   </Typography>
                 )}
               </Box>
@@ -419,17 +455,17 @@ export default function ChatRoom() {
                 }}
               >
                 {!message.isMe && (
-                  <Avatar 
-                    src={message.sender.avatar} 
+                  <Avatar
+                    src={message.sender.avatar}
                     sx={{ width: 32, height: 32 }}
                   >
-                    {message.sender.name.charAt(0)}
+                    {message.sender.name?.charAt(0) || '?'}
                   </Avatar>
                 )}
                 <Box>
                   {!message.isMe && (
-                    <Typography 
-                      variant="caption" 
+                    <Typography
+                      variant="caption"
                       color="text.secondary"
                       sx={{ ml: 1, mb: 0.5, display: 'block' }}
                     >
@@ -451,18 +487,21 @@ export default function ChatRoom() {
                       {message.text}
                     </Typography>
                   </Paper>
-                  <Typography 
-                    variant="caption" 
+                  <Typography
+                    variant="caption"
                     color="text.secondary"
-                    sx={{ 
+                    sx={{
                       ml: message.isMe ? 0 : 1,
                       mr: message.isMe ? 1 : 0,
-                      mt: 0.5, 
+                      mt: 0.5,
                       display: 'block',
                       textAlign: message.isMe ? 'right' : 'left'
                     }}
                   >
-                    {message.timestamp}
+                    {new Date(message.timestamp || message.createdAt).toLocaleTimeString('ko-KR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </Typography>
                 </Box>
               </Box>
@@ -499,9 +538,9 @@ export default function ChatRoom() {
             }
           }}
         />
-        <IconButton 
+        <IconButton
           onClick={handleSendMessage}
-          disabled={newMessage.trim() === ""}
+          disabled={newMessage.trim() === "" || sendingMessage}
           sx={{
             bgcolor: '#E762A9',
             color: 'white',
@@ -560,7 +599,7 @@ export default function ChatRoom() {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" mb={2}>
-            <strong>{roomData.otherUser.name}</strong>님을 차단하시겠습니까?
+            <strong>{otherUser?.name}</strong>님을 차단하시겠습니까?
           </Typography>
           <Typography variant="body2" color="text.secondary">
             • 차단된 사용자와는 대화할 수 없습니다<br/>
@@ -600,7 +639,7 @@ export default function ChatRoom() {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" mb={3}>
-            <strong>{roomData.otherUser.name}</strong>님을 신고하는 이유를 선택해주세요
+            <strong>{otherUser?.name}</strong>님을 신고하는 이유를 선택해주세요
           </Typography>
           <FormControl>
             <RadioGroup

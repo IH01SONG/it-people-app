@@ -61,3 +61,52 @@ export interface Activity {
   createdAt: string; // 모임 생성 일시
   authorId?: string; // 작성자 ID (차단 기능을 위해 추가)
 }
+
+/**
+ * 채팅방 데이터 타입
+ */
+export interface ChatRoom {
+  id: string; // 채팅방 고유 ID
+  postId: string; // 관련 게시글 ID
+  postTitle: string; // 게시글 제목
+  postCategory: string; // 게시글 카테고리
+  postLocation: string; // 게시글 위치
+  postImage?: string; // 게시글 이미지
+  venue?: string; // 만날 장소
+  meetingDate?: string; // 모임 일시
+  maxParticipants: number; // 최대 참여자 수
+  currentParticipants: number; // 현재 참여자 수
+  participants: ChatUser[]; // 참여자 목록
+  lastMessage?: ChatMessage; // 마지막 메시지
+  unreadCount: number; // 읽지 않은 메시지 수
+  status: 'active' | 'completed' | 'blocked'; // 채팅방 상태
+  isMyPost: boolean; // 내가 작성한 게시글인지
+  createdAt: string; // 생성 일시
+  updatedAt: string; // 수정 일시
+}
+
+/**
+ * 채팅 사용자 데이터 타입
+ */
+export interface ChatUser {
+  id: string; // 사용자 고유 ID
+  name: string; // 사용자 이름
+  nickname?: string; // 닉네임
+  email?: string; // 이메일
+  avatar?: string; // 프로필 이미지
+  isBlocked?: boolean; // 차단 여부
+}
+
+/**
+ * 채팅 메시지 데이터 타입
+ */
+export interface ChatMessage {
+  id: string; // 메시지 고유 ID
+  roomId: string; // 채팅방 ID
+  text: string; // 메시지 내용
+  sender: ChatUser; // 발신자 정보
+  timestamp: string; // 전송 시간
+  isMe: boolean; // 내가 보낸 메시지인지
+  readBy: string[]; // 읽은 사용자 ID 목록
+  createdAt: string; // 생성 일시
+}

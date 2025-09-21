@@ -212,4 +212,36 @@ export const api = {
     createChatMessageNotification: (chatRoomId: string, senderId: string, message: string) =>
       axios.post('/notifications/chat-message', { chatRoomId, senderId, message }).then(r => r.data),
   },
+
+  // 채팅 관련 API
+  chat: {
+    // 채팅방 목록 조회
+    getRooms: () => axios.get('/chat/rooms').then(r => r.data),
+
+    // 특정 채팅방 정보 조회
+    getRoom: (roomId: string) => axios.get(`/chat/rooms/${roomId}`).then(r => r.data),
+
+    // 채팅방 메시지 목록 조회
+    getMessages: (roomId: string, params?: { page?: number; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.page) query.append('page', String(params.page));
+      if (params?.limit) query.append('limit', String(params.limit));
+      const qs = query.toString();
+      return axios.get(`/chat/rooms/${roomId}/messages${qs ? `?${qs}` : ''}`).then(r => r.data);
+    },
+
+    // 메시지 전송
+    sendMessage: (roomId: string, message: string) =>
+      axios.post(`/chat/rooms/${roomId}/messages`, { message }).then(r => r.data),
+
+    // 채팅방 나가기
+    leaveRoom: (roomId: string) =>
+      axios.delete(`/chat/rooms/${roomId}/leave`).then(r => r.data),
+
+    // 메시지 읽음 처리
+    markAsRead: (roomId: string, messageId?: string) => {
+      const body = messageId ? { messageId } : {};
+      return axios.post(`/chat/rooms/${roomId}/read`, body).then(r => r.data);
+    },
+  },
 };
