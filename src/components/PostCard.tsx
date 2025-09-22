@@ -4,9 +4,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { IconButton } from "@mui/material";
 
-// 로고 이미지
-import logoSvg from "../assets/logo.png";
 
 // MUI 컴포넌트
 import {
@@ -28,6 +27,7 @@ import type { Post } from "../types/home.types";
 import { useState } from "react";
 import { useBlockUser } from "../contexts/BlockUserContext";
 import { useAuth } from "../auth/AuthContext";
+import { PostJoinAction } from "./PostJoinAction";
 import UserProfileModal from "./UserProfileModal";
 
 /**
@@ -35,8 +35,6 @@ import UserProfileModal from "./UserProfileModal";
  */
 interface PostCardProps {
   post: Post; // 게시글 데이터
-  onJoinRequest: (postId: string) => void; // 참여 신청 콜백
-  isApplied?: boolean; // 신청 상태
   onUserBlock?: (userId: string, userName: string) => void; // 사용자 차단 콜백
   onEditPost?: (postId: string) => void; // 게시글 수정 콜백
   onDeletePost?: (postId: string) => void; // 게시글 삭제 콜백
@@ -48,8 +46,6 @@ interface PostCardProps {
  */
 export default function PostCard({
   post,
-  onJoinRequest,
-  isApplied = false,
   onUserBlock,
   onEditPost,
   onDeletePost
@@ -87,7 +83,7 @@ export default function PostCard({
         // 상위 컴포넌트에서 차단 처리하도록 콜백만 호출
         onUserBlock?.(post.authorId, post.author);
         alert(`${post.author} 사용자가 차단되었습니다.`);
-      } catch (error) {
+      } catch {
         alert('사용자 차단에 실패했습니다.');
       } finally {
         setIsBlocking(false);
@@ -102,7 +98,7 @@ export default function PostCard({
       try {
         await unblockUser(post.authorId);
         alert(`${post.author} 사용자의 차단이 해제되었습니다.`);
-      } catch (error) {
+      } catch {
         alert('차단 해제에 실패했습니다.');
       } finally {
         setIsBlocking(false);
@@ -137,14 +133,6 @@ export default function PostCard({
       {(
         <Box sx={{ height: 250, overflow: "hidden", position: "relative" }}>
           {(() => {
-            // 디버그: 게시글 이미지 데이터 확인
-            if (post.title.includes("이미지 첨부 테스트")) {
-              console.log(`🔍 "${post.title}" 게시글 데이터:`, {
-                image: post.image,
-                imageType: typeof post.image,
-                imageLength: Array.isArray(post.image) ? post.image.length : 'not array'
-              });
-            }
 
             // 카테고리별 기본 이미지 함수
             const getDefaultImages = (category: string): string[] => {
@@ -165,9 +153,9 @@ export default function PostCard({
                   'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop&crop=center'
                 ],
                 '문화/예술': [
-                  'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop&crop=center',
                   'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop&crop=center',
-                  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center'
+                  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&h=300&fit=crop&crop=center'
                 ],
                 '사교/인맥': [
                   'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop&crop=center',
@@ -213,7 +201,13 @@ export default function PostCard({
               images = [post.image];
             } else {
               // 기본 이미지는 첫 번째 이미지만 사용 (스와이핑 없음)
-              const defaultImages = getDefaultImages(post.category);
+              let categoryName = '기타';
+              if (typeof post.category === 'object' && post.category !== null) {
+                categoryName = post.category.name || post.category._id || '기타';
+              } else if (typeof post.category === 'string') {
+                categoryName = post.category;
+              }
+              const defaultImages = getDefaultImages(categoryName);
               images = [defaultImages[0]]; // 첫 번째 이미지만 사용
             }
 
@@ -364,7 +358,15 @@ export default function PostCard({
             <span
               className={`text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700`}
             >
-              {post.category}
+              {(() => {
+                if (typeof post.category === 'object' && post.category !== null) {
+                  return post.category.name || post.category._id || '기타';
+                } else if (typeof post.category === 'string') {
+                  return post.category;
+                } else {
+                  return '기타';
+                }
+              })()}
             </span>
             {post.status === 'full' && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
@@ -420,10 +422,6 @@ export default function PostCard({
             </Box>
             <Box display="flex" alignItems="center" gap={1}>
               <Typography variant="caption" color="text.secondary">
-                조회 {post.viewCount}
-              </Typography>
-              <span className="text-xs text-gray-400">•</span>
-              <Typography variant="caption" color="text.secondary">
                 {new Date(post.createdAt).toLocaleDateString("ko-KR", {
                   month: "short",
                   day: "numeric",
@@ -433,43 +431,10 @@ export default function PostCard({
           </Box>
 
           {!isMyPost && (
-            <Button
-              onClick={() => onJoinRequest(post.id)}
+            <PostJoinAction
+              postId={post.id}
               disabled={post.status === 'full'}
-              sx={{
-                bgcolor: isApplied ? "#C2185B" : post.status === 'full' ? "#CCCCCC" : "#E91E63",
-                color: "white",
-                borderRadius: 20,
-                px: 2,
-                py: 0.5,
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                minWidth: "auto",
-                "&:hover": {
-                  bgcolor: post.status === 'full' ? "#CCCCCC" : isApplied ? "#9C1346" : "#C2185B",
-                  transform: post.status === 'full' ? "none" : "scale(1.05)",
-                },
-                "&:disabled": {
-                  bgcolor: "#CCCCCC",
-                  color: "#999999",
-                },
-                transition: "all 0.2s ease",
-                boxShadow: post.status === 'full' ? "none" : "0 2px 8px rgba(233, 30, 99, 0.3)",
-              }}
-              startIcon={
-                <img
-                  src={logoSvg}
-                  alt="잇플 로고"
-                  style={{
-                    width: "14px",
-                    height: "14px",
-                    filter: "brightness(0) invert(1)"
-                  }}
-                />
-              }
-            >
-              {post.status === 'full' ? '마감' : isApplied ? '신청됨' : '잇플'}
-            </Button>
+            />
           )}
         </Box>
       </Box>
@@ -492,7 +457,7 @@ export default function PostCard({
           // 내가 쓴 글일 때 수정/삭제 메뉴
           <MenuItem key="edit" onClick={() => {
             handleMenuClose();
-            onEditPost && onEditPost(post.id);
+            onEditPost?.(post.id);
           }}>
             <ListItemIcon>
               <EditIcon color="primary" />
@@ -501,7 +466,7 @@ export default function PostCard({
           </MenuItem>,
           <MenuItem key="delete" onClick={() => {
             handleMenuClose();
-            onDeletePost && onDeletePost(post.id);
+            onDeletePost?.(post.id);
           }}>
             <ListItemIcon>
               <DeleteIcon color="error" />

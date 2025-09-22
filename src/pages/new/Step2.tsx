@@ -55,12 +55,67 @@ export default function Step2() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     null
   );
-  const [locationInput, setLocationInput] = useState("위치 로딩 중...");
+  const [locationInput, setLocationInput] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [isMapUpdating, setIsMapUpdating] = useState(false);
+  const [currentLocationCoords, setCurrentLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // 향후 위치 선택 기능 확장 시 사용
   const participantQuickOptions = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30];
+
+  // 현재 위치를 가져오는 함수
+  const getCurrentLocationCoords = useCallback(() => {
+    return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('위치 서비스를 지원하지 않습니다'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setCurrentLocationCoords(coords);
+          resolve(coords);
+        },
+        (error) => {
+          console.error('위치 가져오기 실패:', error);
+          // 기본 위치 (서울시청)
+          const defaultCoords = { lat: 37.5665, lng: 126.978 };
+          setCurrentLocationCoords(defaultCoords);
+          resolve(defaultCoords);
+        }
+      );
+    });
+  }, []);
+
+  // 좌표를 주소로 변환하는 함수
+  const coordsToAddress = useCallback((lat: number, lng: number): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!window.kakao?.maps?.services) {
+        resolve(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`);
+        return;
+      }
+
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
+        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+          const roadAddress = result[0].road_address;
+          const address = roadAddress ? roadAddress.address_name : result[0].address.address_name;
+          resolve(address);
+        } else {
+          resolve(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`);
+        }
+      });
+    });
+  }, []);
+
+  // 컴포넌트 마운트 시 현재 위치 가져오기
+  useEffect(() => {
+    getCurrentLocationCoords();
+  }, [getCurrentLocationCoords]);
 
   useEffect(() => {
     if (location.state?.category) {
@@ -92,10 +147,8 @@ export default function Step2() {
 
     if (
       !locationInput.trim() ||
-      locationInput === "현재 위치" ||
       locationInput.includes("위도:") ||
-      locationInput.includes("경도:") ||
-      locationInput === "위치 로딩 중..."
+      locationInput.includes("경도:")
     ) {
       return;
     }
@@ -127,15 +180,35 @@ export default function Step2() {
       // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
       const finalImages = images;
 
-      // 위치 정보 설정 (선택사항)
-      const displayLocation = locationInput || formData.location;
-      const locationData = coords
-        ? {
-            type: "Point" as const,
-            coordinates: [coords.lng, coords.lat], // [경도, 위도] 순서
-            address: displayLocation || "위치 정보", // 백엔드에서 address 필드 지원
+      // 위치 정보 설정 (필수) - 위치가 입력되지 않으면 현재 위치 사용
+      let finalCoords = coords;
+      let displayLocation = locationInput?.trim() || formData.location?.trim();
+
+      // 위치가 설정되지 않았으면 현재 위치 사용
+      if (!finalCoords || !displayLocation) {
+        if (!currentLocationCoords) {
+          // 현재 위치를 아직 가져오지 못했다면 다시 시도
+          try {
+            finalCoords = await getCurrentLocationCoords();
+          } catch (error) {
+            console.error('현재 위치 가져오기 실패:', error);
+            finalCoords = { lat: 37.5665, lng: 126.978 }; // 기본 위치
           }
-        : null;
+        } else {
+          finalCoords = currentLocationCoords;
+        }
+
+        // 좌표를 주소로 변환
+        if (!displayLocation) {
+          displayLocation = await coordsToAddress(finalCoords.lat, finalCoords.lng);
+        }
+      }
+
+      const locationData = {
+        type: "Point" as const,
+        coordinates: [finalCoords.lng, finalCoords.lat], // [경도, 위도] 순서
+        address: displayLocation, // 백엔드에서 address 필드 지원
+      };
 
       // 백엔드 API 스키마에 맞춘 게시글 데이터
       const postPayload = {
@@ -143,10 +216,17 @@ export default function Step2() {
         content: formData.content, // 필수 필드로 변경
         tags: formData.tags,
         maxParticipants: formData.maxParticipants,
+<<<<<<< HEAD
         // 선택적 필드들
         ...(locationData && { location: locationData }),
         // ...(formData.category && { category: formData.category }),
         ...(formData.venue && { venue: formData.venue }),
+=======
+        content: formData.content.trim(),
+        location: locationData, // 위치 정보는 항상 포함 (필수)
+        ...(formData.category && { category: formData.category }),
+        ...(formData.venue?.trim() && { venue: formData.venue.trim() }),
+>>>>>>> feature/mypage
         ...(formData.meetingDate && {
           meetingDate: new Date(formData.meetingDate).toISOString()
         }),
@@ -553,7 +633,7 @@ export default function Step2() {
           <Box mb={2}>
             <TextField
               fullWidth
-              placeholder="위치를 입력해주세요"
+              placeholder="위치를 입력해주세요 (미입력시 현재위치로 설정됩니다)"
               value={locationInput}
               onChange={(e) => {
                 const newLocation = e.target.value;

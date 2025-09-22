@@ -96,7 +96,9 @@ export default function MapPicker({
             status === window.kakao.maps.services.Status.OK &&
             result.length > 0
           ) {
-            const address = result[0].address.address_name;
+            // 도로명 주소 우선, 없으면 지번 주소 사용
+            const roadAddress = result[0].road_address;
+            const address = roadAddress ? roadAddress.address_name : result[0].address.address_name;
             onLocationChange(address, { lat, lng });
           } else {
             // 최후의 수단: 좌표 표시
@@ -130,7 +132,7 @@ export default function MapPicker({
       const searchOptions = {
         location: mapCenter,
         radius: 20000, // 20km 반경
-        sort: window.kakao.maps.services.SortBy.DISTANCE, // 거리순 정렬
+        sort: window.kakao.maps.services.SortBy.ACCURACY, // 정확도 우선 정렬
       };
 
       places.keywordSearch(
@@ -141,16 +143,58 @@ export default function MapPicker({
             status === window.kakao.maps.services.Status.OK &&
             result.length > 0
           ) {
-            const place = result[0];
-            const newPosition = new window.kakao.maps.LatLng(place.y, place.x);
+            // 검색 키워드와 정확히 일치하거나 가장 관련성이 높은 장소 찾기
+            let bestMatch = result[0]; // 기본값은 첫 번째 결과
+
+            // 1. 정확한 이름 매칭 우선 (역, 학교, 공공기관 등)
+            const exactMatch = result.find((place: any) =>
+              place.place_name.toLowerCase().includes(keyword.toLowerCase()) &&
+              (place.category_name.includes('지하철') ||
+               place.category_name.includes('철도') ||
+               place.category_name.includes('역') ||
+               place.category_name.includes('학교') ||
+               place.category_name.includes('관공서') ||
+               place.category_name.includes('병원') ||
+               place.category_name.includes('은행') ||
+               place.category_name.includes('마트') ||
+               place.category_name.includes('백화점'))
+            );
+
+            if (exactMatch) {
+              bestMatch = exactMatch;
+            } else {
+              // 2. 이름이 정확히 일치하는 것 찾기
+              const nameMatch = result.find((place: any) =>
+                place.place_name.toLowerCase() === keyword.toLowerCase() ||
+                place.place_name.toLowerCase().includes(keyword.toLowerCase())
+              );
+
+              if (nameMatch) {
+                bestMatch = nameMatch;
+              }
+            }
+
+            const newPosition = new window.kakao.maps.LatLng(bestMatch.y, bestMatch.x);
 
             map.setCenter(newPosition);
             marker.setPosition(newPosition);
             const newCoords = {
-              lat: parseFloat(place.y),
-              lng: parseFloat(place.x),
+              lat: parseFloat(bestMatch.y),
+              lng: parseFloat(bestMatch.x),
             };
-            onLocationChange(place.place_name, newCoords);
+            onLocationChange(bestMatch.place_name, newCoords);
+
+            // 디버깅용 로그
+            console.log('🔍 검색 결과:', {
+              keyword,
+              totalResults: result.length,
+              selectedPlace: bestMatch.place_name,
+              category: bestMatch.category_name,
+              allResults: result.map((p: any) => ({
+                name: p.place_name,
+                category: p.category_name
+              }))
+            });
           }
         },
         searchOptions
@@ -165,8 +209,7 @@ export default function MapPicker({
       searchKeyword &&
       searchKeyword.trim() &&
       !searchKeyword.includes("위도:") &&
-      !searchKeyword.includes("경도:") &&
-      searchKeyword !== "현재 위치"
+      !searchKeyword.includes("경도:")
     ) {
       const timer = setTimeout(() => {
         searchByKeyword(searchKeyword);
@@ -234,12 +277,8 @@ export default function MapPicker({
             searchPlaceByCoords(dragLat, dragLng);
           });
 
-          // 초기 위치 설정
-          if (isCurrentLocation) {
-            onLocationChange("현재 위치", { lat, lng });
-          } else {
-            searchPlaceByCoords(lat, lng);
-          }
+          // 초기 위치는 지도만 설정하고, 사용자가 선택하기 전까지는 주소를 표시하지 않음
+          // 사용자가 지도를 클릭하거나 마커를 드래그할 때만 주소 표시
         };
 
         // 현재 위치 가져오기
@@ -292,7 +331,8 @@ export default function MapPicker({
 
         map.setCenter(currentPosition);
         marker.setPosition(currentPosition);
-        onLocationChange("현재 위치", { lat: latitude, lng: longitude });
+        // 현재 위치도 실제 주소로 변환
+        searchPlaceByCoords(latitude, longitude);
       });
     }
   };

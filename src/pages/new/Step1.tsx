@@ -89,7 +89,7 @@ export default function Step1() {
       '68c3bdd957c06e06e2706f9a': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center',
 
       // 문화/예술 - 미술관, 문화활동
-      '68c3bdd957c06e06e2706f9d': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop&crop=center',
+      '68c3bdd957c06e06e2706f9d': 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop&crop=center',
 
       // 사교/인맥 - 사람들이 모인 모습
       '68c3bdd957c06e06e2706f9e': 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop&crop=center',

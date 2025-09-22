@@ -17,6 +17,7 @@ interface LocationHeaderProps {
   currentLocation: string; // 현재 선택된 위치
   notifications: Notification[]; // 알림 목록
   locationLoading?: boolean; // 위치 로딩 상태
+  isSocketConnected?: boolean; // 소켓 연결 상태
   onLocationRefresh?: () => void; // 현재 위치 새로고침 콜백
   onSearchOpen: () => void; // 검색 모달 열기 콜백
   onNotificationOpen: () => void; // 알림 모달 열기 콜백
@@ -30,6 +31,7 @@ export default function LocationHeader({
   currentLocation,
   notifications,
   locationLoading = false,
+  isSocketConnected = false,
   onLocationRefresh,
   onSearchOpen,
   onNotificationOpen,
@@ -95,7 +97,12 @@ export default function LocationHeader({
               },
             }}
           >
-            <NotificationsIcon sx={{ color: "#666" }} />
+            <NotificationsIcon
+              sx={{
+                color: isSocketConnected ? "#E762A9" : "#666",
+                transition: "color 0.3s ease"
+              }}
+            />
           </Badge>
         </IconButton>
       </Box>

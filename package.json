@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+<<<<<<< HEAD
     "dev:local": "vite --host 0.0.0.0 --port 3000",
+=======
+    "dev:local": "vite --host 0.0.0.0 --port 5173",
+>>>>>>> feature/mypage
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
