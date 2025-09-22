@@ -13,13 +13,12 @@ import {
   Container,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import LocationOnIcon from "@mui/icons-material/LocationOn";
-import PhotoCameraIcon from "@mui/icons-material/PhotoCamera";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import MapPicker from "../../components/MapPicker";
+import { getDefaultImageByCategory } from "../../utils/defaultImages";
 
 interface FormData {
   title: string;
@@ -51,7 +50,7 @@ export default function Step2() {
     image: undefined,
   });
 
-  const [images, setImages] = useState<string[]>([]);
+  // 이미지 상태 제거 - 카테고리별 기본 이미지만 사용
   const [newTag, setNewTag] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     null
@@ -148,8 +147,14 @@ export default function Step2() {
         ...(locationData && { location: locationData }),
         // ...(formData.category && { category: formData.category }),
         ...(formData.venue && { venue: formData.venue }),
-        ...(formData.meetingDate && { meetingDate: formData.meetingDate }),
-        ...(finalImages.length > 0 && { images: finalImages }),
+        ...(formData.meetingDate && {
+          meetingDate: new Date(formData.meetingDate).toISOString()
+        }),
+        // 이미지 필드 - 백엔드 호환성을 위해 둘 다 전송
+        ...(finalImageUrls.length > 0 && {
+          imageUrls: finalImageUrls,
+          images: finalImageUrls // 백엔드 호환성을 위해 추가
+        }),
       };
 
       // 백엔드 API 호출
@@ -158,48 +163,29 @@ export default function Step2() {
       console.log("게시글 작성 성공:", response);
       alert("게시글이 성공적으로 작성되었습니다!");
       navigate("/", { state: { refreshPosts: true } });
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("게시글 생성 실패:", error);
+      console.error("🚨 오류 상세:", error?.response?.data);
+      console.error("🚨 오류 상태:", error?.response?.status);
 
       let errorMessage = "게시글 생성에 실패했습니다.";
-      if (error && typeof error === "object") {
-        if ("status" in error && (error as { status: number }).status === 401) {
-          errorMessage = "로그인이 필요합니다.";
-        } else if (
-          "status" in error &&
-          (error as { status: number }).status === 400
-        ) {
-          errorMessage = "입력 정보를 확인해주세요.";
-        }
-        if ("message" in error) {
-          errorMessage = (error as { message: string }).message;
-        }
+      if (error?.response?.status === 400) {
+        const serverError = error?.response?.data?.message || error?.response?.data?.error;
+        errorMessage = serverError ? `입력 오류: ${serverError}` : "입력 정보를 확인해주세요.";
+        console.error("🔍 400 오류 상세:", serverError);
+      } else if (error?.response?.status === 401) {
+        errorMessage = "로그인이 필요합니다.";
+      } else if (error?.message) {
+        errorMessage = error.message;
       }
 
       alert(errorMessage + " 다시 시도해주세요.");
     }
   };
 
-  const handleImageUpload = () => {
-    if (images.length >= 3) return;
-    fileInputRef.current?.click();
-  };
+  // 이미지 업로드 함수 제거
 
-  const handleFilesChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const remainingSlots = 3 - images.length;
-    const selected = files.slice(0, remainingSlots);
-
-    const newUrls: string[] = selected.map((file) => URL.createObjectURL(file));
-    setImages((prev) => [...prev, ...newUrls]);
-
-    // 입력 값 초기화 (같은 파일 다시 선택 가능하도록)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  // 이미지 업로드 기능 제거 - 카테고리별 기본 이미지만 사용
 
   const handleAddTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
@@ -218,19 +204,6 @@ export default function Step2() {
     });
   };
 
-  // 표시할 위치 텍스트 계산 함수
-  const getDisplayLocation = () => {
-    if (locationInput && locationInput.trim()) {
-      return locationInput;
-    }
-    if (formData.location && formData.location.trim()) {
-      return formData.location;
-    }
-    if (coords) {
-      return "선택된 위치";
-    }
-    return "위치를 선택해주세요";
-  };
 
   const isFormValid = formData.title.trim().length > 0;
 
@@ -576,6 +549,36 @@ export default function Step2() {
               }}
             />
           </Box>
+          {/* 위치 입력 필드 */}
+          <Box mb={2}>
+            <TextField
+              fullWidth
+              placeholder="위치를 입력해주세요"
+              value={locationInput}
+              onChange={(e) => {
+                const newLocation = e.target.value;
+                setLocationInput(newLocation);
+                setFormData({
+                  ...formData,
+                  location: newLocation,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover": {
+                    borderColor: "#E762A9",
+                  },
+                  "&.Mui-focused": {
+                    borderColor: "#E762A9",
+                    boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
+                  },
+                },
+              }}
+            />
+          </Box>
 
           {/* 지도 영역 */}
           <Box mb={3}>
@@ -584,7 +587,65 @@ export default function Step2() {
               searchKeyword={searchKeyword}
             />
           </Box>
+          {/* 지도 영역 */}
+          <Box mb={3}>
+            <MapPicker
+              onLocationChange={handleLocationChange}
+              searchKeyword={searchKeyword}
+            />
+          </Box>
 
+          {/* 날짜/시간 설정 */}
+          <Box display="flex" gap={2} mb={2}>
+            <TextField
+              fullWidth
+              type="date"
+              value={
+                formData.meetingDate ? formData.meetingDate.split("T")[0] : ""
+              }
+              onChange={(e) => {
+                const date = e.target.value;
+                const time = formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00";
+                setFormData({
+                  ...formData,
+                  meetingDate: date ? `${date}T${time}` : "",
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              type="time"
+              value={
+                formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00"
+              }
+              onChange={(e) => {
+                const date = formData.meetingDate
+                  ? formData.meetingDate.split("T")[0]
+                  : new Date().toISOString().split("T")[0];
+                setFormData({
+                  ...formData,
+                  meetingDate: `${date}T${e.target.value}`,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
           {/* 날짜/시간 설정 */}
           <Box display="flex" gap={2} mb={2}>
             <TextField

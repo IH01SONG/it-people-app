@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Map as KakaoMap,
   MapMarker,
@@ -27,6 +27,10 @@ import RemoveIcon from "@mui/icons-material/Remove";
 
 import AppHeader from "../components/AppHeader";
 import logoSvg from "../assets/logo.png";
+import { usePosts } from "../hooks/usePosts";
+import { useLocation as useLocationHook } from "../hooks/useLocation";
+import type { Post } from "../types/home.types";
+import { api } from "../lib/api";
 
 export default function Map() {
   const theme = useTheme();
@@ -37,13 +41,28 @@ export default function Map() {
     appkey: import.meta.env.VITE_KAKAO_MAP_API_KEY || "0c537754f8fad9d1b779befd5d75dc07",
   });
 
+  // 실제 데이터 훅들
+  const {
+    posts,
+    loading: postsLoading,
+    loadPosts,
+    handleJoinRequest,
+    appliedPosts
+  } = usePosts();
+
+  const {
+    currentLocation: locationName,
+    currentCoords,
+    getCurrentLocation: getLocation,
+    locationLoading,
+  } = useLocationHook();
+
   const [center, setCenter] = useState({
-    lat: 37.5502,
-    lng: 126.9235, // 홍대입구역
+    lat: 37.5502, // 서울 기본값 (현재 위치 로딩 전)
+    lng: 126.9235,
   });
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState("홍대입구");
   const [zoomLevel, setZoomLevel] = useState(6);
 
   const [filters, setFilters] = useState({
@@ -52,54 +71,20 @@ export default function Map() {
     searchQuery: "",
   });
 
-  // 더미 데이터
-  const dummyPosts = [
-    {
-      id: "1",
-      title: "홍대 카페에서 스터디 모임",
-      content:
-        "같이 자바스크립트 공부해요! 편한 분위기에서 코딩하실 분들 환영합니다.",
-      category: "스터디",
-      tags: ["자바스크립트", "프론트엔드", "카페"],
-      location: { lat: 37.5502, lng: 126.9235 },
-      venue: "홍대 카페거리 스타벅스",
-      image: null,
-      maxParticipants: 6,
-      participants: ["user1", "user2"],
-    },
-    {
-      id: "2",
-      title: "강남 맛집 탐방",
-      content:
-        "새로 오픈한 맛집들을 같이 가볼까요? 맛있는 음식 좋아하는 분들만!",
-      category: "식사",
-      tags: ["맛집", "강남", "탐방"],
-      location: { lat: 37.4979, lng: 127.0276 },
-      venue: "강남역 근처",
-      image: null,
-      maxParticipants: 4,
-      participants: ["user3"],
-    },
-    {
-      id: "3",
-      title: "한강 산책 & 피크닉",
-      content: "날씨 좋을 때 한강에서 산책하고 피크닉 어떠세요?",
-      category: "문화생활",
-      tags: ["한강", "산책", "피크닉"],
-      location: { lat: 37.5215, lng: 126.9357 },
-      venue: "여의도 한강공원",
-      image: null,
-      maxParticipants: 8,
-      participants: ["user4", "user5", "user6"],
-    },
-  ];
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const [posts] = useState(dummyPosts);
-  const [selectedPost, setSelectedPost] = useState<any | null>(null);
-  const [appliedPosts, setAppliedPosts] = useState<Set<string>>(new Set());
-
-  // 필터링된 게시글
+  // 실제 Post 데이터를 기반으로 한 필터링된 게시글
   const filteredPosts = posts.filter((post) => {
+    // 위치 정보가 있는 게시글만 지도에 표시
+    if (!post.location ||
+        typeof post.location !== 'object' ||
+        !post.location.coordinates ||
+        !Array.isArray(post.location.coordinates) ||
+        post.location.coordinates.length !== 2) {
+      return false;
+    }
+
     const matchesCategory =
       !filters.category || post.category === filters.category;
     const matchesTags =
@@ -114,19 +99,44 @@ export default function Map() {
     return matchesCategory && matchesTags && matchesSearch;
   });
 
-  const categories = ["식사", "카페", "쇼핑", "운동", "스터디", "문화생활"];
   const availableTags = [...new Set(posts.flatMap((post) => post.tags))];
 
+  // 카테고리 목록 로드
+  const loadCategories = useCallback(async () => {
+    try {
+      const response = await api.posts.getAll({ limit: 100 }); // 많은 게시글을 가져와서 카테고리 추출
+      const allPosts = Array.isArray(response) ? response : response.posts || [];
+      const uniqueCategories = [...new Set(allPosts.map((post: any) => post.category).filter(Boolean))];
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error("카테고리 로드 실패:", error);
+      // 기본 카테고리 사용
+      setCategories(["자기계발", "봉사활동", "운동/스포츠", "문화/예술", "사교/인맥", "취미", "외국어", "맛집", "반려동물"]);
+    }
+  }, []);
+
   // 현재 위치 가져오기
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        setCenter({ lat: latitude, lng: longitude });
-        setCurrentLocation("현재 위치");
+  const getCurrentLocation = useCallback(() => {
+    getLocation(); // useLocationHook의 getCurrentLocation 사용
+  }, [getLocation]);
+
+  // 위치 정보가 업데이트되면 지도 중심점 업데이트
+  useEffect(() => {
+    if (currentCoords) {
+      setCenter({
+        lat: currentCoords.lat,
+        lng: currentCoords.lng,
       });
     }
-  };
+  }, [currentCoords]);
+
+  // 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    loadCategories();
+    getCurrentLocation();
+    // 전체 게시글 로드 (위치 정보가 있는 것들)
+    loadPosts(1);
+  }, [loadCategories, getCurrentLocation, loadPosts]);
 
   const handleTagFilter = (tag: string) => {
     setFilters((prev) => ({
@@ -373,7 +383,7 @@ export default function Map() {
       {/* 지도 제목 */}
       <Box sx={{ px: 2, py: 1, bgcolor: "white" }}>
         <Typography variant="h6" fontWeight={600} color="#333">
-          {currentLocation} 지역 모임 지도
+          {locationName} 지역 모임 지도
         </Typography>
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Typography variant="caption" color="text.secondary">
@@ -410,7 +420,7 @@ export default function Map() {
             borderRadius: 3,
           }}
         >
-          {mapLoading ? (
+          {mapLoading || postsLoading ? (
             <Box
               display="flex"
               alignItems="center"
@@ -421,7 +431,7 @@ export default function Map() {
               <Box textAlign="center">
                 <CircularProgress sx={{ color: "#E762A9", mb: 2 }} />
                 <Typography variant="body2" color="text.secondary">
-                  지도를 로드하고 있어요...
+                  {mapLoading ? '지도를 로드하고 있어요...' : '게시글을 로드하고 있어요...'}
                 </Typography>
               </Box>
             </Box>
@@ -480,8 +490,8 @@ export default function Map() {
                 }}
               >
                 {filteredPosts.map((post) => {
-                  const lat = post.location.lat;
-                  const lng = post.location.lng;
+                  // GeoJSON 좌표 [경도, 위도] → [위도, 경도]로 변환
+                  const [lng, lat] = post.location.coordinates;
 
                   console.log("🎯 마커 렌더링:", {
                     id: post.id,
@@ -489,6 +499,7 @@ export default function Map() {
                     lng: lng,
                     category: post.category,
                     title: post.title,
+                    location: post.location,
                   });
 
                   return (
@@ -664,7 +675,7 @@ export default function Map() {
               {selectedPost.image && (
                 <Box
                   component="img"
-                  src={selectedPost.image}
+                  src={Array.isArray(selectedPost.image) ? selectedPost.image[0] : selectedPost.image}
                   alt={selectedPost.title}
                   sx={{
                     width: "100%",
@@ -720,7 +731,7 @@ export default function Map() {
                     color="text.primary"
                     fontWeight={600}
                   >
-                    {selectedPost.location.address || "위치 정보"}
+                    {selectedPost.location?.address || selectedPost.venue || "위치 정보"}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {selectedPost.venue || "만날 장소"}
@@ -733,18 +744,9 @@ export default function Map() {
                 variant="contained"
                 size="large"
                 onClick={() => {
-                  const postId = selectedPost.id;
-                  const newAppliedPosts = new Set(appliedPosts);
-                  
-                  if (appliedPosts.has(postId)) {
-                    newAppliedPosts.delete(postId);
-                  } else {
-                    newAppliedPosts.add(postId);
-                  }
-                  
-                  setAppliedPosts(newAppliedPosts);
-                  console.log(appliedPosts.has(postId) ? "참여 취소:" : "참여 신청:", postId);
+                  handleJoinRequest(selectedPost.id);
                 }}
+                disabled={selectedPost.status === 'full' || selectedPost.status === 'completed'}
                 sx={{
                   bgcolor: appliedPosts.has(selectedPost.id) ? "#C2185B" : "#E91E63",
                   color: "white",
@@ -759,6 +761,10 @@ export default function Map() {
                     boxShadow: "0 4px 12px rgba(231, 98, 169, 0.4)",
                     transform: "scale(1.02)",
                   },
+                  "&:disabled": {
+                    bgcolor: "#ccc",
+                    color: "#666",
+                  },
                 }}
                 startIcon={
                   <img
@@ -772,7 +778,9 @@ export default function Map() {
                   />
                 }
               >
-                잇플
+                {selectedPost.status === 'full' ? '마감됨' :
+                 selectedPost.status === 'completed' ? '종료됨' :
+                 appliedPosts.has(selectedPost.id) ? '참여 취소' : '잇플'}
               </Button>
             </Box>
           </Box>

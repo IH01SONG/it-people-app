@@ -15,7 +15,7 @@ export interface Post {
   venue?: string; // 구체적인 만날 장소
   category: string; // 모임 카테고리
   tags: string[]; // 태그 배열
-  image?: string; // 게시글 이미지 URL
+  image?: string | string[]; // 게시글 이미지 URL 또는 URL 배열
   participants: string[]; // 참여자 ID 배열
   maxParticipants: number; // 최대 참여자 수
   meetingDate?: Date; // 모임 일시

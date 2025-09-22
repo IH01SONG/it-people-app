@@ -114,21 +114,21 @@ export default function MyActivities({
 
   // 특정 활동의 참여 요청 목록 로드
   const loadJoinRequests = useCallback(async (activityId: string) => {
-    console.log(`🔄 참여 요청 로딩 시작: ${activityId}`);
     setLoadingRequests(prev => ({ ...prev, [activityId]: true }));
     try {
       const requests = await api.joinRequests.getByPost(activityId);
-      console.log(`📥 활동 ${activityId}의 참여 요청 응답:`, requests);
-
       const requestsArray = Array.isArray(requests) ? requests : requests.requests || [];
-      console.log(`📋 활동 ${activityId}의 참여 요청 ${requestsArray.length}개`);
 
       setJoinRequests(prev => ({
         ...prev,
         [activityId]: requestsArray
       }));
     } catch (error) {
-      console.error(`❌ 활동 ${activityId}의 참여 요청 로드 실패:`, error);
+      // 404 에러는 정상적인 상황 (참여 요청이 없음)이므로 로그를 출력하지 않음
+      const isNotFound = (error as any)?.response?.status === 404;
+      if (!isNotFound) {
+        console.error(`활동 ${activityId}의 참여 요청 로드 실패:`, error);
+      }
       setJoinRequests(prev => ({ ...prev, [activityId]: [] }));
     } finally {
       setLoadingRequests(prev => ({ ...prev, [activityId]: false }));

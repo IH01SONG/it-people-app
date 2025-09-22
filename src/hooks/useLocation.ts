@@ -3,6 +3,7 @@ import { useKakaoLoader } from "react-kakao-maps-sdk";
 
 export function useLocation() {
   const [currentLocation, setCurrentLocation] = useState("위치 확인 중...");
+  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(null);
   const currentCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
   const currentLocationRef = useRef<string>("위치 확인 중...");
   const [locationLoading, setLocationLoading] = useState(true);
@@ -15,12 +16,10 @@ export function useLocation() {
 
   // 현재 위치를 가져오는 함수
   const getCurrentLocation = useCallback(async () => {
-    console.log("🔄 getCurrentLocation 시작");
     setLocationLoading(true);
 
     // 카카오맵이 로딩 중이면 대기
     if (mapLoading) {
-      console.log("⏳ 카카오맵 로딩 중...");
       setCurrentLocation("지도 로딩 중...");
       setLocationLoading(false);
       return;
@@ -44,7 +43,6 @@ export function useLocation() {
     }
 
     try {
-      console.log("📍 브라우저 위치 정보 요청 중...");
       const position = await new Promise<GeolocationPosition>(
         (resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -58,7 +56,7 @@ export function useLocation() {
       const { latitude, longitude } = position.coords;
       const coords = { lat: latitude, lng: longitude };
       currentCoordsRef.current = coords;
-      console.log("✅ 브라우저 위치 정보 획득:", coords);
+      setCurrentCoords(coords);
 
       // 주소 변환을 Promise로 래핑하여 완료 후 게시글 로드
       try {
@@ -70,7 +68,6 @@ export function useLocation() {
           return;
         }
 
-        console.log("🗺️ 카카오맵 주소 변환 시작...");
         const geocoder = new window.kakao.maps.services.Geocoder();
 
         // Promise로 래핑하여 주소 변환 완료 후 게시글 로드
@@ -97,7 +94,6 @@ export function useLocation() {
                 }
               }
 
-              console.log("🎯 주소 변환 완료:", location);
               setCurrentLocation(location);
               currentLocationRef.current = location;
               resolve();
@@ -115,12 +111,12 @@ export function useLocation() {
       currentLocationRef.current = "홍대입구";
     } finally {
       setLocationLoading(false);
-      console.log("✅ getCurrentLocation 완료");
     }
   }, [mapLoading, mapError]);
 
   return {
     currentLocation,
+    currentCoords,
     currentCoordsRef,
     currentLocationRef,
     locationLoading,

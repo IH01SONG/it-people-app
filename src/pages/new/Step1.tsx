@@ -59,6 +59,56 @@ export default function Step1() {
     return descMap[category] || "새로운 만남을 시작해요";
   };
 
+  // 카테고리명을 ID로 매핑
+  const getCategoryId = (categoryName: string): string => {
+    const categoryIdMap: Record<string, string> = {
+      자기계발: "68c3bdd957c06e06e2706f85",
+      봉사활동: "68c3bdd957c06e06e2706f86",
+      "운동/스포츠": "68c3bdd957c06e06e2706f9a",
+      "문화/예술": "68c3bdd957c06e06e2706f9d",
+      "사교/인맥": "68c3bdd957c06e06e2706f9e",
+      취미: "68c3bdd957c06e06e2706f87",
+      외국어: "68c3bdd957c06e06e2706f88",
+      맛집: "68c3bdd957c06e06e2706f9c",
+      반려동물: "68c3bdd957c06e06e2706fa1",
+    };
+    return categoryIdMap[categoryName] || "68c3bdd957c06e06e2706fa1";
+  };
+
+  // 카테고리별 미리보기 이미지
+  const getCategoryPreviewImage = (category: string): string => {
+    const categoryId = getCategoryId(category);
+    const defaultImages: { [key: string]: string } = {
+      // 자기계발 - 책, 공부, 성장 관련
+      '68c3bdd957c06e06e2706f85': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=center',
+
+      // 봉사활동 - 손을 맞잡는 모습, 도움
+      '68c3bdd957c06e06e2706f86': 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400&h=300&fit=crop&crop=center',
+
+      // 운동/스포츠 - 운동하는 모습
+      '68c3bdd957c06e06e2706f9a': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center',
+
+      // 문화/예술 - 미술관, 문화활동
+      '68c3bdd957c06e06e2706f9d': 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop&crop=center',
+
+      // 사교/인맥 - 사람들이 모인 모습
+      '68c3bdd957c06e06e2706f9e': 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop&crop=center',
+
+      // 취미 - 다양한 취미활동
+      '68c3bdd957c06e06e2706f87': 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=400&h=300&fit=crop&crop=center',
+
+      // 외국어 - 언어학습, 대화
+      '68c3bdd957c06e06e2706f88': 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=300&fit=crop&crop=center',
+
+      // 맛집 - 음식, 식당
+      '68c3bdd957c06e06e2706f9c': 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&crop=center',
+
+      // 반려동물 - 강아지, 고양이
+      '68c3bdd957c06e06e2706fa1': 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=300&fit=crop&crop=center',
+    };
+    return defaultImages[categoryId] || defaultImages['68c3bdd957c06e06e2706fa1'];
+  };
+
   const handleSubmit = () => {
     if (selectedCategory) {
       navigate("/new/step2", { state: { category: selectedCategory } });
@@ -235,6 +285,57 @@ export default function Step1() {
             </Card>
           ))}
         </Box>
+
+        {/* 선택된 카테고리 미리보기 */}
+        {selectedCategory && (
+          <Card
+            sx={{
+              mb: 4,
+              borderRadius: 3,
+              overflow: "hidden",
+              boxShadow: "0 4px 16px rgba(231, 98, 169, 0.1)",
+              border: "2px solid #E762A9",
+            }}
+          >
+            <Box
+              sx={{
+                position: "relative",
+                height: 200,
+                backgroundImage: `url(${getCategoryPreviewImage(selectedCategory)})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                display: "flex",
+                alignItems: "flex-end",
+              }}
+            >
+              {/* 오버레이 그라데이션 */}
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.1))",
+                }}
+              />
+              {/* 카테고리 정보 */}
+              <Box sx={{ position: "relative", p: 3, width: "100%" }}>
+                <Box display="flex" alignItems="center" gap={2} mb={1}>
+                  <Typography variant="h4">
+                    {getCategoryEmoji(selectedCategory)}
+                  </Typography>
+                  <Typography variant="h5" color="white" fontWeight={700}>
+                    {selectedCategory}
+                  </Typography>
+                </Box>
+                <Typography variant="body1" color="rgba(255,255,255,0.9)">
+                  {getCategoryDescription(selectedCategory)}
+                </Typography>
+              </Box>
+            </Box>
+          </Card>
+        )}
       </Container>
 
       {/* 하단 버튼 */}

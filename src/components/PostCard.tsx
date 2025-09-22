@@ -2,6 +2,8 @@
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 // 로고 이미지
 import logoSvg from "../assets/logo.png";
@@ -57,10 +59,12 @@ export default function PostCard({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isBlocking, setIsBlocking] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const isBlocked = isUserBlocked(post.authorId);
   const isMyPost = user && (user.email === post.author || user.id === post.authorId);
   const menuOpen = Boolean(anchorEl);
+
 
   const handleAuthorClick = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -106,6 +110,19 @@ export default function PostCard({
       }
     }
   };
+
+  // 이미지 네비게이션 함수
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const images = Array.isArray(post.image) ? post.image : [post.image];
+    setCurrentImageIndex(prev => prev > 0 ? prev - 1 : images.length - 1);
+  };
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const images = Array.isArray(post.image) ? post.image : [post.image];
+    setCurrentImageIndex(prev => prev < images.length - 1 ? prev + 1 : 0);
+  };
   return (
     <Card
       sx={{
@@ -116,23 +133,191 @@ export default function PostCard({
         position: "relative",
       }}
     >
-      {post.image && (
-        <Box sx={{ height: 200, overflow: "hidden", position: "relative" }}>
-          <img
-            src={post.image}
-            alt={post.title}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-            onError={(e) => {
-              // 이미지 로드 실패 시 숨김
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
-            loading="lazy"
-          />
+      {/* 모든 게시글에 이미지 영역 표시 (사용자 이미지 또는 기본 이미지) */}
+      {(
+        <Box sx={{ height: 250, overflow: "hidden", position: "relative" }}>
+          {(() => {
+            // 디버그: 게시글 이미지 데이터 확인
+            if (post.title.includes("이미지 첨부 테스트")) {
+              console.log(`🔍 "${post.title}" 게시글 데이터:`, {
+                image: post.image,
+                imageType: typeof post.image,
+                imageLength: Array.isArray(post.image) ? post.image.length : 'not array'
+              });
+            }
+
+            // 카테고리별 기본 이미지 함수
+            const getDefaultImages = (category: string): string[] => {
+              const defaultImages: { [key: string]: string[] } = {
+                '자기계발': [
+                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=300&fit=crop&crop=center'
+                ],
+                '봉사활동': [
+                  'https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=400&h=300&fit=crop&crop=center'
+                ],
+                '운동/스포츠': [
+                  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1517963879433-6ad2b056d712?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=300&fit=crop&crop=center'
+                ],
+                '문화/예술': [
+                  'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center'
+                ],
+                '사교/인맥': [
+                  'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop&crop=center'
+                ],
+                '취미': [
+                  'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1486401899868-0e435ed85128?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=400&h=300&fit=crop&crop=center'
+                ],
+                '외국어': [
+                  'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?w=400&h=300&fit=crop&crop=center'
+                ],
+                '맛집': [
+                  'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1485962398705-ef6a13c41e8f?w=400&h=300&fit=crop&crop=center'
+                ],
+                '반려동물': [
+                  'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop&crop=center'
+                ],
+                'default': [
+                  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop&crop=center'
+                ]
+              };
+              return defaultImages[category] || defaultImages['default'];
+            };
+
+            // 실제 이미지가 있으면 사용, 없으면 카테고리별 기본 이미지의 첫 번째만 사용
+            let images: string[];
+            if (post.image && Array.isArray(post.image) && post.image.length > 0) {
+              // 사용자가 업로드한 실제 이미지들 (배열)
+              images = post.image;
+            } else if (post.image && typeof post.image === 'string' && post.image.trim() !== '') {
+              // 사용자가 업로드한 실제 이미지 (단일)
+              images = [post.image];
+            } else {
+              // 기본 이미지는 첫 번째 이미지만 사용 (스와이핑 없음)
+              const defaultImages = getDefaultImages(post.category);
+              images = [defaultImages[0]]; // 첫 번째 이미지만 사용
+            }
+
+            const currentImage = images[currentImageIndex] || images[0];
+
+            return (
+              <>
+                <img
+                  src={currentImage}
+                  alt={post.title}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                  loading="lazy"
+                />
+
+                {/* 이미지가 여러 개일 때만 네비게이션 버튼 표시 */}
+                {images.length > 1 && (
+                  <>
+                    {/* 이전 이미지 버튼 */}
+                    <IconButton
+                      onClick={handlePrevImage}
+                      sx={{
+                        position: "absolute",
+                        left: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        bgcolor: "rgba(0,0,0,0.5)",
+                        color: "white",
+                        width: 36,
+                        height: 36,
+                        "&:hover": {
+                          bgcolor: "rgba(0,0,0,0.7)",
+                        },
+                        zIndex: 2,
+                      }}
+                    >
+                      <ChevronLeftIcon fontSize="small" />
+                    </IconButton>
+
+                    {/* 다음 이미지 버튼 */}
+                    <IconButton
+                      onClick={handleNextImage}
+                      sx={{
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        bgcolor: "rgba(0,0,0,0.5)",
+                        color: "white",
+                        width: 36,
+                        height: 36,
+                        "&:hover": {
+                          bgcolor: "rgba(0,0,0,0.7)",
+                        },
+                        zIndex: 2,
+                      }}
+                    >
+                      <ChevronRightIcon fontSize="small" />
+                    </IconButton>
+
+                    {/* 이미지 인디케이터 */}
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 12,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        display: "flex",
+                        gap: 0.5,
+                        zIndex: 2,
+                      }}
+                    >
+                      {images.map((_, index) => (
+                        <Box
+                          key={index}
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            bgcolor: index === currentImageIndex
+                              ? "rgba(255,255,255,0.9)"
+                              : "rgba(255,255,255,0.4)",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentImageIndex(index);
+                          }}
+                        />
+                      ))}
+                    </Box>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </Box>
       )}
 
@@ -247,38 +432,45 @@ export default function PostCard({
             </Box>
           </Box>
 
-          <Button
-            onClick={() => onJoinRequest(post.id)}
-            sx={{
-              bgcolor: isApplied ? "#C2185B" : "#E91E63",
-              color: "white",
-              borderRadius: 20,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.8rem",
-              fontWeight: 600,
-              minWidth: "auto",
-              "&:hover": {
-                bgcolor: isApplied ? "#9C1346" : "#C2185B",
-                transform: "scale(1.05)",
-              },
-              transition: "all 0.2s ease",
-              boxShadow: "0 2px 8px rgba(233, 30, 99, 0.3)",
-            }}
-            startIcon={
-              <img 
-                src={logoSvg} 
-                alt="잇플 로고" 
-                style={{ 
-                  width: "14px", 
-                  height: "14px",
-                  filter: "brightness(0) invert(1)"
-                }} 
-              />
-            }
-          >
-            잇플
-          </Button>
+          {!isMyPost && (
+            <Button
+              onClick={() => onJoinRequest(post.id)}
+              disabled={post.status === 'full'}
+              sx={{
+                bgcolor: isApplied ? "#C2185B" : post.status === 'full' ? "#CCCCCC" : "#E91E63",
+                color: "white",
+                borderRadius: 20,
+                px: 2,
+                py: 0.5,
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                minWidth: "auto",
+                "&:hover": {
+                  bgcolor: post.status === 'full' ? "#CCCCCC" : isApplied ? "#9C1346" : "#C2185B",
+                  transform: post.status === 'full' ? "none" : "scale(1.05)",
+                },
+                "&:disabled": {
+                  bgcolor: "#CCCCCC",
+                  color: "#999999",
+                },
+                transition: "all 0.2s ease",
+                boxShadow: post.status === 'full' ? "none" : "0 2px 8px rgba(233, 30, 99, 0.3)",
+              }}
+              startIcon={
+                <img
+                  src={logoSvg}
+                  alt="잇플 로고"
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    filter: "brightness(0) invert(1)"
+                  }}
+                />
+              }
+            >
+              {post.status === 'full' ? '마감' : isApplied ? '신청됨' : '잇플'}
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -296,54 +488,50 @@ export default function PostCard({
           horizontal: 'left',
         }}
       >
-        {isMyPost ? (
+{isMyPost ? [
           // 내가 쓴 글일 때 수정/삭제 메뉴
-          <>
-            <MenuItem onClick={() => {
-              handleMenuClose();
-              onEditPost && onEditPost(post.id);
-            }}>
-              <ListItemIcon>
-                <EditIcon color="primary" />
-              </ListItemIcon>
-              <ListItemText>수정</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={() => {
-              handleMenuClose();
-              onDeletePost && onDeletePost(post.id);
-            }}>
-              <ListItemIcon>
-                <DeleteIcon color="error" />
-              </ListItemIcon>
-              <ListItemText>삭제</ListItemText>
-            </MenuItem>
-          </>
-        ) : (
+          <MenuItem key="edit" onClick={() => {
+            handleMenuClose();
+            onEditPost && onEditPost(post.id);
+          }}>
+            <ListItemIcon>
+              <EditIcon color="primary" />
+            </ListItemIcon>
+            <ListItemText>수정</ListItemText>
+          </MenuItem>,
+          <MenuItem key="delete" onClick={() => {
+            handleMenuClose();
+            onDeletePost && onDeletePost(post.id);
+          }}>
+            <ListItemIcon>
+              <DeleteIcon color="error" />
+            </ListItemIcon>
+            <ListItemText>삭제</ListItemText>
+          </MenuItem>
+        ] : [
           // 다른 사람 글일 때 프로필 보기/차단 메뉴
-          <>
-            <MenuItem onClick={handleShowProfile}>
+          <MenuItem key="profile" onClick={handleShowProfile}>
+            <ListItemIcon>
+              <PersonIcon />
+            </ListItemIcon>
+            <ListItemText>프로필 보기</ListItemText>
+          </MenuItem>,
+          isBlocked ? (
+            <MenuItem key="unblock" onClick={handleUnblockUser} disabled={isBlocking}>
               <ListItemIcon>
-                <PersonIcon />
+                <PersonIcon color="success" />
               </ListItemIcon>
-              <ListItemText>프로필 보기</ListItemText>
+              <ListItemText>차단 해제</ListItemText>
             </MenuItem>
-            {isBlocked ? (
-              <MenuItem onClick={handleUnblockUser} disabled={isBlocking}>
-                <ListItemIcon>
-                  <PersonIcon color="success" />
-                </ListItemIcon>
-                <ListItemText>차단 해제</ListItemText>
-              </MenuItem>
-            ) : (
-              <MenuItem onClick={handleBlockUser} disabled={isBlocking}>
-                <ListItemIcon>
-                  <BlockIcon color="error" />
-                </ListItemIcon>
-                <ListItemText>사용자 차단</ListItemText>
-              </MenuItem>
-            )}
-          </>
-        )}
+          ) : (
+            <MenuItem key="block" onClick={handleBlockUser} disabled={isBlocking}>
+              <ListItemIcon>
+                <BlockIcon color="error" />
+              </ListItemIcon>
+              <ListItemText>사용자 차단</ListItemText>
+            </MenuItem>
+          )
+        ]}
       </Menu>
 
       {/* 사용자 프로필 모달 */}
