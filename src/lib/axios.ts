@@ -1,12 +1,17 @@
 // src/lib/axios.ts
 import axios from "axios";
+
+// 개발 환경과 프로덕션 환경에 따른 API URL 설정
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 const api = axios.create({
-  baseURL: API_BASE_URL, // ✅ '/api'
+  baseURL: API_BASE_URL,
   withCredentials: true,
   timeout: 10000,
-  headers: { "Content-Type": "application/json" },
+  headers: { 
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+  },
 });
 
 // 토큰을 즉시 설정할 수 있는 함수 추가

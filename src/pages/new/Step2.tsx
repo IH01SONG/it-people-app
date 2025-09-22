@@ -31,7 +31,6 @@ interface FormData {
   meetingDate: string;
   tags: string[];
   image?: string;
-  validHours: number; // 게시글 유효시간 (시간 단위, 최대 24시간)
 }
 
 export default function Step2() {
@@ -39,42 +38,6 @@ export default function Step2() {
   const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // 컴포넌트 마운트 시 스크롤을 맨 위로 이동
-  useEffect(() => {
-    const scrollToTop = () => {
-      // 여러 방법으로 스크롤 조정
-      window.scrollTo(0, 0);
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-
-      // 컨테이너가 있으면 컨테이너도 스크롤 조정
-      if (containerRef.current) {
-        containerRef.current.scrollIntoView({
-          behavior: 'auto',
-          block: 'start',
-          inline: 'start'
-        });
-      }
-    };
-
-    // 즉시 실행
-    scrollToTop();
-
-    // 렌더링 후 여러 번 실행
-    const timers = [
-      setTimeout(scrollToTop, 0),
-      setTimeout(scrollToTop, 50),
-      setTimeout(scrollToTop, 100),
-      setTimeout(scrollToTop, 200),
-    ];
-
-    return () => {
-      timers.forEach(timer => clearTimeout(timer));
-    };
-  }, []);
 
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -86,7 +49,6 @@ export default function Step2() {
     meetingDate: "",
     tags: [],
     image: undefined,
-    validHours: 24, // 기본값 24시간
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -101,22 +63,6 @@ export default function Step2() {
   // 향후 위치 선택 기능 확장 시 사용
   const participantQuickOptions = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30];
 
-  // 카테고리별 기본 이미지 매핑
-  const getDefaultImageByCategory = (categoryId: string): string => {
-    const defaultImages: { [key: string]: string } = {
-      '68c3bdd957c06e06e2706f9a': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop&crop=center', // 운동
-      '68c3bdd957c06e06e2706f9b': 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop&crop=center', // 스터디
-      '68c3bdd957c06e06e2706f9c': 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&h=300&fit=crop&crop=center', // 맛집
-      '68c3bdd957c06e06e2706f9d': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=center', // 문화
-      '68c3bdd957c06e06e2706f9e': 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop&crop=center', // 친목
-      '68c3bdd957c06e06e2706f9f': 'https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=400&h=300&fit=crop&crop=center', // 게임
-      '68c3bdd957c06e06e2706fa0': 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&h=300&fit=crop&crop=center', // 여행
-      '68c3bdd957c06e06e2706fa1': 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=400&h=300&fit=crop&crop=center', // 기타
-    };
-
-    return defaultImages[categoryId] || defaultImages['68c3bdd957c06e06e2706fa1']; // 기본값은 '기타' 카테고리 이미지
-  };
-
   useEffect(() => {
     if (location.state?.category) {
       setSelectedCategory(location.state.category);
@@ -124,25 +70,6 @@ export default function Step2() {
         ...prev,
         category: location.state.category,
       }));
-
-      // 카테고리 설정 후에도 스크롤을 맨 위로 이동
-      const scrollToTop = () => {
-        window.scrollTo(0, 0);
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-
-        if (containerRef.current) {
-          containerRef.current.scrollIntoView({
-            behavior: 'auto',
-            block: 'start',
-            inline: 'start'
-          });
-        }
-      };
-
-      setTimeout(scrollToTop, 50);
-      setTimeout(scrollToTop, 100);
     }
   }, [location.state]);
 
@@ -187,16 +114,19 @@ export default function Step2() {
       return;
     }
 
-    // 설명글은 선택사항으로 변경 (0자도 허용)
+    if (!formData.content.trim()) {
+      alert("내용을 입력해주세요.");
+      return;
+    }
+
+    if (formData.content.trim().length < 5) {
+      alert("내용은 최소 5자 이상 입력해주세요.");
+      return;
+    }
 
     try {
       // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
-      let finalImages = images;
-      if (finalImages.length === 0 && formData.category) {
-        const defaultImage = getDefaultImageByCategory(formData.category);
-        finalImages = [defaultImage];
-        console.log(`📷 카테고리 '${formData.category}'에 맞는 기본 이미지 추가:`, defaultImage);
-      }
+      const finalImages = images;
 
       // 위치 정보 설정 (선택사항)
       const displayLocation = locationInput || formData.location;
@@ -211,21 +141,21 @@ export default function Step2() {
       // 백엔드 API 스키마에 맞춘 게시글 데이터
       const postPayload = {
         title: formData.title,
+        content: formData.content, // 필수 필드로 변경
         tags: formData.tags,
         maxParticipants: formData.maxParticipants,
-        validHours: formData.validHours, // 게시글 유효시간 추가
         // 선택적 필드들
-        ...(formData.content.trim() && { content: formData.content.trim() }), // 내용이 있을 때만 추가
         ...(locationData && { location: locationData }),
-        ...(formData.category && { category: formData.category }),
+        // ...(formData.category && { category: formData.category }),
         ...(formData.venue && { venue: formData.venue }),
         ...(formData.meetingDate && { meetingDate: formData.meetingDate }),
         ...(finalImages.length > 0 && { images: finalImages }),
       };
 
       // 백엔드 API 호출
-      await api.posts.create(postPayload);
-
+      const response = await api.posts.create(postPayload);
+      
+      console.log("게시글 작성 성공:", response);
       alert("게시글이 성공적으로 작성되었습니다!");
       navigate("/", { state: { refreshPosts: true } });
     } catch (error: unknown) {
@@ -358,7 +288,6 @@ export default function Step2() {
       </Box>
 
       <Container
-        ref={containerRef}
         maxWidth="sm"
         sx={{
           px: 3,
@@ -519,31 +448,6 @@ export default function Step2() {
               style={{ display: "none" }}
             />
           </Box>
-
-          {/* 카테고리별 기본 이미지 미리보기 */}
-          {images.length === 0 && formData.category && (
-            <Box mt={2} p={2} bgcolor="rgba(231, 98, 169, 0.05)" borderRadius={2}>
-              <Typography variant="caption" color="text.secondary" mb={1} display="block">
-                이미지를 업로드하지 않으면 카테고리에 맞는 기본 이미지가 자동으로 추가됩니다:
-              </Typography>
-              <Box display="flex" alignItems="center" gap={1}>
-                <img
-                  src={getDefaultImageByCategory(formData.category)}
-                  alt="기본 이미지 미리보기"
-                  style={{
-                    width: 60,
-                    height: 40,
-                    objectFit: 'cover',
-                    borderRadius: 4,
-                    border: '1px solid #e0e0e0'
-                  }}
-                />
-                <Typography variant="caption" color="text.secondary">
-                  카테고리 기본 이미지
-                </Typography>
-              </Box>
-            </Box>
-          )}
         </Box>
 
         {/* 소개글 입력 */}
@@ -552,7 +456,7 @@ export default function Step2() {
             fullWidth
             multiline
             rows={4}
-            placeholder="소개글을 입력해 주세요 (0-100글자, 선택사항)"
+            placeholder="소개글을 입력해 주세요 (최대 100글자, 선택사항)"
             value={formData.content}
             onChange={(e) => {
               const content = e.target.value;
@@ -577,97 +481,6 @@ export default function Step2() {
           />
         </Box>
 
-        {/* 위치 입력 필드 */}
-        <Box mb={2}>
-          <TextField
-            fullWidth
-            placeholder="위치를 입력해주세요"
-            value={locationInput}
-            onChange={(e) => {
-              const newLocation = e.target.value;
-              setLocationInput(newLocation);
-              setFormData({
-                ...formData,
-                location: newLocation,
-              });
-            }}
-            variant="outlined"
-            size="small"
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-                "&:hover": {
-                  borderColor: "#E762A9",
-                },
-                "&.Mui-focused": {
-                  borderColor: "#E762A9",
-                  boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
-                },
-              },
-            }}
-          />
-        </Box>
-
-        {/* 지도 영역 */}
-        <Box mb={3}>
-          <MapPicker
-            onLocationChange={handleLocationChange}
-            searchKeyword={searchKeyword}
-          />
-        </Box>
-
-        {/* 날짜/시간 설정 */}
-        <Box display="flex" gap={2} mb={2}>
-          <TextField
-            fullWidth
-            type="date"
-            value={
-              formData.meetingDate ? formData.meetingDate.split("T")[0] : ""
-            }
-            onChange={(e) => {
-              const date = e.target.value;
-              const time = formData.meetingDate
-                ? formData.meetingDate.split("T")[1]
-                : "18:00";
-              setFormData({
-                ...formData,
-                meetingDate: date ? `${date}T${time}` : "",
-              });
-            }}
-            variant="outlined"
-            size="small"
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-              },
-            }}
-          />
-          <TextField
-            fullWidth
-            type="time"
-            value={
-              formData.meetingDate
-                ? formData.meetingDate.split("T")[1]
-                : "18:00"
-            }
-            onChange={(e) => {
-              const date = formData.meetingDate
-                ? formData.meetingDate.split("T")[0]
-                : new Date().toISOString().split("T")[0];
-              setFormData({
-                ...formData,
-                meetingDate: `${date}T${e.target.value}`,
-              });
-            }}
-            variant="outlined"
-            size="small"
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-              },
-            }}
-          />
-        </Box>
         {/* 만날 위치 및 시간 */}
         <Box mb={3}>
           <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
@@ -731,6 +544,98 @@ export default function Step2() {
                   : "시간을 선택해주세요"}
               </span>
             </Typography>
+          </Box>
+
+          {/* 위치 입력 필드 */}
+          <Box mb={2}>
+            <TextField
+              fullWidth
+              placeholder="위치를 입력해주세요"
+              value={locationInput}
+              onChange={(e) => {
+                const newLocation = e.target.value;
+                setLocationInput(newLocation);
+                setFormData({
+                  ...formData,
+                  location: newLocation,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover": {
+                    borderColor: "#E762A9",
+                  },
+                  "&.Mui-focused": {
+                    borderColor: "#E762A9",
+                    boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
+                  },
+                },
+              }}
+            />
+          </Box>
+
+          {/* 지도 영역 */}
+          <Box mb={3}>
+            <MapPicker
+              onLocationChange={handleLocationChange}
+              searchKeyword={searchKeyword}
+            />
+          </Box>
+
+          {/* 날짜/시간 설정 */}
+          <Box display="flex" gap={2} mb={2}>
+            <TextField
+              fullWidth
+              type="date"
+              value={
+                formData.meetingDate ? formData.meetingDate.split("T")[0] : ""
+              }
+              onChange={(e) => {
+                const date = e.target.value;
+                const time = formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00";
+                setFormData({
+                  ...formData,
+                  meetingDate: date ? `${date}T${time}` : "",
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              type="time"
+              value={
+                formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00"
+              }
+              onChange={(e) => {
+                const date = formData.meetingDate
+                  ? formData.meetingDate.split("T")[0]
+                  : new Date().toISOString().split("T")[0];
+                setFormData({
+                  ...formData,
+                  meetingDate: `${date}T${e.target.value}`,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
           </Box>
 
           {/* 최대 모집 인원 - 직관적 컨트롤 */}
@@ -813,88 +718,6 @@ export default function Step2() {
                 />
               ))}
             </Box>
-          </Box>
-        </Box>
-
-        {/* 게시글 유효시간 설정 */}
-        <Box mb={3}>
-          <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
-            게시글 유효시간 (자동 삭제)
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            설정한 시간 후 게시글이 자동으로 삭제됩니다. (최대 24시간)
-          </Typography>
-
-          <Box display="flex" alignItems="center" gap={1}>
-            <IconButton
-              aria-label="decrease hours"
-              onClick={() =>
-                setFormData({
-                  ...formData,
-                  validHours: Math.max(1, formData.validHours - 1),
-                })
-              }
-              size="small"
-            >
-              <RemoveIcon />
-            </IconButton>
-            <TextField
-              value={formData.validHours}
-              onChange={(e) => {
-                const v = Number(e.target.value.replace(/[^0-9]/g, "")) || 1;
-                setFormData({
-                  ...formData,
-                  validHours: Math.min(24, Math.max(1, v)),
-                });
-              }}
-              slotProps={{
-                input: {
-                  sx: { textAlign: "center", width: "60px" },
-                },
-              }}
-              variant="outlined"
-              size="small"
-            />
-            <IconButton
-              aria-label="increase hours"
-              onClick={() =>
-                setFormData({
-                  ...formData,
-                  validHours: Math.min(24, formData.validHours + 1),
-                })
-              }
-              size="small"
-            >
-              <AddIcon />
-            </IconButton>
-            <Typography variant="body2" color="text.secondary">
-              시간
-            </Typography>
-          </Box>
-
-          {/* 시간 선택 버튼들 */}
-          <Box display="flex" flexWrap="wrap" gap={1} mt={2}>
-            {[1, 3, 6, 12, 24].map((hours) => (
-              <Button
-                key={hours}
-                variant="outlined"
-                size="small"
-                onClick={() => setFormData({ ...formData, validHours: hours })}
-                sx={{
-                  bgcolor: formData.validHours === hours ? "#E762A9" : "white",
-                  color: formData.validHours === hours ? "white" : "#666",
-                  borderColor: formData.validHours === hours ? "#E762A9" : "#e0e0e0",
-                  "&:hover": {
-                    bgcolor: formData.validHours === hours
-                      ? "#E762A9"
-                      : "rgba(231, 98, 169, 0.1)",
-                    borderColor: "#E762A9",
-                  },
-                }}
-              >
-                {hours}시간
-              </Button>
-            ))}
           </Box>
         </Box>
 
