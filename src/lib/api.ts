@@ -75,8 +75,12 @@ export const api = {
     getNearby: (lat: number, lng: number, radius: number = 5000) => 
       axios.get(`/posts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`).then(r => r.data),
 
+    // 게시글 상세 조회
+    getById: (postId: string) =>
+      axios.get(`/posts/${postId}`).then(r => r.data),
+
     // 게시글 작성
-    create: (postData: any) => 
+    create: (postData: any) =>
       axios.post('/posts', postData).then(r => r.data),
 
     // 게시글 수정

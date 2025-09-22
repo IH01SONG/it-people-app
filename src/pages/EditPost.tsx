@@ -77,10 +77,16 @@ export default function EditPost() {
 
       try {
         setLoading(true);
-        // 현재 사용자의 게시글 목록에서 해당 게시글 찾기
-        const response = await api.users.getMyPosts();
-        const posts = response?.posts || response || [];
+
+        // 내가 작성한 게시글 목록에서 해당 게시글 찾기 (권한 확실히 하기 위해)
+        console.log('🔍 [EditPost] getMyPosts로 권한 있는 게시글 목록 조회');
+        const myPostsResponse = await api.users.getMyPosts();
+        console.log('🔍 [EditPost] getMyPosts 응답:', myPostsResponse);
+        const posts = myPostsResponse?.posts || myPostsResponse || [];
+        console.log('🔍 [EditPost] 내 게시글 목록:', posts);
+
         const post = posts.find((p: { _id?: string; id?: string }) => (p._id || p.id) === postId);
+        console.log('🔍 [EditPost] 찾은 내 게시글:', post);
 
         if (!post) {
           alert("본인이 작성한 게시글 중에서 해당 게시글을 찾을 수 없습니다.");
@@ -90,15 +96,25 @@ export default function EditPost() {
 
         // 게시글 소유권 확인
         try {
-          const currentUser = await api.getMe();
-          const postAuthorId = post.author?._id || post.author?.id || post.author;
+          const currentUser = await api.users.getMe();
+          console.log('🔍 [EditPost] 현재 사용자 정보:', currentUser);
+          console.log('🔍 [EditPost] 게시글 정보:', post);
+          console.log('🔍 [EditPost] 게시글 작성자:', post.author);
+          console.log('🔍 [EditPost] 게시글 authorId:', post.authorId);
+
+          const postAuthorId = post.authorId?._id || post.authorId?.id || post.authorId ||
+                              post.author?._id || post.author?.id || post.author;
           const currentUserId = currentUser._id || currentUser.id;
 
-          // 게시글 소유권 확인 (이메일과 ID 모두 체크)
+          console.log('🔍 [EditPost] 추출된 postAuthorId:', postAuthorId);
+          console.log('🔍 [EditPost] 추출된 currentUserId:', currentUserId);
+
+          // 게시글 소유권 확인 (ID 비교)
           const isOwner = postAuthorId === currentUserId ||
-                         post.author?.email === currentUser.email ||
-                         postAuthorId === currentUser.email ||
+                         post.authorId === currentUserId ||
                          post.author === currentUserId;
+
+          console.log('🔍 [EditPost] 소유권 확인 결과:', isOwner);
 
           if (!isOwner) {
             alert('본인이 작성한 게시글만 수정할 수 있습니다.');
@@ -203,20 +219,20 @@ export default function EditPost() {
         venue: formData.venue.trim(),
         category: formData.category,
         maxParticipants: formData.maxParticipants,
-        meetingDate: formData.meetingDate
-          ? new Date(formData.meetingDate).toISOString()
-          : undefined,
+        ...(formData.meetingDate && {
+          meetingDate: new Date(formData.meetingDate).toISOString()
+        }),
         tags: formData.tags,
         content: formData.content.trim(),
         // 이미지 필드 - 백엔드 호환성을 위해 둘 다 전송
-        ...(finalImageUrls.length > 0 && {
-          imageUrls: finalImageUrls,
-          images: finalImageUrls // 백엔드 호환성을 위해 추가
-        }),
+        imageUrls: finalImageUrls,
+        images: finalImageUrls
       };
 
       // 백엔드 API 호출 전 디버깅
       console.log('🚀 전송할 수정 데이터:', JSON.stringify(updateData, null, 2));
+      console.log('🔐 [EditPost] 인증 토큰:', token);
+      console.log('🔗 [EditPost] 수정 요청 URL:', `/posts/${postId}`);
 
       await api.posts.update(postId!, updateData);
 
@@ -224,10 +240,19 @@ export default function EditPost() {
       navigate("/", { state: { refreshPosts: true } });
     } catch (error: any) {
       console.error("게시글 수정 실패:", error);
+      console.error("에러 응답 전체:", error?.response);
+      console.error("에러 데이터:", error?.response?.data);
+      console.error("에러 헤더:", error?.response?.headers);
 
       // 403 오류 처리
       if (error?.response?.status === 403) {
         const errorMsg = error?.response?.data?.message || "이 게시글을 수정할 권한이 없습니다.";
+        console.error("🚨 [EditPost] 403 권한 오류 상세:", {
+          postId,
+          currentUserId: await api.users.getMe().then(u => u._id || u.id).catch(() => 'unknown'),
+          errorMessage: errorMsg,
+          fullError: error?.response?.data
+        });
         alert(`권한 오류: ${errorMsg}`);
       }
       // 401 오류 처리

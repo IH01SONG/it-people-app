@@ -4,6 +4,7 @@ import theme from "./theme";
 import AppRoutes from "./routes/AppRoutes";
 import { AuthProvider } from "./auth/AuthContext";
 import { BlockUserProvider } from "./contexts/BlockUserContext";
+import NotificationToast from "./components/NotificationToast";
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
       <AuthProvider>
         <BlockUserProvider>
           <AppRoutes />
+          <NotificationToast />
         </BlockUserProvider>
       </AuthProvider>
     </ThemeProvider>

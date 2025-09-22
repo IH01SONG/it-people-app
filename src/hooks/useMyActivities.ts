@@ -1,6 +1,9 @@
 import { useState, useCallback } from "react";
 import { api } from "../lib/api";
 import type { Activity } from "../types/home.types";
+import { findMyPendingRequest } from "../utils/joinRequestId";
+import { joinRequestStorage, postStorage, authStorage } from "../utils/localStorage";
+import { handleCancelError, logDetailedError } from "../utils/errorHandling";
 
 /** 안전 파싱 유틸 */
 const toStringSafe = (v: unknown, fallback = ""): string =>
@@ -49,15 +52,16 @@ export function useMyActivities() {
 
       const activities: Activity[] = [];
 
-      // 로컬에서 삭제된 게시글 ID 목록 가져오기
-      const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
+      // 로컬 저장소에서 게시글 상태 확인 (표준화된 유틸 사용)
+      const deletedPosts = postStorage.getDeletedPosts();
+      const appliedPosts = joinRequestStorage.getAppliedPosts();
+      const cancelledPosts = joinRequestStorage.getCancelledPosts();
 
-      // 현재 참여 중인 게시글 ID 목록 가져오기 (참여 취소하지 않은 것들)
-      const appliedPosts = JSON.parse(localStorage.getItem('appliedPosts') || '[]');
-
-      // 참여 취소한 게시글 ID 목록 가져오기
-      const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');
-      console.log('🚫 취소된 게시글 목록:', cancelledPosts);
+      console.log('🚫 [MyActivities] 로컬 저장소 상태:', {
+        '삭제된_게시글': deletedPosts,
+        '신청한_게시글': appliedPosts,
+        '취소한_게시글': cancelledPosts
+      });
 
       // 내가 쓴 글을 활동으로 변환
       const myPosts = myPostsResponse?.posts || myPostsResponse || [];
@@ -189,17 +193,16 @@ export function useMyActivities() {
       return;
     }
 
-    // 인증 토큰 확인
-    const token = localStorage.getItem('access_token');
+    // 인증 토큰 확인 (표준화된 유틸 사용)
+    const token = authStorage.getToken();
     if (!token) {
       alert('로그인이 필요합니다.');
       return;
     }
 
     try {
-      // 1. 저장된 requestId 확인
-      const requestIds = JSON.parse(localStorage.getItem('requestIds') || '{}');
-      const requestId = requestIds[postId];
+      // 1. 저장된 requestId 확인 (표준화된 유틸 사용)
+      const requestId = joinRequestStorage.getRequestId(postId);
 
       console.log('🔍 [MyActivities] 저장된 requestId 확인:', { postId, requestId });
 
@@ -210,10 +213,9 @@ export function useMyActivities() {
         await api.joinRequests.cancel(requestId);
         console.log('✅ [MyActivities] 참여 취소 성공');
 
-        // requestId 저장소에서 제거
-        delete requestIds[postId];
-        localStorage.setItem('requestIds', JSON.stringify(requestIds));
-        console.log('✅ [MyActivities] requestId 저장소에서 제거:', postId);
+        // 표준화된 저장소 관리
+        joinRequestStorage.recordCancelRequest(postId);
+        console.log('✅ [MyActivities] 저장소 상태 업데이트 완료:', postId);
       } else {
         console.log('⚠️ [MyActivities] 저장된 requestId가 없음. 서버에서 조회 시도...');
 
@@ -224,7 +226,7 @@ export function useMyActivities() {
         // 현재 사용자 정보 먼저 확보
         let currentUserId;
         try {
-          const currentUser = await api.getMe();
+          const currentUser = await api.users.getMe();
           currentUserId = currentUser?._id || currentUser?.id;
           console.log('👤 [MyActivities] 현재 사용자 ID:', currentUserId);
 
@@ -240,13 +242,15 @@ export function useMyActivities() {
         const sentRequests = await api.joinRequests.getSent({ status: 'pending' });
         console.log('📋 [MyActivities] 내가 보낸 참여 요청 목록:', sentRequests);
 
-        // 해당 postId에 대한 내 참여 요청 찾기
+        // 해당 postId에 대한 내 참여 요청 찾기 (개선된 유틸 사용)
         const requests = sentRequests.requests || sentRequests;
-        const myRequest = Array.isArray(requests) ? requests.find((req: any) =>
-          (req.post?._id === postId || req.post === postId || req.postId === postId) &&
-          (req.requester?._id === currentUserId || req.requester === currentUserId) &&
-          req.status === 'pending'
-        ) : null;
+        console.log('🔍 [MyActivities] getSent API 응답 구조:', {
+          '전체_응답': sentRequests,
+          '요청_배열': requests,
+          '요청_개수': Array.isArray(requests) ? requests.length : 0
+        });
+
+        const myRequest = findMyPendingRequest(requests, postId, currentUserId);
 
         if (!myRequest) {
           console.error('❌ [MyActivities] 참여 요청을 찾을 수 없음');
@@ -263,43 +267,32 @@ export function useMyActivities() {
         console.log('🔄 [MyActivities] 찾은 requestId로 참여 취소 API 호출 중...');
         await api.joinRequests.cancel(foundRequestId);
         console.log('✅ [MyActivities] 참여 취소 성공');
+
+        // 표준화된 저장소 관리
+        joinRequestStorage.recordCancelRequest(postId);
       }
 
       // 5. 로컬 상태 업데이트
       removeActivity(postId);
 
-      // 6. localStorage 업데이트
-      const appliedPosts = JSON.parse(localStorage.getItem('appliedPosts') || '[]');
-      const newAppliedPosts = appliedPosts.filter((id: string) => id !== postId);
-      localStorage.setItem('appliedPosts', JSON.stringify(newAppliedPosts));
-
-      const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');
-      if (!cancelledPosts.includes(postId)) {
-        cancelledPosts.push(postId);
-        localStorage.setItem('cancelledPosts', JSON.stringify(cancelledPosts));
-      }
-
       alert("참여 취소가 완료되었습니다.");
 
     } catch (error: any) {
-      console.error("🚨 [MyActivities] 참여 취소 실패:", error);
-      console.error("🚨 [MyActivities] 오류 상태 코드:", error?.response?.status);
-      console.error("🚨 [MyActivities] 오류 응답 데이터:", error?.response?.data);
+      // 표준화된 에러 처리
+      const errorMessage = handleCancelError(error);
 
-      // 모든 오류를 사용자에게 표시하여 팀원들과 상담할 수 있도록 함
-      const statusCode = error?.response?.status;
-      const errorData = error?.response?.data;
-      let errorMessage = "";
-
-      if (statusCode === 404) {
-        errorMessage = `참여 요청을 찾을 수 없습니다 (404). 이미 취소되었거나 처리된 요청일 수 있습니다.`;
-      } else if (statusCode === 400) {
-        errorMessage = "이미 처리된 요청은 취소할 수 없습니다.";
-      } else if (statusCode === 403) {
-        errorMessage = "참여 취소 권한이 없습니다.";
-      } else {
-        errorMessage = errorData?.message || `참여 취소에 실패했습니다.\n상태 코드: ${statusCode}\n백엔드 개발자에게 문의하세요.`;
-      }
+      // 상세 에러 로깅 (백엔드 개발자용)
+      logDetailedError(error, 'MyActivities-Cancel', {
+        postId,
+        requestId: joinRequestStorage.getRequestId(postId),
+        currentUserId,
+        localStorage_상태: {
+          requestIds: joinRequestStorage.getAllRequestIds(),
+          appliedPosts: joinRequestStorage.getAppliedPosts(),
+          cancelledPosts: joinRequestStorage.getCancelledPosts()
+        },
+        action: 'cancel_from_activities'
+      });
 
       alert(errorMessage);
     }
