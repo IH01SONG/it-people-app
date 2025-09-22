@@ -77,36 +77,65 @@ export default function EditPost() {
 
       try {
         setLoading(true);
+        
+        // 인증 토큰 확인
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          alert('로그인이 필요합니다.');
+          navigate('/login');
+          return;
+        }
+
+        console.log('🔍 게시글 로드 시작:', postId);
+        
         // 현재 사용자의 게시글 목록에서 해당 게시글 찾기
         const response = await api.users.getMyPosts();
+        console.log('📋 내 게시글 목록:', response);
+        
         const posts = response?.posts || response || [];
         const post = posts.find((p: { _id?: string; id?: string }) => (p._id || p.id) === postId);
 
         if (!post) {
+          console.error('❌ 게시글을 찾을 수 없음:', { postId, postsCount: posts.length });
           alert("본인이 작성한 게시글 중에서 해당 게시글을 찾을 수 없습니다.");
           navigate("/");
           return;
         }
 
+        console.log('✅ 게시글 찾음:', post);
+
         // 게시글 소유권 확인
         try {
           const currentUser = await api.getMe();
+          console.log('👤 현재 사용자 정보:', currentUser);
+          console.log('📝 게시글 작성자 정보:', post.author);
+          
           const postAuthorId = post.author?._id || post.author?.id || post.author;
           const currentUserId = currentUser._id || currentUser.id;
 
-          // 게시글 소유권 확인 (이메일과 ID 모두 체크)
+          console.log('🔍 작성자 ID 비교:', { postAuthorId, currentUserId });
+
+          // 게시글 소유권 확인 (다양한 방식으로 체크)
           const isOwner = postAuthorId === currentUserId ||
                          post.author?.email === currentUser.email ||
                          postAuthorId === currentUser.email ||
-                         post.author === currentUserId;
+                         post.author === currentUserId ||
+                         post.authorId === currentUserId ||
+                         post.authorId === currentUser.email;
+
+          console.log('✅ 소유권 확인 결과:', isOwner);
 
           if (!isOwner) {
+            console.error('❌ 권한 없음:', { postAuthorId, currentUserId, postAuthor: post.author });
             alert('본인이 작성한 게시글만 수정할 수 있습니다.');
             navigate('/');
             return;
           }
         } catch (userError) {
           console.error('현재 사용자 정보 조회 실패:', userError);
+          alert('사용자 정보를 확인할 수 없습니다. 다시 로그인해주세요.');
+          navigate('/login');
+          return;
         }
 
         // 폼 데이터 설정
@@ -191,6 +220,10 @@ export default function EditPost() {
         return;
       }
 
+      // 현재 사용자 정보 재확인
+      const currentUser = await api.getMe();
+      console.log('💾 수정 시 사용자 정보 재확인:', currentUser);
+
       // 카테고리에 맞는 기본 이미지 자동 추가
       let finalImageUrls: string[] = [];
       if (formData.category) {
@@ -218,28 +251,44 @@ export default function EditPost() {
       // 백엔드 API 호출 전 디버깅
       console.log('🚀 전송할 수정 데이터:', JSON.stringify(updateData, null, 2));
 
+      console.log('💾 게시글 수정 API 호출 시작');
       await api.posts.update(postId!, updateData);
+      console.log('✅ 게시글 수정 완료');
 
       alert("게시글이 수정되었습니다.");
       navigate("/", { state: { refreshPosts: true } });
     } catch (error: any) {
-      console.error("게시글 수정 실패:", error);
+      console.error("❌ 게시글 수정 실패:", error);
+      console.error("❌ 오류 상태:", error?.response?.status);
+      console.error("❌ 오류 데이터:", error?.response?.data);
+
+      let errorMessage = "게시글 수정에 실패했습니다.";
 
       // 403 오류 처리
       if (error?.response?.status === 403) {
-        const errorMsg = error?.response?.data?.message || "이 게시글을 수정할 권한이 없습니다.";
-        alert(`권한 오류: ${errorMsg}`);
+        errorMessage = error?.response?.data?.message || "이 게시글을 수정할 권한이 없습니다.";
+        console.error("🚫 권한 오류:", errorMessage);
       }
       // 401 오류 처리
       else if (error?.response?.status === 401) {
-        alert("인증이 만료되었습니다. 다시 로그인해주세요.");
+        errorMessage = "인증이 만료되었습니다. 다시 로그인해주세요.";
+        console.error("🔑 인증 오류:", errorMessage);
         localStorage.removeItem('access_token');
         navigate('/login');
+        return;
       }
+      // 404 오류 처리
+      else if (error?.response?.status === 404) {
+        errorMessage = "게시글을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.";
+        console.error("🔍 게시글 없음:", errorMessage);
+      }
+      // 기타 오류
       else {
-        const errorMsg = error?.response?.data?.message || "게시글 수정에 실패했습니다.";
-        alert(`오류: ${errorMsg}`);
+        errorMessage = error?.response?.data?.message || error?.message || "게시글 수정에 실패했습니다.";
+        console.error("⚠️ 기타 오류:", errorMessage);
       }
+
+      alert(`오류: ${errorMessage}`);
     } finally {
       setSaving(false);
     }

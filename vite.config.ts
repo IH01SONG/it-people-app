@@ -7,37 +7,55 @@ const TARGET = "https://it-people-server-140857839854.asia-northeast3.run.app";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    port: 5173,
+    host: true,
     proxy: {
       "/api": {
         target: TARGET,
         changeOrigin: true,
         secure: true,
         configure: (proxy: any) => {
-          proxy.on("proxyReq", (proxyReq: any, _req: any) => {
+          proxy.on("proxyReq", (proxyReq: any, req: any) => {
             // 🔧 서버의 Origin/CSRF 자체체크 우회: Origin/Referer를 타깃으로 통일
             proxyReq.setHeader("origin", TARGET);
             proxyReq.setHeader("referer", TARGET + "/");
-            // 필요 시, Authorization 유지
+            proxyReq.setHeader("host", new URL(TARGET).host);
+            
+            // 요청 로깅
+            console.log("🔄 Proxy Request →", req.method, req.url, "→", TARGET + req.url);
           });
-          proxy.on("error", (err: any) => {
-            console.log("❌ Proxy error:", err?.message || err);
+          
+          proxy.on("error", (err: any, req: any) => {
+            console.error("❌ Proxy error:", err?.message || err, "for", req?.url);
           });
+          
           proxy.on("proxyRes", (proxyRes: any, req: any) => {
-            console.log("✅ Response ←", proxyRes.statusCode, req.method, req.url);
+            // 🔥 CORS 헤더 추가 - 이것이 핵심!
+            proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+            proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
+            proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin';
+            proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+            proxyRes.headers['Access-Control-Max-Age'] = '86400';
+            
+            console.log("✅ Proxy Response ←", proxyRes.statusCode, req.method, req.url);
           });
         },
       },
 
-      // (선택) 소켓 쓰면 같이 프록시
+      // 소켓 프록시
       "/socket.io": {
         target: TARGET,
         ws: true,
         changeOrigin: true,
         secure: true,
         configure: (proxy: any) => {
-          proxy.on("error", (err: any) => console.log("❌ WS Proxy error:", err?.message || err));
+          proxy.on("error", (err: any) => console.error("❌ WS Proxy error:", err?.message || err));
         },
       },
     },
+  },
+  // 환경 변수 기본값 설정
+  define: {
+    'import.meta.env.VITE_API_URL': JSON.stringify('/api'),
   },
 });

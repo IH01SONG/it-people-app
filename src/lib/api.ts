@@ -1,7 +1,28 @@
 // src/lib/api.ts
 import axios from './axios';
 
+// 인증 상태 확인 헬퍼 함수
+const checkAuth = () => {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    console.warn('⚠️ 인증 토큰이 없습니다. 로그인이 필요합니다.');
+    return false;
+  }
+  return true;
+};
+
 export const api = {
+  // 서버 상태 확인
+  healthCheck: () => {
+    console.log('🏥 Health check 요청:', '/health');
+    return axios.get('/health').then(r => {
+      console.log('🏥 Health check 응답:', r.data);
+      return r.data;
+    }).catch((err) => {
+      console.warn('🏥 Health check 실패:', err?.response?.status, err?.message);
+      return { status: 'error' };
+    });
+  },
   signup: (payload: {
     email: string;
     password: string;
@@ -24,13 +45,42 @@ export const api = {
   // 이메일 중복 확인 API (기존 닉네임 중복 확인에서 변경)
   checkEmail: (email: string) => axios.post('/auth/check-email', { email }).then(r => r.data as { isAvailable: boolean; isValid: boolean; message: string; }),
 
-  // 비밀번호 재설정 관련 API
-  requestPasswordReset: (email: string) => axios.post('/auth/password-reset/request', { email }).then(r => r.data),
-  verifyPasswordResetCode: (email: string, code: string) => axios.post('/auth/password-reset/verify', { email, code }).then(r => r.data),
-  confirmPasswordReset: (newPassword: string, resetToken: string) => 
-    axios.post('/auth/password-reset/confirm', { newPassword }, {
-      headers: { Authorization: `Bearer ${resetToken}` }
-    }).then(r => r.data),
+      // 비밀번호 재설정 관련 API
+      requestPasswordReset: (email: string) => axios.post('/auth/password-reset/request', { email }).then(r => r.data),
+      verifyPasswordResetCode: (email: string, code: string) => axios.post('/auth/password-reset/verify', { email, code }).then(r => r.data),
+      confirmPasswordReset: (newPassword: string, resetToken: string) =>
+        axios.post('/auth/password-reset/confirm', { newPassword }, {
+          headers: { Authorization: `Bearer ${resetToken}` }
+        }).then(r => r.data),
+
+      // 구글 OAuth 관련 API
+      googleAuth: () => {
+        console.log('🔗 구글 OAuth 로그인 페이지로 이동');
+        window.location.href = '/api/auth/google';
+      },
+
+      // 사용자 정보 조회 (JWT 토큰 사용)
+      fetchUserInfo: async (token: string) => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            console.log('✅ 사용자 정보 조회 성공:', userData);
+            return userData;
+          } else {
+            throw new Error(`사용자 정보 조회 실패: ${response.status}`);
+          }
+        } catch (error) {
+          console.error('❌ 사용자 정보 조회 실패:', error);
+          throw error;
+        }
+      },
 
   // 게시글 관련 API
   posts: {
@@ -80,12 +130,30 @@ export const api = {
       axios.post('/posts', postData).then(r => r.data),
 
     // 게시글 수정
-    update: (postId: string, postData: any) =>
-      axios.put(`/posts/${postId}`, postData).then(r => r.data),
+    update: (postId: string, postData: any) => {
+      if (!checkAuth()) return Promise.reject(new Error('인증이 필요합니다.'));
+      console.log('✏️ 게시글 수정 API 호출:');
+      console.log('📝 게시글 ID:', postId);
+      console.log('📦 수정 데이터:', postData);
+      console.log('🔗 요청 URL:', `/posts/${postId}`);
+      
+      return axios.put(`/posts/${postId}`, postData)
+        .then(r => {
+          console.log('✅ 게시글 수정 성공:', r.data);
+          return r.data;
+        })
+        .catch(err => {
+          console.error('❌ 게시글 수정 실패:', err.response?.data || err.message);
+          throw err;
+        });
+    },
 
     // 게시글 삭제
-    delete: (postId: string) =>
-      axios.delete(`/posts/${postId}`).then(r => r.data),
+    delete: (postId: string) => {
+      if (!checkAuth()) return Promise.reject(new Error('인증이 필요합니다.'));
+      console.log('🗑️ 게시글 삭제 API 호출:', postId);
+      return axios.delete(`/posts/${postId}`).then(r => r.data);
+    },
 
     // 모임 참여 신청
     join: (postId: string) =>

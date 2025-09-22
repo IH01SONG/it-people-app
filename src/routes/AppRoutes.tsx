@@ -31,6 +31,7 @@ const PlaceDetail = lazy(() => import("../pages/map/PlaceDetail"));
 const ForgotPasswordRequest = lazy(() => import("../pages/ForgotPasswordRequest"));
 const ForgotPasswordVerify = lazy(() => import("../pages/ForgotPasswordVerify"));
 const ResetPassword = lazy(() => import("../pages/ResetPassword"));
+const GoogleCallback = lazy(() => import("../pages/GoogleCallback"));
 
 
 export default function AppRoutes() {
@@ -38,6 +39,9 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallbackSkeleton />}>
         <Routes>
+          {/* Google OAuth Callback - RootLayout 밖에 배치 */}
+          <Route path="/auth/callback" element={<GoogleCallback />} />
+          
           {/* Pages without bottom navigation */}
           <Route path="/search-results" element={<SearchResults />} />
           <Route path="/new" element={
