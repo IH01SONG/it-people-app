@@ -1,12 +1,23 @@
 // src/lib/axios.ts
 import axios from "axios";
+
+// 개발 환경과 프로덕션 환경에 따른 API URL 설정
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
+// 개발 환경에서 API URL 확인
+if (import.meta.env.DEV) {
+  console.log('🔧 API Base URL:', API_BASE_URL);
+  console.log('🔧 Current Origin:', window.location.origin);
+}
+
 const api = axios.create({
-  baseURL: API_BASE_URL, // ✅ '/api'
+  baseURL: API_BASE_URL,
   withCredentials: true,
   timeout: 10000,
-  headers: { "Content-Type": "application/json" },
+  headers: { 
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+  },
 });
 
 // 토큰을 즉시 설정할 수 있는 함수 추가
@@ -23,7 +34,29 @@ api.interceptors.request.use((cfg) => {
   if (t) {
     cfg.headers = cfg.headers || {};
     cfg.headers.Authorization = `Bearer ${t}`;
+    console.log('🔑 Authorization 헤더 설정:', `Bearer ${t.substring(0, 20)}...`);
+  } else {
+    console.warn('⚠️ 인증 토큰이 없습니다.');
   }
+
+  // 게시글 수정/삭제 API 호출 시 상세 로깅
+  if (cfg.url?.includes('/posts') && (cfg.method === 'PUT' || cfg.method === 'DELETE')) {
+    console.log('🌐 [Axios Interceptor] 게시글 수정/삭제 API 요청:');
+    console.log('📝 HTTP 메소드:', cfg.method?.toUpperCase());
+    console.log('🔗 요청 URL:', cfg.url);
+    console.log('📋 요청 헤더:', cfg.headers);
+    console.log('📦 요청 데이터:', cfg.data);
+  }
+
+  // 참여 관련 API 호출 시 상세 로깅
+  if (cfg.url?.includes('/join')) {
+    console.log('🌐 [Axios Interceptor] 참여 API 요청 감지:');
+    console.log('📝 실제 HTTP 메소드:', cfg.method?.toUpperCase());
+    console.log('🔗 실제 요청 URL:', cfg.url);
+    console.log('📋 요청 헤더:', cfg.headers);
+    console.log('📦 요청 데이터:', cfg.data);
+  }
+
   return cfg;
 });
 

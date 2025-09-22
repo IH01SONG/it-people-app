@@ -38,6 +38,7 @@ interface MyActivitiesProps {
   onDeleteActivity?: (activityId: string) => void; // 활동 삭제 핸들러
   onAcceptRequest?: (activityId: string, requestId: string) => void; // 신청 수락 핸들러
   onRejectRequest?: (activityId: string, requestId: string) => void; // 신청 거절 핸들러
+  onCancelParticipation?: (activityId: string) => void; // 참여 취소 핸들러
 }
 
 /**
@@ -50,7 +51,8 @@ export default function MyActivities({
   onEditActivity,
   onDeleteActivity,
   onAcceptRequest,
-  onRejectRequest
+  onRejectRequest,
+  onCancelParticipation
 }: MyActivitiesProps) {
   const [expanded, setExpanded] = useState(true); // 확장/축소 상태
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -58,34 +60,6 @@ export default function MyActivities({
   const [joinRequests, setJoinRequests] = useState<{[activityId: string]: any[]}>({});
   const [loadingRequests, setLoadingRequests] = useState<{[activityId: string]: boolean}>({});
 
-  // 남은 시간 계산 함수 (24시간 기준)
-  const getRemainingTime = (createdAt: string): string => {
-    const now = new Date();
-    const created = new Date(createdAt);
-
-    // Invalid Date 체크
-    if (isNaN(created.getTime())) {
-      return "시간 정보 없음";
-    }
-
-    const diffInMs = now.getTime() - created.getTime();
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-
-    if (diffInHours >= 24) {
-      return "만료됨";
-    }
-
-    const remainingHours = 24 - diffInHours;
-
-    if (remainingHours < 1) {
-      const remainingMinutes = Math.floor(remainingHours * 60);
-      return `${remainingMinutes}분 남음`;
-    } else {
-      const hours = Math.floor(remainingHours);
-      const minutes = Math.floor((remainingHours - hours) * 60);
-      return minutes > 0 ? `${hours}시간 ${minutes}분 남음` : `${hours}시간 남음`;
-    }
-  };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, activityId: string) => {
     event.stopPropagation();
@@ -112,23 +86,42 @@ export default function MyActivities({
     handleMenuClose();
   };
 
-  // 특정 활동의 참여 요청 목록 로드
+  // 특정 활동의 참여 요청 목록 로드 (getReceived API 사용)
   const loadJoinRequests = useCallback(async (activityId: string) => {
     setLoadingRequests(prev => ({ ...prev, [activityId]: true }));
     try {
-      const requests = await api.joinRequests.getByPost(activityId);
-      const requestsArray = Array.isArray(requests) ? requests : requests.requests || [];
+      console.log('🔍 [MyActivities] 받은 참여 요청 목록 조회 중... activityId:', activityId);
+
+      // 현재 사용자 정보 확보
+      const currentUser = await api.getMe();
+      const currentUserId = currentUser?._id || currentUser?.id;
+
+      if (!currentUserId) {
+        throw new Error('사용자 정보를 찾을 수 없습니다.');
+      }
+
+      // 내가 받은 참여 요청 중에서 해당 포스트에 대한 것만 필터링
+      const receivedRequests = await api.joinRequests.getReceived({ status: 'pending', limit: 50 });
+      const requests = receivedRequests?.data?.requests || receivedRequests?.requests || [];
+
+      console.log('📋 [MyActivities] 받은 요청 전체 개수:', requests.length);
+
+      // 해당 activityId(포스트ID)에 대한 요청들만 필터링
+      const filteredRequests = Array.isArray(requests) ? requests.filter((req: any) => {
+        const postMatch = req.post?._id === activityId || req.post === activityId || req.postId === activityId;
+        const statusMatch = req.status === 'pending';
+        return postMatch && statusMatch;
+      }) : [];
+
+      console.log(`✅ [MyActivities] 활동 ${activityId}에 대한 pending 요청 ${filteredRequests.length}개 발견`);
 
       setJoinRequests(prev => ({
         ...prev,
-        [activityId]: requestsArray
+        [activityId]: filteredRequests
       }));
     } catch (error) {
-      // 404 에러는 정상적인 상황 (참여 요청이 없음)이므로 로그를 출력하지 않음
-      const isNotFound = (error as any)?.response?.status === 404;
-      if (!isNotFound) {
-        console.error(`활동 ${activityId}의 참여 요청 로드 실패:`, error);
-      }
+      // 에러 처리 (요청이 없으면 빈 배열)
+      console.error(`❌ [MyActivities] 활동 ${activityId}의 참여 요청 로드 실패:`, error);
       setJoinRequests(prev => ({ ...prev, [activityId]: [] }));
     } finally {
       setLoadingRequests(prev => ({ ...prev, [activityId]: false }));
@@ -296,9 +289,6 @@ export default function MyActivities({
                     >
                       {item.status}
                     </span>
-                    <Typography variant="caption" color="text.secondary">
-                      {getRemainingTime(item.createdAt)}
-                    </Typography>
                   </Box>
 
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -379,6 +369,7 @@ export default function MyActivities({
                       <Button
                         size="small"
                         variant="outlined"
+                        onClick={() => onCancelParticipation && onCancelParticipation(item.id)}
                         sx={{
                           fontSize: "0.7rem",
                           py: 0.5,

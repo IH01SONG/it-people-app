@@ -36,42 +36,7 @@ export default function Step2() {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // 컴포넌트 마운트 시 스크롤을 맨 위로 이동
-  useEffect(() => {
-    const scrollToTop = () => {
-      // 여러 방법으로 스크롤 조정
-      window.scrollTo(0, 0);
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-
-      // 컨테이너가 있으면 컨테이너도 스크롤 조정
-      if (containerRef.current) {
-        containerRef.current.scrollIntoView({
-          behavior: "auto",
-          block: "start",
-          inline: "start",
-        });
-      }
-    };
-
-    // 즉시 실행
-    scrollToTop();
-
-    // 렌더링 후 여러 번 실행
-    const timers = [
-      setTimeout(scrollToTop, 0),
-      setTimeout(scrollToTop, 50),
-      setTimeout(scrollToTop, 100),
-      setTimeout(scrollToTop, 200),
-    ];
-
-    return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-    };
-  }, []);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -90,12 +55,67 @@ export default function Step2() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     null
   );
-  const [locationInput, setLocationInput] = useState("위치 로딩 중...");
+  const [locationInput, setLocationInput] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [isMapUpdating, setIsMapUpdating] = useState(false);
+  const [currentLocationCoords, setCurrentLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // 향후 위치 선택 기능 확장 시 사용
   const participantQuickOptions = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30];
+
+  // 현재 위치를 가져오는 함수
+  const getCurrentLocationCoords = useCallback(() => {
+    return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('위치 서비스를 지원하지 않습니다'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setCurrentLocationCoords(coords);
+          resolve(coords);
+        },
+        (error) => {
+          console.error('위치 가져오기 실패:', error);
+          // 기본 위치 (서울시청)
+          const defaultCoords = { lat: 37.5665, lng: 126.978 };
+          setCurrentLocationCoords(defaultCoords);
+          resolve(defaultCoords);
+        }
+      );
+    });
+  }, []);
+
+  // 좌표를 주소로 변환하는 함수
+  const coordsToAddress = useCallback((lat: number, lng: number): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!window.kakao?.maps?.services) {
+        resolve(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`);
+        return;
+      }
+
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
+        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+          const roadAddress = result[0].road_address;
+          const address = roadAddress ? roadAddress.address_name : result[0].address.address_name;
+          resolve(address);
+        } else {
+          resolve(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`);
+        }
+      });
+    });
+  }, []);
+
+  // 컴포넌트 마운트 시 현재 위치 가져오기
+  useEffect(() => {
+    getCurrentLocationCoords();
+  }, [getCurrentLocationCoords]);
 
   useEffect(() => {
     if (location.state?.category) {
@@ -104,25 +124,6 @@ export default function Step2() {
         ...prev,
         category: location.state.category,
       }));
-
-      // 카테고리 설정 후에도 스크롤을 맨 위로 이동
-      const scrollToTop = () => {
-        window.scrollTo(0, 0);
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-
-        if (containerRef.current) {
-          containerRef.current.scrollIntoView({
-            behavior: "auto",
-            block: "start",
-            inline: "start",
-          });
-        }
-      };
-
-      setTimeout(scrollToTop, 50);
-      setTimeout(scrollToTop, 100);
     }
   }, [location.state]);
 
@@ -146,10 +147,8 @@ export default function Step2() {
 
     if (
       !locationInput.trim() ||
-      locationInput === "현재 위치" ||
       locationInput.includes("위도:") ||
-      locationInput.includes("경도:") ||
-      locationInput === "위치 로딩 중..."
+      locationInput.includes("경도:")
     ) {
       return;
     }
@@ -168,37 +167,66 @@ export default function Step2() {
     }
 
     if (!formData.content.trim()) {
-      alert("모임 설명을 입력해주세요.");
+      alert("내용을 입력해주세요.");
+      return;
+    }
+
+    if (formData.content.trim().length < 5) {
+      alert("내용은 최소 5자 이상 입력해주세요.");
       return;
     }
 
     try {
-      // 카테고리에 맞는 기본 이미지 자동 추가
-      let finalImageUrls: string[] = [];
-      if (formData.category) {
-        const defaultImage = getDefaultImageByCategory(formData.category);
-        finalImageUrls = [defaultImage];
+      // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
+      const finalImages = images;
+
+      // 위치 정보 설정 (필수) - 위치가 입력되지 않으면 현재 위치 사용
+      let finalCoords = coords;
+      let displayLocation = locationInput?.trim() || formData.location?.trim();
+
+      // 위치가 설정되지 않았으면 현재 위치 사용
+      if (!finalCoords || !displayLocation) {
+        if (!currentLocationCoords) {
+          // 현재 위치를 아직 가져오지 못했다면 다시 시도
+          try {
+            finalCoords = await getCurrentLocationCoords();
+          } catch (error) {
+            console.error('현재 위치 가져오기 실패:', error);
+            finalCoords = { lat: 37.5665, lng: 126.978 }; // 기본 위치
+          }
+        } else {
+          finalCoords = currentLocationCoords;
+        }
+
+        // 좌표를 주소로 변환
+        if (!displayLocation) {
+          displayLocation = await coordsToAddress(finalCoords.lat, finalCoords.lng);
+        }
       }
 
-      // 위치 정보 설정 (선택사항)
-      const displayLocation = locationInput || formData.location;
-      const locationData = coords
-        ? {
-            type: "Point" as const,
-            coordinates: [coords.lng, coords.lat], // [경도, 위도] 순서
-            address: displayLocation || "위치 정보", // 백엔드에서 address 필드 지원
-          }
-        : null;
+      const locationData = {
+        type: "Point" as const,
+        coordinates: [finalCoords.lng, finalCoords.lat], // [경도, 위도] 순서
+        address: displayLocation, // 백엔드에서 address 필드 지원
+      };
 
       // 백엔드 API 스키마에 맞춘 게시글 데이터
       const postPayload = {
         title: formData.title,
+        content: formData.content, // 필수 필드로 변경
         tags: formData.tags,
         maxParticipants: formData.maxParticipants,
-        content: formData.content.trim(),
+<<<<<<< HEAD
+        // 선택적 필드들
         ...(locationData && { location: locationData }),
-        ...(formData.category && { category: formData.category }),
+        // ...(formData.category && { category: formData.category }),
         ...(formData.venue && { venue: formData.venue }),
+=======
+        content: formData.content.trim(),
+        location: locationData, // 위치 정보는 항상 포함 (필수)
+        ...(formData.category && { category: formData.category }),
+        ...(formData.venue?.trim() && { venue: formData.venue.trim() }),
+>>>>>>> feature/mypage
         ...(formData.meetingDate && {
           meetingDate: new Date(formData.meetingDate).toISOString()
         }),
@@ -209,11 +237,10 @@ export default function Step2() {
         }),
       };
 
-      // 백엔드 API 호출 전 디버깅
-      console.log('🚀 전송할 데이터:', JSON.stringify(postPayload, null, 2));
-
-      await api.posts.create(postPayload);
-
+      // 백엔드 API 호출
+      const response = await api.posts.create(postPayload);
+      
+      console.log("게시글 작성 성공:", response);
       alert("게시글이 성공적으로 작성되었습니다!");
       navigate("/", { state: { refreshPosts: true } });
     } catch (error: any) {
@@ -314,7 +341,6 @@ export default function Step2() {
       </Box>
 
       <Container
-        ref={containerRef}
         maxWidth="sm"
         sx={{
           px: 3,
@@ -391,6 +417,91 @@ export default function Step2() {
           />
         </Box>
 
+        {/* 이미지 업로드 */}
+        <Box mb={3}>
+          <Typography variant="subtitle2" fontWeight={600} mb={1} color="#333">
+            사진 첨부
+          </Typography>
+          <Box display="flex" gap={2}>
+            {images.map((img, idx) => (
+              <Box key={idx} sx={{ position: "relative" }}>
+                <Box
+                  component="img"
+                  src={img}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    borderRadius: 2,
+                    border: "1px solid #e0e0e0",
+                  }}
+                />
+                <IconButton
+                  onClick={() =>
+                    setImages((prev) => prev.filter((_, i) => i !== idx))
+                  }
+                  size="small"
+                  sx={{
+                    position: "absolute",
+                    top: -8,
+                    right: -8,
+                    bgcolor: "white",
+                    color: "#666",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    "&:hover": { bgcolor: "#f5f5f5" },
+                  }}
+                >
+                  ×
+                </IconButton>
+              </Box>
+            ))}
+            {images.length < 3 && (
+              <Box
+                onClick={handleImageUpload}
+                sx={{
+                  width: 80,
+                  height: 80,
+                  border: "2px dashed #E762A9",
+                  borderRadius: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  bgcolor: "rgba(231, 98, 169, 0.02)",
+                  "&:hover": {
+                    bgcolor: "rgba(231, 98, 169, 0.05)",
+                    borderColor: "#D554A0",
+                  },
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <PhotoCameraIcon
+                  sx={{ fontSize: 24, color: "#E762A9", mb: 0.5 }}
+                />
+                <Typography
+                  variant="caption"
+                  color="#E762A9"
+                  textAlign="center"
+                >
+                  {images.length}/3
+                  <br />
+                  (선택)
+                </Typography>
+              </Box>
+            )}
+            {/* 모바일/데스크탑 파일 선택 인풋 (숨김) */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              capture="environment"
+              onChange={handleFilesChange}
+              style={{ display: "none" }}
+            />
+          </Box>
+        </Box>
 
         {/* 소개글 입력 */}
         <Box mb={3}>
@@ -398,7 +509,7 @@ export default function Step2() {
             fullWidth
             multiline
             rows={4}
-            placeholder="모임에 대해 자세히 설명해주세요 (필수)"
+            placeholder="소개글을 입력해 주세요 (최대 100글자, 선택사항)"
             value={formData.content}
             onChange={(e) => {
               const content = e.target.value;
@@ -429,11 +540,100 @@ export default function Step2() {
             만날 위치 및 시간
           </Typography>
 
+          {/* 날짜/시간 표시 */}
+          <Box
+            sx={{
+              p: 2,
+              border: "1px solid #e0e0e0",
+              borderRadius: 2,
+              mb: 2,
+              bgcolor: "#f8f9fa",
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={1} mb={1}>
+              <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
+              <Typography
+                variant="body2"
+                fontWeight={600}
+                sx={{
+                  color:
+                    getDisplayLocation() === "위치를 선택해주세요"
+                      ? "#999"
+                      : "#333",
+                }}
+              >
+                {getDisplayLocation()}
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              ●{" "}
+              <span
+                style={{
+                  color: formData.meetingDate ? "inherit" : "#999",
+                  fontStyle: formData.meetingDate ? "normal" : "italic",
+                }}
+              >
+                {formData.meetingDate
+                  ? new Date(formData.meetingDate).toLocaleDateString("ko-KR", {
+                      month: "numeric",
+                      day: "numeric",
+                      weekday: "short",
+                    })
+                  : "날짜를 선택해주세요"}
+              </span>
+              <br />●{" "}
+              <span
+                style={{
+                  color: formData.meetingDate ? "inherit" : "#999",
+                  fontStyle: formData.meetingDate ? "normal" : "italic",
+                }}
+              >
+                {formData.meetingDate
+                  ? new Date(formData.meetingDate).toLocaleTimeString("ko-KR", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                  : "시간을 선택해주세요"}
+              </span>
+            </Typography>
+          </Box>
+
           {/* 위치 입력 필드 */}
           <Box mb={2}>
             <TextField
               fullWidth
               placeholder="위치를 입력해주세요"
+              value={locationInput}
+              onChange={(e) => {
+                const newLocation = e.target.value;
+                setLocationInput(newLocation);
+                setFormData({
+                  ...formData,
+                  location: newLocation,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  "&:hover": {
+                    borderColor: "#E762A9",
+                  },
+                  "&.Mui-focused": {
+                    borderColor: "#E762A9",
+                    boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
+                  },
+                },
+              }}
+            />
+          </Box>
+          {/* 위치 입력 필드 */}
+          <Box mb={2}>
+            <TextField
+              fullWidth
+              placeholder="위치를 입력해주세요 (미입력시 현재위치로 설정됩니다)"
               value={locationInput}
               onChange={(e) => {
                 const newLocation = e.target.value;
@@ -467,7 +667,65 @@ export default function Step2() {
               searchKeyword={searchKeyword}
             />
           </Box>
+          {/* 지도 영역 */}
+          <Box mb={3}>
+            <MapPicker
+              onLocationChange={handleLocationChange}
+              searchKeyword={searchKeyword}
+            />
+          </Box>
 
+          {/* 날짜/시간 설정 */}
+          <Box display="flex" gap={2} mb={2}>
+            <TextField
+              fullWidth
+              type="date"
+              value={
+                formData.meetingDate ? formData.meetingDate.split("T")[0] : ""
+              }
+              onChange={(e) => {
+                const date = e.target.value;
+                const time = formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00";
+                setFormData({
+                  ...formData,
+                  meetingDate: date ? `${date}T${time}` : "",
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              type="time"
+              value={
+                formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00"
+              }
+              onChange={(e) => {
+                const date = formData.meetingDate
+                  ? formData.meetingDate.split("T")[0]
+                  : new Date().toISOString().split("T")[0];
+                setFormData({
+                  ...formData,
+                  meetingDate: `${date}T${e.target.value}`,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
           {/* 날짜/시간 설정 */}
           <Box display="flex" gap={2} mb={2}>
             <TextField
