@@ -13,7 +13,11 @@
         "destination": "/index.html"
       },
       {
-        "source": "/:path*",
+        "source": "/auth/callback",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/(.*)",
         "destination": "/index.html"
       }
     ]

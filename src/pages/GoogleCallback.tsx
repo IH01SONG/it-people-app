@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, Stack } from "@mui/material";
 import { api } from "../lib/api";
 
 export default function GoogleCallback() {
@@ -24,16 +24,67 @@ export default function GoogleCallback() {
         console.log('🔍 코드 존재 여부:', !!searchParams.get('code'));
         console.log('🔍 환경변수 VITE_API_URL:', import.meta.env.VITE_API_URL);
         console.log('🔍 전체 searchParams:', searchParams.toString());
+        console.log('🔍 React Router location:', window.location);
+        console.log('🔍 현재 경로가 /auth/callback인지:', window.location.pathname === '/auth/callback');
         
         // URL 파라미터에서 코드와 에러 확인
         const code = searchParams.get('code');
         const error = searchParams.get('error');
         const state = searchParams.get('state');
+        const token = searchParams.get('token'); // JWT 토큰이 직접 전달된 경우
         
         if (error) {
           console.error('❌ 구글 OAuth 에러:', error);
           setErrorMessage(`구글 로그인 중 오류가 발생했습니다: ${error}`);
           setStatus('error');
+          return;
+        }
+        
+        // JWT 토큰이 직접 전달된 경우 (백엔드에서 이미 처리된 경우)
+        if (token) {
+          console.log('✅ JWT 토큰이 직접 전달됨:', token.substring(0, 30) + '...');
+          
+          try {
+            // 1. 토큰을 로컬 스토리지에 저장
+            localStorage.setItem('access_token', token);
+            console.log('💾 토큰을 로컬 스토리지에 저장 완료');
+            
+            // 2. 사용자 정보 조회
+            try {
+              console.log('👤 사용자 정보 조회 시작...');
+              const userData = await api.fetchUserInfo(token);
+              console.log('✅ 사용자 정보 조회 성공:', userData);
+              
+              // 3. AuthContext의 login 함수 호출 (이메일만 전달)
+              await login(userData.email, '');
+              console.log('🔐 AuthContext 로그인 상태 업데이트 완료');
+              
+              setStatus('success');
+              console.log('🎉 구글 로그인 완료!');
+              
+              // 4. 메인 페이지로 리다이렉트
+              setTimeout(() => {
+                console.log('🏠 메인 페이지로 리다이렉트');
+                navigate('/', { replace: true });
+              }, 1500);
+              
+            } catch (userError) {
+              console.error('❌ 사용자 정보 조회 실패:', userError);
+              
+              // 토큰은 있지만 사용자 정보 조회 실패 시에도 로그인 처리
+              console.warn('⚠️ 사용자 정보 조회 실패했지만 토큰이 있으므로 로그인 진행');
+              setStatus('success');
+              setTimeout(() => {
+                navigate('/', { replace: true });
+              }, 1500);
+            }
+            
+          } catch (tokenError) {
+            console.error('❌ 토큰 처리 실패:', tokenError);
+            setErrorMessage(`토큰 처리 중 오류가 발생했습니다: ${tokenError.message}`);
+            setStatus('error');
+          }
+          
           return;
         }
         
@@ -59,7 +110,8 @@ export default function GoogleCallback() {
             },
             body: JSON.stringify({
               code: code,
-              state: state
+              state: state,
+              redirect_uri: window.location.origin + '/auth/callback/google'
             })
           });
 
@@ -119,7 +171,13 @@ export default function GoogleCallback() {
           
         } catch (serverError) {
           console.error('❌ 서버 통신 실패:', serverError);
-          setErrorMessage(`서버와의 통신에 실패했습니다: ${serverError.message}`);
+          
+          // 404 에러인 경우 백엔드 서버 문제임을 명시
+          if (serverError.message.includes('404')) {
+            setErrorMessage('백엔드 서버의 Google OAuth 콜백 엔드포인트가 구현되지 않았습니다. 서버 관리자에게 문의하세요.');
+          } else {
+            setErrorMessage(`서버와의 통신에 실패했습니다: ${serverError.message}`);
+          }
           setStatus('error');
         }
 

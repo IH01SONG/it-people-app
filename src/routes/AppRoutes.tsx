@@ -41,6 +41,7 @@ export default function AppRoutes() {
         <Routes>
           {/* Google OAuth Callback - RootLayout 밖에 배치 */}
           <Route path="/auth/callback/google" element={<GoogleCallback />} />
+          <Route path="/auth/callback" element={<GoogleCallback />} />
           
           {/* Pages without bottom navigation */}
           <Route path="/search-results" element={<SearchResults />} />

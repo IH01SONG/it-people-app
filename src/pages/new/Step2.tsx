@@ -213,20 +213,12 @@ export default function Step2() {
       // 백엔드 API 스키마에 맞춘 게시글 데이터
       const postPayload = {
         title: formData.title,
-        content: formData.content, // 필수 필드로 변경
+        content: formData.content.trim(), // 필수 필드로 변경
         tags: formData.tags,
         maxParticipants: formData.maxParticipants,
-<<<<<<< HEAD
-        // 선택적 필드들
-        ...(locationData && { location: locationData }),
-        // ...(formData.category && { category: formData.category }),
-        ...(formData.venue && { venue: formData.venue }),
-=======
-        content: formData.content.trim(),
         location: locationData, // 위치 정보는 항상 포함 (필수)
         ...(formData.category && { category: formData.category }),
         ...(formData.venue?.trim() && { venue: formData.venue.trim() }),
->>>>>>> feature/mypage
         ...(formData.meetingDate && {
           meetingDate: new Date(formData.meetingDate).toISOString()
         }),
@@ -535,7 +527,7 @@ export default function Step2() {
         </Box>
 
         {/* 만날 위치 및 시간 */}
-        <Box mb={3}>
+        <Box mb={3} key="meeting-location-time">
           <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
             만날 위치 및 시간
           </Typography>
@@ -726,6 +718,7 @@ export default function Step2() {
                 },
               }}
             />
+          </Box>
           {/* 날짜/시간 설정 */}
           <Box display="flex" gap={2} mb={2}>
             <TextField
