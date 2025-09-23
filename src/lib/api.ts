@@ -170,12 +170,40 @@ export const api = {
       axios.put('/users/me', userData).then(r => r.data),
 
     // 프로필 이미지 업로드
-    uploadProfileImage: (formData: FormData) =>
-      axios.post('/users/me/profile-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }).then(r => r.data),
+    uploadProfileImage: async (formData: FormData) => {
+      const possibleEndpoints = [
+        '/users/me/profile-image',
+        '/users/profile-image',
+        '/users/me/avatar',
+        '/users/avatar',
+        '/upload/profile-image',
+        '/upload/avatar',
+        '/auth/profile-image',
+        '/profile/image'
+      ];
+
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log('📤 프로필 이미지 업로드 시도:', endpoint);
+          const response = await axios.post(endpoint, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          console.log('✅ 프로필 이미지 업로드 성공:', endpoint, response.data);
+          return response.data;
+        } catch (err: any) {
+          console.warn(`⚠️ ${endpoint} 실패:`, err.response?.status, err.response?.data?.message);
+          if (err.response?.status !== 404) {
+            // 404가 아닌 다른 에러는 실제 에러로 처리
+            throw err;
+          }
+        }
+      }
+      
+      // 모든 엔드포인트가 404인 경우
+      throw new Error('프로필 이미지 업로드 API를 찾을 수 없습니다. 서버 관리자에게 문의하세요.');
+    },
 
     // 내가 쓴 글
     getMyPosts: () => axios.get('/users/me/posts').then(r => r.data),

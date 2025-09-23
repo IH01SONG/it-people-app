@@ -33,26 +33,44 @@ const My: React.FC = () => {
 
   // 사용자 정보 로드
   useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        setLoading(true);
-        const userInfo = await api.users.getMe();
-        setNickname(userInfo.nickname || userInfo.name || '사용자 닉네임');
-        setProfileImage(userInfo.profileImage || null);
-      } catch (err) {
-        console.error('Failed to load user info:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (user) {
       loadUserInfo();
     }
   }, [user]);
 
   const handleProfileImageChange = (imageUrl: string | null) => {
+    console.log('🔄 프로필 이미지 변경:', imageUrl);
     setProfileImage(imageUrl);
+    
+    // 서버 이미지인 경우에만 사용자 정보를 다시 로드
+    if (imageUrl && !imageUrl.startsWith('blob:')) {
+      setTimeout(() => {
+        loadUserInfo();
+      }, 1000);
+    }
+  };
+
+  const loadUserInfo = async () => {
+    try {
+      setLoading(true);
+      const userInfo = await api.users.getMe();
+      console.log('👤 사용자 정보 로드:', userInfo);
+      setNickname(userInfo.nickname || userInfo.name || '사용자 닉네임');
+      
+      // 프로필 이미지 URL에 타임스탬프 추가하여 캐시 무효화
+      const profileImageUrl = userInfo.profileImage;
+      if (profileImageUrl) {
+        const imageUrlWithTimestamp = `${profileImageUrl}?t=${Date.now()}`;
+        console.log('🖼️ 프로필 이미지 URL (캐시 무효화):', imageUrlWithTimestamp);
+        setProfileImage(imageUrlWithTimestamp);
+      } else {
+        setProfileImage(null);
+      }
+    } catch (err) {
+      console.error('Failed to load user info:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNicknameEdit = () => {
