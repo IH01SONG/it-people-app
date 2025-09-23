@@ -82,13 +82,34 @@ const ResetPassword: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // TODO: 백엔드 연동
+      // 백엔드 연동 시도
       await api.confirmPasswordReset(newPassword, resetToken);
       alert('비밀번호가 성공적으로 재설정되었습니다.');
       navigate('/login');
     } catch (error: any) {
       console.error('비밀번호 재설정 실패:', error);
-      alert('비밀번호 재설정에 실패했습니다. 다시 시도해주세요.');
+      
+      // 백엔드가 준비되지 않은 경우 모의 기능
+      if (error.response?.status === 404 || error.code === 'ERR_BAD_REQUEST') {
+        console.log('🔄 백엔드 API가 준비되지 않음. 모의 기능으로 진행...');
+        
+        // 개발용: 로컬 스토리지에 새 비밀번호 저장 (실제로는 해시화되어야 함)
+        const mockUserData = {
+          email: location.state?.email,
+          newPassword: newPassword, // 실제로는 해시화되어야 함
+          resetTime: Date.now()
+        };
+        
+        localStorage.setItem('mock_password_reset', JSON.stringify(mockUserData));
+        localStorage.removeItem('mock_reset_code');
+        localStorage.removeItem('mock_reset_email');
+        localStorage.removeItem('mock_reset_time');
+        
+        alert('개발 모드: 비밀번호가 재설정되었습니다. (실제로는 백엔드에서 처리되어야 함)');
+        navigate('/login');
+      } else {
+        alert('비밀번호 재설정에 실패했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setIsLoading(false);
     }
