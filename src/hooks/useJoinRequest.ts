@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { extractRequestId, getPostId, getRequesterId, findMyPendingRequest } from '../utils/joinRequestId';
 import { handleJoinError, handleCancelError, logDetailedError } from '../utils/errorHandling';
 import { joinRequestStorage } from '../utils/localStorage';
+import { requestJoin } from '../lib/joinRequest.api';
 // import { useAuthContext } from '../contexts/AuthContext'; // 있으면 사용하세요
 
 type JoinRequest = {
@@ -89,7 +90,7 @@ export function useJoinRequest(postId?: string) {
         console.log('🚨 [JoinRequest] 백엔드 확인 필요:', {
           "문제": "참여 신청했지만 getSent에서 찾을 수 없음",
           "확인사항": [
-            "POST /posts/:postId/join이 JoinRequest를 정상 생성하는지",
+            "POST /posts/:postId/request가 JoinRequest를 정상 생성하는지",
             "GET /join-requests/sent의 응답 구조가 올바른지",
             "post/requester 필드 populate 여부",
             "사용자별 권한 필터링 로직"
@@ -119,8 +120,8 @@ export function useJoinRequest(postId?: string) {
     try {
       await ensureMyId();
 
-      console.log('📝 [JoinRequest] 참여 신청 시도: POST /posts/{postId}/join', targetPostId);
-      const res = await api.posts.join(targetPostId);
+      console.log('📝 [JoinRequest] 참여 요청 시도: POST /posts/{postId}/request', targetPostId);
+      const res = await requestJoin(targetPostId);
 
       // 백엔드 개발자를 위한 상세 응답 로깅
       console.log('🔍 [JoinRequest] 참여 신청 API 응답 전체:', res);
@@ -154,7 +155,7 @@ export function useJoinRequest(postId?: string) {
         setMyPendingRequest({ _id: createdId, post: { _id: targetPostId }, status: 'pending' } as any);
       } else {
         console.log('⚠️ [JoinRequest] 신청 응답에 requestId 없음 → sent 목록에서 재탐색');
-        console.log('🚨 [JoinRequest] 백엔드 확인 필요: POST /posts/:postId/join 응답에 requestId 포함 여부');
+        console.log('🚨 [JoinRequest] 백엔드 확인 필요: POST /posts/:postId/request 응답에 requestId 포함 여부');
         await refreshMyPendingForPost(targetPostId);
       }
     } catch (e: any) {

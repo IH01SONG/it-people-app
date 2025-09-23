@@ -91,9 +91,9 @@ export const api = {
     delete: (postId: string) =>
       axios.delete(`/posts/${postId}`).then(r => r.data),
 
-    // 모임 참여 신청
+    // 모임 참여 요청 (승인/거절 시스템)
     join: (postId: string) =>
-      axios.post(`/posts/${postId}/join`).then(r => r.data),
+      axios.post(`/posts/${postId}/request`).then(r => r.data),
   },
 
   // 사용자 관련 API
