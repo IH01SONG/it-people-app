@@ -48,7 +48,7 @@ const ForgotPasswordVerify: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // TODO: 백엔드 연동
+      // 백엔드 연동 시도
       const response = await api.verifyPasswordResetCode(email, code);
       const resetToken = response.resetToken || 'mock-reset-token';
       
@@ -60,13 +60,41 @@ const ForgotPasswordVerify: React.FC = () => {
       });
     } catch (error: any) {
       console.error('코드 인증 실패:', error);
+      
+      // 백엔드가 준비되지 않은 경우 모의 기능
+      if (error.response?.status === 404 || error.code === 'ERR_BAD_REQUEST') {
+        console.log('🔄 백엔드 API가 준비되지 않음. 모의 기능으로 진행...');
+        
+        // 로컬 스토리지에서 저장된 코드 확인
+        const storedCode = localStorage.getItem('mock_reset_code');
+        const storedEmail = localStorage.getItem('mock_reset_email');
+        const storedTime = localStorage.getItem('mock_reset_time');
+        
+        // 10분 이내인지 확인
+        const isValidTime = storedTime && (Date.now() - parseInt(storedTime)) < 10 * 60 * 1000;
+        
+        if (storedCode === code && storedEmail === email && isValidTime) {
+          console.log('✅ 모의 인증 코드 검증 성공');
+          const mockResetToken = 'mock-reset-token-' + Date.now();
+          navigate('/reset-password', { 
+            state: { 
+              email, 
+              resetToken: mockResetToken 
+            } 
+          });
+          return;
+        } else {
+          setCodeError('유효하지 않은 인증 코드입니다.');
+        }
+      } else {
+        setCodeError('유효하지 않은 인증 코드입니다.');
+      }
+      
       setAttempts(prev => prev + 1);
       
       if (attempts >= 2) {
         setIsBlocked(true);
         setCodeError('인증 시도 횟수를 초과했습니다. 처음부터 다시 시도해주세요.');
-      } else {
-        setCodeError('유효하지 않은 인증 코드입니다.');
       }
     } finally {
       setIsLoading(false);

@@ -53,18 +53,52 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       setError(null);
       setShowOptions(false);
 
-      // FormData 생성
-      const formData = new FormData();
-      formData.append('profileImage', file);
+      console.log('📤 파일 업로드 시작:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
 
-      // API 호출
-      const response = await api.users.uploadProfileImage(formData);
-      
-      // 성공 시 이미지 URL 업데이트
-      onImageChange(response.imageUrl);
+      // 먼저 로컬에서 미리보기 표시
+      const localImageUrl = URL.createObjectURL(file);
+      console.log('🖼️ 로컬 미리보기 URL 생성:', localImageUrl);
+      onImageChange(localImageUrl);
+
+      // 서버 업로드 시도 (실패해도 로컬 미리보기는 유지)
+      try {
+        console.log('🏥 서버 상태 확인 중...');
+        const healthCheck = await api.healthCheck();
+        console.log('🏥 서버 상태:', healthCheck);
+
+        // FormData 생성
+        const formData = new FormData();
+        formData.append('profileImage', file);
+
+        // API 호출
+        const response = await api.users.uploadProfileImage(formData);
+        console.log('📸 프로필 이미지 업로드 응답:', response);
+        
+        // 성공 시 서버에서 받은 이미지 URL로 교체
+        const imageUrl = response.imageUrl || response.profileImage || response.url || response.data?.imageUrl;
+        console.log('🖼️ 서버에서 받은 이미지 URL:', imageUrl);
+        
+        if (imageUrl) {
+          // 로컬 URL 해제
+          URL.revokeObjectURL(localImageUrl);
+          
+          // 서버 이미지 URL로 교체
+          const imageUrlWithTimestamp = `${imageUrl}?t=${Date.now()}`;
+          console.log('🔄 서버 이미지로 교체:', imageUrlWithTimestamp);
+          onImageChange(imageUrlWithTimestamp);
+        }
+      } catch (uploadErr: any) {
+        console.warn('⚠️ 서버 업로드 실패, 로컬 미리보기 유지:', uploadErr);
+        // 서버 업로드가 실패해도 로컬 미리보기는 유지
+        setError('서버 업로드에 실패했지만 이미지가 선택되었습니다. 나중에 다시 시도해주세요.');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || '이미지 업로드에 실패했습니다.');
-      console.error('Failed to upload profile image:', err);
+      console.error('❌ 이미지 처리 실패:', err);
+      setError(err.message || '이미지 처리에 실패했습니다.');
     } finally {
       setUploading(false);
     }
@@ -99,7 +133,19 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
           sx={{ 
             width: size, 
             height: size,
-            bgcolor: 'primary.main'
+            bgcolor: 'primary.main',
+            '& img': {
+              objectFit: 'cover'
+            }
+          }}
+          imgProps={{
+            onError: (e) => {
+              console.warn('🖼️ 이미지 로드 실패:', currentImage);
+              e.currentTarget.style.display = 'none';
+            },
+            onLoad: () => {
+              console.log('✅ 이미지 로드 성공:', currentImage);
+            }
           }}
         />
         <IconButton

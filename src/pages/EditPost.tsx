@@ -39,7 +39,6 @@ export default function EditPost() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newTag, setNewTag] = useState("");
-  // 이미지 상태 제거 - 카테고리별 기본 이미지만 사용
 
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -63,12 +62,8 @@ export default function EditPost() {
     { id: "68c3bdd957c06e06e2706fa1", name: "반려동물", icon: "🐕" },
   ];
 
-  // 선택된 카테고리 정보 가져오기
-  const getSelectedCategory = () => {
-    return categories.find((cat) => cat.id === formData.category);
-  };
-
-  // getDefaultImageByCategory 함수는 utils/defaultImages.ts에서 import
+  const getSelectedCategory = () =>
+    categories.find((cat) => cat.id === formData.category);
 
   // 게시글 데이터 로드
   useEffect(() => {
@@ -78,17 +73,29 @@ export default function EditPost() {
       try {
         setLoading(true);
 
-        // 내가 작성한 게시글 목록에서 해당 게시글 찾기 (권한 확실히 하기 위해)
-        console.log('🔍 [EditPost] getMyPosts로 권한 있는 게시글 목록 조회');
-        const myPostsResponse = await api.users.getMyPosts();
-        console.log('🔍 [EditPost] getMyPosts 응답:', myPostsResponse);
-        const posts = myPostsResponse?.posts || myPostsResponse || [];
-        console.log('🔍 [EditPost] 내 게시글 목록:', posts);
+        // 인증 토큰 확인 (없으면 로그인 페이지로)
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          alert("로그인이 필요합니다.");
+          navigate("/login");
+          return;
+        }
 
-        const post = posts.find((p: { _id?: string; id?: string }) => (p._id || p.id) === postId);
-        console.log('🔍 [EditPost] 찾은 내 게시글:', post);
+        console.log("🔍 [EditPost] 게시글 로드 시작:", postId);
+
+        // 내가 작성한 게시글 목록에서 해당 게시글 찾기 (권한 보장)
+        const myPostsResponse = await api.users.getMyPosts();
+        console.log("📋 [EditPost] 내 게시글 목록:", myPostsResponse);
+        const posts = myPostsResponse?.posts || myPostsResponse || [];
+        const post = posts.find(
+          (p: { _id?: string; id?: string }) => (p._id || p.id) === postId
+        );
 
         if (!post) {
+          console.error("❌ 게시글을 찾을 수 없음:", {
+            postId,
+            postsCount: posts.length,
+          });
           alert("본인이 작성한 게시글 중에서 해당 게시글을 찾을 수 없습니다.");
           navigate("/");
           return;
@@ -97,51 +104,53 @@ export default function EditPost() {
         // 게시글 소유권 확인
         try {
           const currentUser = await api.users.getMe();
-          console.log('🔍 [EditPost] 현재 사용자 정보:', currentUser);
-          console.log('🔍 [EditPost] 게시글 정보:', post);
-          console.log('🔍 [EditPost] 게시글 작성자:', post.author);
-          console.log('🔍 [EditPost] 게시글 authorId:', post.authorId);
-
-          const postAuthorId = post.authorId?._id || post.authorId?.id || post.authorId ||
-                              post.author?._id || post.author?.id || post.author;
-          const currentUserId = currentUser._id || currentUser.id;
-
-          console.log('🔍 [EditPost] 추출된 postAuthorId:', postAuthorId);
-          console.log('🔍 [EditPost] 추출된 currentUserId:', currentUserId);
-
-          // 게시글 소유권 확인 (ID 비교)
-          const isOwner = postAuthorId === currentUserId ||
-                         post.authorId === currentUserId ||
-                         post.author === currentUserId;
-
-          console.log('🔍 [EditPost] 소유권 확인 결과:', isOwner);
+          console.log("👤 [EditPost] 현재 사용자:", currentUser);
+          const postAuthorId =
+            (post as any).authorId?._id ||
+            (post as any).authorId?.id ||
+            (post as any).authorId ||
+            (post as any).author?._id ||
+            (post as any).author?.id ||
+            (post as any).author;
+          const currentUserId =
+            (currentUser as any)._id || (currentUser as any).id;
+          const isOwner =
+            postAuthorId === currentUserId ||
+            (post as any).authorId === currentUserId ||
+            (post as any).author === currentUserId;
 
           if (!isOwner) {
-            alert('본인이 작성한 게시글만 수정할 수 있습니다.');
-            navigate('/');
+            console.error("❌ 권한 없음:", {
+              postAuthorId,
+              currentUserId,
+              postAuthor: (post as any).author,
+            });
+            alert("본인이 작성한 게시글만 수정할 수 있습니다.");
+            navigate("/");
             return;
           }
         } catch (userError) {
-          console.error('현재 사용자 정보 조회 실패:', userError);
+          console.error("현재 사용자 정보 조회 실패:", userError);
+          alert("사용자 정보를 확인할 수 없습니다. 다시 로그인해주세요.");
+          navigate("/login");
+          return;
         }
 
         // 폼 데이터 설정
         setFormData({
-          title: post.title || "",
-          content: post.content || "",
-          venue: post.venue || "",
+          title: (post as any).title || "",
+          content: (post as any).content || "",
+          venue: (post as any).venue || "",
           category:
-            typeof post.category === "object"
-              ? post.category._id
-              : post.category,
-          maxParticipants: post.maxParticipants || 2,
-          meetingDate: post.meetingDate
-            ? new Date(post.meetingDate).toISOString().slice(0, 16)
+            typeof (post as any).category === "object"
+              ? (post as any).category._id
+              : (post as any).category,
+          maxParticipants: (post as any).maxParticipants || 2,
+          meetingDate: (post as any).meetingDate
+            ? new Date((post as any).meetingDate).toISOString().slice(0, 16)
             : "",
-          tags: Array.isArray(post.tags) ? post.tags : [],
+          tags: Array.isArray((post as any).tags) ? (post as any).tags : [],
         });
-
-        // 이미지는 카테고리별 기본 이미지만 사용 (수정 불가)
       } catch (error) {
         console.error("게시글 로드 실패:", error);
         alert("게시글을 불러오는데 실패했습니다.");
@@ -155,11 +164,14 @@ export default function EditPost() {
   }, [postId, navigate]);
 
   // 폼 데이터 업데이트
-  const updateFormData = (field: keyof FormData, value: string | number | string[]) => {
+  const updateFormData = (
+    field: keyof FormData,
+    value: string | number | string[]
+  ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 태그 추가
+  // 태그 추가/제거
   const addTag = () => {
     if (
       newTag.trim() &&
@@ -170,8 +182,6 @@ export default function EditPost() {
       setNewTag("");
     }
   };
-
-  // 태그 제거
   const removeTag = (tagToRemove: string) => {
     updateFormData(
       "tags",
@@ -179,12 +189,11 @@ export default function EditPost() {
     );
   };
 
-  // 폼 유효성 검사
   const isFormValid = () => {
     return (
-      formData.title.trim() &&
-      formData.content.trim() &&
-      formData.category &&
+      !!formData.title.trim() &&
+      !!formData.content.trim() &&
+      !!formData.category &&
       formData.maxParticipants >= 2
     );
   };
@@ -199,72 +208,67 @@ export default function EditPost() {
     try {
       setSaving(true);
 
-      // 토큰 확인
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token");
       if (!token) {
         alert("인증 토큰이 없습니다. 다시 로그인해주세요.");
-        navigate('/login');
+        navigate("/login");
         return;
       }
 
-      // 카테고리에 맞는 기본 이미지 자동 추가
+      // 사용자 재확인 (선택)
+      await api.users.getMe().catch(() => {
+        throw new Error("사용자 인증 확인 실패");
+      });
+
+      // 카테고리 기본 이미지 자동 설정
       let finalImageUrls: string[] = [];
       if (formData.category) {
         const defaultImage = getDefaultImageByCategory(formData.category);
         finalImageUrls = [defaultImage];
       }
 
-      const updateData = {
+      const updateData: any = {
         title: formData.title.trim(),
         venue: formData.venue.trim(),
         category: formData.category,
         maxParticipants: formData.maxParticipants,
         ...(formData.meetingDate && {
-          meetingDate: new Date(formData.meetingDate).toISOString()
+          meetingDate: new Date(formData.meetingDate).toISOString(),
         }),
         tags: formData.tags,
         content: formData.content.trim(),
-        // 이미지 필드 - 백엔드 호환성을 위해 둘 다 전송
         imageUrls: finalImageUrls,
-        images: finalImageUrls
+        images: finalImageUrls, // 백엔드 호환성
       };
 
-      // 백엔드 API 호출 전 디버깅
-      console.log('🚀 전송할 수정 데이터:', JSON.stringify(updateData, null, 2));
-      console.log('🔐 [EditPost] 인증 토큰:', token);
-      console.log('🔗 [EditPost] 수정 요청 URL:', `/posts/${postId}`);
-
+      console.log("🚀 [EditPost] 전송할 데이터:", updateData);
       await api.posts.update(postId!, updateData);
 
       alert("게시글이 수정되었습니다.");
       navigate("/", { state: { refreshPosts: true } });
     } catch (error: any) {
-      console.error("게시글 수정 실패:", error);
-      console.error("에러 응답 전체:", error?.response);
-      console.error("에러 데이터:", error?.response?.data);
-      console.error("에러 헤더:", error?.response?.headers);
+      console.error("❌ 게시글 수정 실패:", error);
+      let errorMessage = "게시글 수정에 실패했습니다.";
 
-      // 403 오류 처리
       if (error?.response?.status === 403) {
-        const errorMsg = error?.response?.data?.message || "이 게시글을 수정할 권한이 없습니다.";
-        console.error("🚨 [EditPost] 403 권한 오류 상세:", {
-          postId,
-          currentUserId: await api.users.getMe().then(u => u._id || u.id).catch(() => 'unknown'),
-          errorMessage: errorMsg,
-          fullError: error?.response?.data
-        });
-        alert(`권한 오류: ${errorMsg}`);
+        errorMessage =
+          error?.response?.data?.message ||
+          "이 게시글을 수정할 권한이 없습니다.";
+      } else if (error?.response?.status === 401) {
+        errorMessage = "인증이 만료되었습니다. 다시 로그인해주세요.";
+        localStorage.removeItem("access_token");
+        navigate("/login");
+        return;
+      } else if (error?.response?.status === 404) {
+        errorMessage =
+          "게시글을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.";
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
       }
-      // 401 오류 처리
-      else if (error?.response?.status === 401) {
-        alert("인증이 만료되었습니다. 다시 로그인해주세요.");
-        localStorage.removeItem('access_token');
-        navigate('/login');
-      }
-      else {
-        const errorMsg = error?.response?.data?.message || "게시글 수정에 실패했습니다.";
-        alert(`오류: ${errorMsg}`);
-      }
+
+      alert(`오류: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
@@ -295,9 +299,7 @@ export default function EditPost() {
         width: "100%",
         maxWidth: "600px",
         margin: "0 auto",
-        "@media (min-width:600px)": {
-          maxWidth: "600px",
-        },
+        "@media (min-width:600px)": { maxWidth: "600px" },
       }}
     >
       {/* Header */}
@@ -316,12 +318,7 @@ export default function EditPost() {
         </IconButton>
         <Typography
           variant="h6"
-          sx={{
-            flexGrow: 1,
-            textAlign: "center",
-            mr: 4,
-            fontWeight: 700,
-          }}
+          sx={{ flexGrow: 1, textAlign: "center", mr: 4, fontWeight: 700 }}
         >
           모임 수정하기
         </Typography>
@@ -333,12 +330,10 @@ export default function EditPost() {
           px: 3,
           py: 3,
           maxWidth: "600px !important",
-          "@media (min-width: 600px)": {
-            maxWidth: "600px !important",
-          },
+          "@media (min-width: 600px)": { maxWidth: "600px !important" },
         }}
       >
-        {/* 프로그레스 */}
+        {/* Progress */}
         <Box mb={4}>
           <Stepper activeStep={1} sx={{ mb: 2 }}>
             <Step>
@@ -353,7 +348,7 @@ export default function EditPost() {
           </Stepper>
         </Box>
 
-        {/* 선택된 카테고리 표시 */}
+        {/* Selected Category */}
         {getSelectedCategory() && (
           <Card
             sx={{
@@ -406,11 +401,7 @@ export default function EditPost() {
               value={formData.title}
               onChange={(e) => updateFormData("title", e.target.value)}
               variant="outlined"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             />
           </Box>
 
@@ -460,11 +451,7 @@ export default function EditPost() {
               value={formData.content}
               onChange={(e) => updateFormData("content", e.target.value)}
               variant="outlined"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             />
           </Box>
 
@@ -484,11 +471,7 @@ export default function EditPost() {
               value={formData.venue}
               onChange={(e) => updateFormData("venue", e.target.value)}
               variant="outlined"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             />
           </Box>
 
@@ -508,11 +491,7 @@ export default function EditPost() {
               value={formData.meetingDate}
               onChange={(e) => updateFormData("meetingDate", e.target.value)}
               variant="outlined"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             />
           </Box>
 
@@ -581,8 +560,6 @@ export default function EditPost() {
             >
               태그 (최대 5개)
             </Typography>
-
-            {/* 기존 태그들 */}
             <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
               {formData.tags.map((tag, index) => (
                 <Chip
@@ -594,15 +571,11 @@ export default function EditPost() {
                   sx={{
                     borderColor: "#E91E63",
                     color: "#E91E63",
-                    "& .MuiChip-deleteIcon": {
-                      color: "#E91E63",
-                    },
+                    "& .MuiChip-deleteIcon": { color: "#E91E63" },
                   }}
                 />
               ))}
             </Box>
-
-            {/* 새 태그 입력 */}
             {formData.tags.length < 5 && (
               <Box display="flex" gap={1}>
                 <TextField
@@ -632,7 +605,7 @@ export default function EditPost() {
             )}
           </Box>
 
-          {/* 수정 버튼 */}
+          {/* 액션 */}
           <Box display="flex" gap={2} mt={4}>
             <Button
               variant="outlined"
@@ -668,10 +641,7 @@ export default function EditPost() {
                     "linear-gradient(135deg, #D554A0 0%, #C94694 100%)",
                   boxShadow: "0 6px 16px rgba(231, 98, 169, 0.4)",
                 },
-                "&:disabled": {
-                  background: "#ccc",
-                  boxShadow: "none",
-                },
+                "&:disabled": { background: "#ccc", boxShadow: "none" },
               }}
             >
               {saving ? (
