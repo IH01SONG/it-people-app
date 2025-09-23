@@ -177,6 +177,10 @@ export const api = {
     // 모임 참여 요청 (승인/거절 시스템)
     join: (postId: string) =>
       axios.post(`/posts/${postId}/request`).then(r => r.data),
+
+    // 모임 참여 취소 (승인된 참가자인 경우)
+    leave: (postId: string) =>
+      axios.post(`/posts/${postId}/leave`).then(r => r.data),
   },
 
   // 사용자 관련 API

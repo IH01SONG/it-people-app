@@ -91,7 +91,9 @@ export function PostJoinAction({ postId, disabled = false, authorId, joinStatus 
             userMessage = '본인이 작성한 모임에는 참여할 수 없어요. 😅';
             break;
           case '이미 참여 중인 모임입니다.':
-            userMessage = '이미 참여 중인 모임입니다. 🎉';
+            userMessage = '이미 참여 중인 모임입니다. 취소하려면 내 활동에서 "참여 취소"를 선택하세요. 🎉';
+            // 서버가 이미 참가자로 인식 → UI도 참가 상태로 전환
+            // TODO: 여기서 상태 업데이트 로직 추가 (useJoinCancel 훅에서 joined 상태로 변경)
             break;
           case '모임 정원이 가득 찼습니다.':
             userMessage = '아쉽게도 모임이 마감되었습니다. 😢';

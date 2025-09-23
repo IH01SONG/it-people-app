@@ -8,7 +8,8 @@ import {
   authStorage,
 } from "../utils/localStorage";
 import { handleCancelError, logDetailedError } from "../utils/errorHandling";
-import { displayCategoryName } from "../constants/categories";
+import { displayCategoryName } from "../utils/category";
+import { CATEGORY_ID_TO_NAME } from "../constants/categories";
 
 
 
@@ -38,10 +39,11 @@ export function useMyActivities() {
       const me = await api.users.getMe();
       const meId = me?._id || (me as any)?.id || null;
 
-      // 내가 쓴 글과 참여한 모임 병렬 로드
-      const [myPostsResponse, joinedPostsResponse] = await Promise.all([
+      // 내가 쓴 글, 대기중 요청, 참가 확정 글을 병렬 로드
+      const [myPostsResponse, sentPendingResponse, joinedPostsResponse] = await Promise.all([
         api.users.getMyPosts(),
-        api.users.getJoinedPosts(),
+        api.joinRequests.getSent({ status: 'pending' }), // 대기중 요청
+        api.users.getJoinedPosts(), // 참가 확정 글
       ]);
 
       const activities: Activity[] = [];
@@ -67,7 +69,7 @@ export function useMyActivities() {
           if (meId && authorId && meId !== authorId) return;
 
           // 카테고리 표시명
-          const categoryName = displayCategoryName(post?.category);
+          const categoryName = displayCategoryName(post?.category, CATEGORY_ID_TO_NAME);
 
           // createdAt 폴백(정렬 안정화)
           const created =
@@ -95,18 +97,20 @@ export function useMyActivities() {
         });
       }
 
-      // 내가 참여한 글 → 활동 변환
-      const joinedPosts =
-        joinedPostsResponse?.posts || joinedPostsResponse || [];
-      if (Array.isArray(joinedPosts)) {
-        joinedPosts.forEach((post: any) => {
+      // 1) 대기중 참여 요청 → 활동 변환 (requestId 있음)
+      const sentPendingRequests = sentPendingResponse?.data?.requests || sentPendingResponse?.requests || [];
+      if (Array.isArray(sentPendingRequests)) {
+        sentPendingRequests.forEach((request: any) => {
+          const post = request?.post;
           const postId = post?._id || post?.id;
-          if (!postId) return;
+          const requestId = request?._id || request?.id;
+
+          if (!postId || !requestId) return;
 
           // 참여 취소한 게시글 제외
           if (cancelledPosts.includes(String(postId))) return;
 
-          const categoryName = displayCategoryName(post?.category);
+          const categoryName = displayCategoryName(post?.category, CATEGORY_ID_TO_NAME);
           const created =
             post?.createdAt ??
             post?.updatedAt ??
@@ -116,7 +120,7 @@ export function useMyActivities() {
           activities.push({
             id: String(postId),
             title: post?.title ?? "",
-            status: post?.status === "active" ? "참여 중" : "완료",
+            status: "pending", // 대기중 상태
             time: post?.meetingDate
               ? new Date(post.meetingDate as string).toLocaleString("ko-KR")
               : "미정",
@@ -127,8 +131,45 @@ export function useMyActivities() {
             category: categoryName,
             role: "참여자",
             createdAt: String(created),
-            // 작성자 ID는 서버 포맷 다양성 대비
             authorId: extractAuthorId(post) || "unknown",
+            requestId: String(requestId), // 참여 요청 ID 저장
+          } as Activity);
+        });
+      }
+
+      // 2) 참가 확정 글 → 활동 변환 (requestId 없음)
+      const joinedPosts = joinedPostsResponse?.posts || joinedPostsResponse || [];
+      if (Array.isArray(joinedPosts)) {
+        joinedPosts.forEach((post: any) => {
+          const postId = post?._id || post?.id;
+          if (!postId) return;
+
+          // 참여 취소한 게시글 제외
+          if (cancelledPosts.includes(String(postId))) return;
+
+          const categoryName = displayCategoryName(post?.category, CATEGORY_ID_TO_NAME);
+          const created =
+            post?.createdAt ??
+            post?.updatedAt ??
+            post?.meetingDate ??
+            "1970-01-01T00:00:00.000Z";
+
+          activities.push({
+            id: String(postId),
+            title: post?.title ?? "",
+            status: "approved", // 승인된 상태
+            time: post?.meetingDate
+              ? new Date(post.meetingDate as string).toLocaleString("ko-KR")
+              : "미정",
+            members: Array.isArray(post?.participants)
+              ? post.participants.length
+              : 0,
+            maxMembers: Number(post?.maxParticipants ?? 0),
+            category: categoryName,
+            role: "참여자",
+            createdAt: String(created),
+            authorId: extractAuthorId(post) || "unknown",
+            requestId: undefined, // 승인되면 보통 request가 없어짐
           } as Activity);
         });
       }
@@ -169,6 +210,10 @@ export function useMyActivities() {
     async (postId: string) => {
       if (!window.confirm("정말로 참여를 취소하시겠습니까?")) return;
 
+      // Activity에서 requestId 찾기
+      const activity = myActivities.find(a => a.id === postId && a.role === "참여자");
+      const activityRequestId = activity?.requestId;
+
       // 인증 토큰 확인
       const token = authStorage.getToken();
       if (!token) {
@@ -177,87 +222,48 @@ export function useMyActivities() {
       }
 
       try {
-        // 1) 저장된 requestId 우선
-        const savedRequestId = joinRequestStorage.getRequestId(postId);
-        console.log("🔍 [MyActivities] 저장된 requestId 확인:", {
-          postId,
-          requestId: savedRequestId,
-        });
-
-        if (savedRequestId) {
-          console.log(
-            "🔄 [MyActivities] 저장된 requestId로 취소:",
-            savedRequestId
-          );
-          await api.joinRequests.cancel(savedRequestId);
+        // 1) pending 상태: requestId로 취소
+        if (activityRequestId) {
+          console.log("🎯 [MyActivities] pending 상태 - requestId로 취소:", activityRequestId);
+          await api.joinRequests.cancel(activityRequestId);
           joinRequestStorage.recordCancelRequest(postId);
-          joinRequestStorage.clearRequestId(postId); // 취소 후 정리
-        } else {
-          console.log("⚠️ 저장된 requestId 없음 → 서버 조회");
-
-          // 현재 유저 ID 확보 (항상 최신 정보 사용)
-          let meId;
-          try {
-            const me = await api.users.getMe();
-            meId = me?._id || me?.id;
-          } catch (e) {
-            console.error("❌ 사용자 정보 조회 실패:", e);
-            alert("사용자 정보를 찾을 수 없습니다. 다시 로그인해주세요.");
-            return;
-          }
-
-          // 2) 1차: pending
-          let sent = await api.joinRequests.getSent({ status: "pending" });
-          let arr = sent?.requests || sent;
-          console.log("📋 pending sent:", Array.isArray(arr) ? arr.length : 0);
-
-          let myRequest = findMyPendingRequest(arr, postId, meId!);
-
-          // 3) 2차: all
-          if (!myRequest) {
-            console.log("⚠️ pending에서 못찾음 → all 조회");
-            sent = await api.joinRequests.getSent(); // 전체
-            arr = sent?.requests || sent;
-
-            myRequest = Array.isArray(arr)
-              ? arr.find((req: any) => {
-                  const reqPostId = req?.post?._id || req?.postId;
-                  const reqRequesterId =
-                    req?.requester?._id || req?.requesterId;
-                  const ok =
-                    String(reqPostId) === String(postId) &&
-                    String(reqRequesterId) === String(meId);
-                  return ok;
-                })
-              : undefined;
-          }
-
-          if (!myRequest) {
-            console.error(
-              "❌ 참여 요청을 찾을 수 없음(pending, all 모두 실패)"
-            );
-            alert(
-              "참여 요청을 찾을 수 없습니다. 이미 취소되었거나 처리된 요청일 수 있습니다."
-            );
-            removeActivity(postId);
-            return;
-          }
-
-          const foundRequestId = myRequest._id || myRequest.id;
-          console.log("✅ server에서 requestId 찾음:", foundRequestId);
-
-          // 발견한 id 캐싱(다음번 최적화)
-          joinRequestStorage.setRequestId(postId, foundRequestId);
-
-          // 취소 호출
-          await api.joinRequests.cancel(foundRequestId);
-          joinRequestStorage.recordCancelRequest(postId);
-          joinRequestStorage.clearRequestId(postId); // 취소 후 정리
+          removeActivity(postId);
+          alert("참여 신청이 취소되었습니다.");
+          return;
         }
 
-        // 상태 반영
-        removeActivity(postId);
-        alert("참여 취소가 완료되었습니다.");
+        // 2) approved 상태: leave API로 취소
+        if (activity?.status === "approved") {
+          console.log("🎯 [MyActivities] approved 상태 - leave API로 취소");
+          try {
+            await api.posts.leave(postId);
+            joinRequestStorage.recordCancelRequest(postId);
+            removeActivity(postId);
+            alert("참여 취소가 완료되었습니다.");
+            return;
+          } catch (leaveError: any) {
+            const status = leaveError?.response?.status;
+            const message = leaveError?.response?.data?.message;
+
+            // leave API가 없거나 미구현인 경우
+            if (status === 404 || message?.includes("not found")) {
+              alert("승인된 참가 취소는 현재 앱에서 직접 처리할 수 없습니다. 주최자에게 문의해 주세요.");
+              return;
+            }
+            throw leaveError;
+          }
+        }
+
+        // 3) 혹시 상태 정보가 없거나 이상한 경우의 안전장치
+        console.warn("⚠️ [MyActivities] 예상치 못한 상황 - Activity 상태:", {
+          activity: activity ? {
+            id: activity.id,
+            status: activity.status,
+            requestId: activity.requestId
+          } : null
+        });
+
+        alert("참여 취소 처리에 문제가 있습니다. 잠시 후 다시 시도해주세요.");
       } catch (error: any) {
         const errorMessage = handleCancelError(error);
 
@@ -275,7 +281,7 @@ export function useMyActivities() {
         alert(errorMessage);
       }
     },
-    [removeActivity] // currentUserId 의존성 제거
+    [myActivities, removeActivity] // myActivities 의존성 추가
   );
 
   return {

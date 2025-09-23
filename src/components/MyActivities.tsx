@@ -320,7 +320,11 @@ export default function MyActivities({
                   >
                     <span
                       className={`text-xs px-2 py-1 rounded-full ${
-                        item.status === "모집 완료"
+                        item.status === "pending"
+                          ? "bg-orange-100 text-orange-700"
+                          : item.status === "approved"
+                          ? "bg-green-100 text-green-700"
+                          : item.status === "모집 완료"
                           ? "bg-green-100 text-green-700"
                           : item.status === "대기 중"
                           ? "bg-blue-100 text-blue-700"
@@ -329,7 +333,9 @@ export default function MyActivities({
                           : "bg-purple-100 text-purple-700"
                       }`}
                     >
-                      {item.status}
+                      {item.status === "pending" ? "신청 대기중" :
+                       item.status === "approved" ? "참여 중" :
+                       item.status}
                     </span>
                   </Box>
 
@@ -414,20 +420,32 @@ export default function MyActivities({
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => onCancelParticipation && onCancelParticipation(item.id)}
+                        onClick={() => {
+                          console.log("🎯 [MyActivities UI] 취소 클릭:", {
+                            postId: item.id,
+                            status: item.status,
+                            requestId: item.requestId,
+                            title: item.title
+                          });
+                          if (onCancelParticipation) {
+                            onCancelParticipation(item.id);
+                          }
+                        }}
                         sx={{
                           fontSize: "0.7rem",
                           py: 0.5,
                           px: 1.5,
-                          borderColor: "#f44336",
-                          color: "#f44336",
+                          borderColor: item.status === "pending" ? "#ff9800" : "#f44336",
+                          color: item.status === "pending" ? "#ff9800" : "#f44336",
                           "&:hover": {
-                            borderColor: "#d32f2f",
-                            bgcolor: "rgba(244, 67, 54, 0.04)",
+                            borderColor: item.status === "pending" ? "#f57c00" : "#d32f2f",
+                            bgcolor: item.status === "pending"
+                              ? "rgba(255, 152, 0, 0.04)"
+                              : "rgba(244, 67, 54, 0.04)",
                           },
                         }}
                       >
-                        참여 취소
+                        {item.status === "pending" ? "신청 취소" : "참여 취소"}
                       </Button>
                     </Box>
                   )}

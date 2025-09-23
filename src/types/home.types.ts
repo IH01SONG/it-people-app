@@ -63,6 +63,7 @@ export interface Activity {
   role: string; // 내 역할 (주최자, 참여자)
   createdAt: string; // 모임 생성 일시
   authorId?: string; // 작성자 ID (차단 기능을 위해 추가)
+  requestId?: string; // 참여 요청 ID (참여자인 경우)
 }
 
 /**
