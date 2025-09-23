@@ -44,17 +44,32 @@ const ForgotPasswordRequest: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // TODO: 백엔드 연동
+      // 백엔드 연동 시도
       await api.requestPasswordReset(email);
       setIsCodeSent(true);
       startCooldown();
       alert('인증 코드가 전송되었습니다.');
     } catch (error: any) {
       console.error('비밀번호 재설정 요청 실패:', error);
-      // 이메일 존재 여부 노출 금지
-      alert('인증 코드가 전송되었습니다.');
-      setIsCodeSent(true);
-      startCooldown();
+      
+      // 백엔드가 준비되지 않은 경우 모의 기능
+      if (error.response?.status === 404 || error.code === 'ERR_BAD_REQUEST') {
+        console.log('🔄 백엔드 API가 준비되지 않음. 모의 기능으로 진행...');
+        // 개발용: 로컬 스토리지에 이메일과 코드 저장
+        const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
+        localStorage.setItem('mock_reset_code', mockCode);
+        localStorage.setItem('mock_reset_email', email);
+        localStorage.setItem('mock_reset_time', Date.now().toString());
+        
+        alert(`개발 모드: 인증 코드는 ${mockCode} 입니다.`);
+        setIsCodeSent(true);
+        startCooldown();
+      } else {
+        // 이메일 존재 여부 노출 금지
+        alert('인증 코드가 전송되었습니다.');
+        setIsCodeSent(true);
+        startCooldown();
+      }
     } finally {
       setIsLoading(false);
     }

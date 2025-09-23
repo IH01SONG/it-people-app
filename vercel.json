@@ -9,7 +9,7 @@
         "destination": "https://it-people-server-140857839854.asia-northeast3.run.app/socket.io/:path*"
       },
       {
-        "source": "/auth/callback",
+        "source": "/auth/callback/google",
         "destination": "/index.html"
       },
       {
