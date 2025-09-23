@@ -17,7 +17,7 @@
         "destination": "/index.html"
       },
       {
-        "source": "/((?!api|socket\\.io|auth/callback).*)",
+        "source": "/(.*)",
         "destination": "/index.html"
       }
     ]
