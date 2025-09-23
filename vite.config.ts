@@ -7,16 +7,26 @@ const TARGET = "https://it-people-server-140857839854.asia-northeast3.run.app";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+<<<<<<< HEAD
+    port: 3000,
+    host: true, // 외부 접근 허용
+=======
     port: 5173,
     host: true,
+>>>>>>> feature/mypage
     proxy: {
       "/api": {
         target: TARGET,
         changeOrigin: true,
         secure: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api'), // 경로 유지
         configure: (proxy: any) => {
           proxy.on("proxyReq", (proxyReq: any, req: any) => {
+<<<<<<< HEAD
+            // CORS 헤더 설정
+=======
             // 🔧 서버의 Origin/CSRF 자체체크 우회: Origin/Referer를 타깃으로 통일
+>>>>>>> feature/mypage
             proxyReq.setHeader("origin", TARGET);
             proxyReq.setHeader("referer", TARGET + "/");
             proxyReq.setHeader("host", new URL(TARGET).host);
@@ -30,12 +40,20 @@ export default defineConfig({
           });
           
           proxy.on("proxyRes", (proxyRes: any, req: any) => {
+<<<<<<< HEAD
+            // CORS 헤더 추가
+            proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+            proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+            proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With';
+            proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+=======
             // 🔥 CORS 헤더 추가 - 이것이 핵심!
             proxyRes.headers['Access-Control-Allow-Origin'] = '*';
             proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
             proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin';
             proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
             proxyRes.headers['Access-Control-Max-Age'] = '86400';
+>>>>>>> feature/mypage
             
             console.log("✅ Proxy Response ←", proxyRes.statusCode, req.method, req.url);
           });
