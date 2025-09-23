@@ -18,8 +18,10 @@ export default function GoogleCallback() {
         console.log('🔄 구글 OAuth 콜백 처리 시작');
         console.log('📍 현재 URL:', window.location.href);
         console.log('📍 현재 경로:', window.location.pathname);
+        console.log('📍 현재 도메인:', window.location.hostname);
         console.log('🔍 URL 파라미터:', Object.fromEntries(searchParams.entries()));
         console.log('🔍 토큰 존재 여부:', !!searchParams.get('token'));
+        console.log('🔍 환경변수 VITE_API_URL:', import.meta.env.VITE_API_URL);
         
         // URL 파라미터에서 토큰과 에러 확인
         const token = searchParams.get('token');
