@@ -83,7 +83,7 @@ export default function NotificationToast() {
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   {notification.actions.map((action, actionIndex) => (
                     <Button
-                      key={actionIndex}
+                      key={`action-${notification.id}-${actionIndex}`}
                       size="small"
                       variant="outlined"
                       color="inherit"

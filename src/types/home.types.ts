@@ -1,3 +1,6 @@
+// 카테고리 타입 import
+import type { Category } from '../utils/category';
+
 /**
  * 모임 게시글 데이터 타입 (백엔드 Post 모델과 일치)
  */
@@ -13,7 +16,7 @@ export interface Post {
     address?: string; // 주소 (표시용)
   }; // 위치 정보 (GeoJSON Point)
   venue?: string; // 구체적인 만날 장소
-  category: string; // 모임 카테고리
+  category: Category | string; // 모임 카테고리 (populate 또는 ID 문자열)
   tags: string[]; // 태그 배열
   image?: string | string[]; // 게시글 이미지 URL 또는 URL 배열
   participants: string[]; // 참여자 ID 배열
@@ -56,7 +59,7 @@ export interface Activity {
   time: string; // 모임 시간
   members: number; // 현재 참여자 수
   maxMembers: number; // 최대 참여자 수
-  category: string; // 모임 카테고리
+  category: Category | string; // 모임 카테고리 (populate 또는 ID 문자열)
   role: string; // 내 역할 (주최자, 참여자)
   createdAt: string; // 모임 생성 일시
   authorId?: string; // 작성자 ID (차단 기능을 위해 추가)

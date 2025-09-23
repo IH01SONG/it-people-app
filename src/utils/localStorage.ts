@@ -126,6 +126,10 @@ export const joinRequestStorage = {
   getAllRequestIds: () => getStorageJSON<Record<string, string>>(STORAGE_KEYS.REQUEST_IDS, {}),
   getAppliedPosts: () => getStorageJSON<string[]>(STORAGE_KEYS.APPLIED_POSTS, []),
   getCancelledPosts: () => getStorageJSON<string[]>(STORAGE_KEYS.CANCELLED_POSTS, []),
+
+  // useMyActivities.ts 호환성을 위한 별칭 메서드들
+  setRequestId: (postId: string, requestId: string) => setRequestId(postId, requestId),
+  clearRequestId: (postId: string) => removeRequestId(postId),
 };
 
 /**

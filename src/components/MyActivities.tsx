@@ -28,6 +28,10 @@ import {
 // 타입 정의
 import type { Activity } from "../types/home.types";
 
+// 카테고리 유틸
+import { displayCategoryName } from "../utils/category";
+import { CATEGORY_ID_TO_NAME, CATEGORY_ICON_BY_NAME } from "../constants/categories";
+
 /**
  * MyActivities 컴포넌트 Props 정의
  */
@@ -57,9 +61,24 @@ export default function MyActivities({
   const [expanded, setExpanded] = useState(true); // 확장/축소 상태
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
-  const [joinRequests, setJoinRequests] = useState<{[activityId: string]: any[]}>({});
+  const [joinRequests, setJoinRequests] = useState<{[activityId: string]: unknown[]}>({});
   const [loadingRequests, setLoadingRequests] = useState<{[activityId: string]: boolean}>({});
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // 현재 사용자 ID
 
+  // 현재 사용자 정보 로드
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const currentUser = await api.users.getMe();
+        const userId = currentUser?._id || currentUser?.id;
+        setCurrentUserId(userId);
+        console.log('👤 [MyActivities] 현재 사용자 ID 로드:', userId);
+      } catch (error) {
+        console.error('❌ [MyActivities] 현재 사용자 정보 로드 실패:', error);
+      }
+    };
+    loadCurrentUser();
+  }, []);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, activityId: string) => {
     event.stopPropagation();
@@ -86,65 +105,86 @@ export default function MyActivities({
     handleMenuClose();
   };
 
-  // 특정 활동의 참여 요청 목록 로드 (getReceived API 사용)
-  const loadJoinRequests = useCallback(async (activityId: string) => {
-    setLoadingRequests(prev => ({ ...prev, [activityId]: true }));
+  // 모든 참여 요청을 한 번에 로드하고 활동별로 그룹핑 (다중 호출 최적화)
+  const loadAllJoinRequests = useCallback(async () => {
+    if (!currentUserId || !expanded || activities.length === 0) return;
+
+    // 주최자인 활동들 찾기
+    const hostActivities = activities.filter(activity =>
+      activity.role === "주최자" &&
+      activity.status !== "모집 완료" &&
+      activity.authorId === currentUserId
+    );
+
+    if (hostActivities.length === 0) return;
+
+    // 모든 주최자 활동에 대해 로딩 상태 설정
+    const loadingState: {[activityId: string]: boolean} = {};
+    hostActivities.forEach(activity => {
+      loadingState[activity.id] = true;
+    });
+    setLoadingRequests(prev => ({ ...prev, ...loadingState }));
+
     try {
-      console.log('🔍 [MyActivities] 받은 참여 요청 목록 조회 중... activityId:', activityId);
+      console.log('🔍 [MyActivities] 모든 받은 참여 요청 한 번에 조회 중...');
 
-      // 현재 사용자 정보 확보
-      const currentUser = await api.getMe();
-      const currentUserId = currentUser?._id || currentUser?.id;
-
-      if (!currentUserId) {
-        throw new Error('사용자 정보를 찾을 수 없습니다.');
-      }
-
-      // 내가 받은 참여 요청 중에서 해당 포스트에 대한 것만 필터링
+      // 한 번의 API 호출로 모든 받은 요청 가져오기
       const receivedRequests = await api.joinRequests.getReceived({ status: 'pending', limit: 50 });
       const requests = receivedRequests?.data?.requests || receivedRequests?.requests || [];
 
       console.log('📋 [MyActivities] 받은 요청 전체 개수:', requests.length);
 
-      // 해당 activityId(포스트ID)에 대한 요청들만 필터링
-      const filteredRequests = Array.isArray(requests) ? requests.filter((req: any) => {
-        const postMatch = req.post?._id === activityId || req.post === activityId || req.postId === activityId;
-        const statusMatch = req.status === 'pending';
-        return postMatch && statusMatch;
-      }) : [];
+      // 메모리상에서 활동별로 그룹핑
+      const groupedRequests: {[activityId: string]: any[]} = {};
 
-      console.log(`✅ [MyActivities] 활동 ${activityId}에 대한 pending 요청 ${filteredRequests.length}개 발견`);
-
-      setJoinRequests(prev => ({
-        ...prev,
-        [activityId]: filteredRequests
-      }));
-    } catch (error) {
-      // 에러 처리 (요청이 없으면 빈 배열)
-      console.error(`❌ [MyActivities] 활동 ${activityId}의 참여 요청 로드 실패:`, error);
-      setJoinRequests(prev => ({ ...prev, [activityId]: [] }));
-    } finally {
-      setLoadingRequests(prev => ({ ...prev, [activityId]: false }));
-    }
-  }, []);
-
-  // 컴포넌트가 확장될 때 주최자인 활동들의 참여 요청 로드
-  useEffect(() => {
-    if (expanded && activities.length > 0) {
-      activities.forEach(activity => {
-        if (activity.role === "주최자" && activity.status !== "모집 완료") {
-          loadJoinRequests(activity.id);
-        }
+      hostActivities.forEach(activity => {
+        groupedRequests[activity.id] = [];
       });
+
+      if (Array.isArray(requests)) {
+        requests.forEach((req: any) => {
+          const postId = req.post?._id || req.post || req.postId;
+          if (postId && Object.prototype.hasOwnProperty.call(groupedRequests, postId) && req.status === 'pending') {
+            groupedRequests[postId].push(req);
+          }
+        });
+      }
+
+      // 각 활동별 요청 개수 로그
+      Object.entries(groupedRequests).forEach(([activityId, reqs]) => {
+        console.log(`✅ [MyActivities] 활동 ${activityId}에 대한 pending 요청 ${reqs.length}개 발견`);
+      });
+
+      setJoinRequests(prev => ({ ...prev, ...groupedRequests }));
+    } catch (error) {
+      console.error('❌ [MyActivities] 모든 참여 요청 로드 실패:', error);
+      // 에러 시 모든 활동에 빈 배열 설정
+      const emptyRequests: {[activityId: string]: any[]} = {};
+      hostActivities.forEach(activity => {
+        emptyRequests[activity.id] = [];
+      });
+      setJoinRequests(prev => ({ ...prev, ...emptyRequests }));
+    } finally {
+      // 모든 주최자 활동에 대해 로딩 상태 해제
+      const loadingState: {[activityId: string]: boolean} = {};
+      hostActivities.forEach(activity => {
+        loadingState[activity.id] = false;
+      });
+      setLoadingRequests(prev => ({ ...prev, ...loadingState }));
     }
-  }, [expanded, activities, loadJoinRequests]);
+  }, [currentUserId, expanded, activities]);
+
+  // 컴포넌트가 확장되고 사용자 정보가 로드되면 모든 참여 요청 로드
+  useEffect(() => {
+    loadAllJoinRequests();
+  }, [loadAllJoinRequests]);
 
   // 신청 수락 핸들러
   const handleAcceptRequest = async (activityId: string, requestId: string) => {
     if (onAcceptRequest) {
       await onAcceptRequest(activityId, requestId);
-      // 요청 목록 새로고침
-      loadJoinRequests(activityId);
+      // 모든 요청 목록 새로고침 (최적화된 방식)
+      loadAllJoinRequests();
     }
   };
 
@@ -152,8 +192,8 @@ export default function MyActivities({
   const handleRejectRequest = async (activityId: string, requestId: string) => {
     if (onRejectRequest) {
       await onRejectRequest(activityId, requestId);
-      // 요청 목록 새로고침
-      loadJoinRequests(activityId);
+      // 모든 요청 목록 새로고침 (최적화된 방식)
+      loadAllJoinRequests();
     }
   };
 
@@ -233,7 +273,9 @@ export default function MyActivities({
                     mb={0.5}
                   >
                     <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{item.category}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        {CATEGORY_ICON_BY_NAME[displayCategoryName(item.category, CATEGORY_ID_TO_NAME)] || "📍"} {displayCategoryName(item.category, CATEGORY_ID_TO_NAME)}
+                      </span>
                       <Typography
                         variant="body2"
                         fontWeight={600}
@@ -310,12 +352,15 @@ export default function MyActivities({
                       )}
                   </Box>
 
-                  {item.role === "주최자" && item.status !== "모집 완료" && (
+                  {item.role === "주최자" &&
+                   item.status !== "모집 완료" &&
+                   currentUserId &&
+                   item.authorId === currentUserId && (
                     <Box display="flex" gap={1} flexWrap="wrap">
-                      {/* 참여 요청이 있는 경우 개별 수락/거절 버튼 */}
+                      {/* 참여 요청이 있는 경우 개별 수락/거절 버튼 (권한 가드 적용) */}
                       {joinRequests[item.id] && joinRequests[item.id].length > 0 ? (
-                        joinRequests[item.id].map((request: any) => (
-                          <Box key={request.id || request._id} display="flex" gap={0.5} mb={1} alignItems="center">
+                        joinRequests[item.id].map((request: any, index: number) => (
+                          <Box key={request.id || request._id || `request-${index}`} display="flex" gap={0.5} mb={1} alignItems="center">
                             <Typography variant="caption" color="text.secondary" sx={{ minWidth: '80px' }}>
                               {request.user?.nickname || request.user?.name || request.user?.email || '사용자'}:
                             </Typography>

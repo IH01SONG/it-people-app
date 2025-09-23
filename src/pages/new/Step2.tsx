@@ -15,6 +15,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import MapPicker from "../../components/MapPicker";
@@ -24,127 +25,138 @@ interface FormData {
   title: string;
   content: string;
   venue: string;
-  location: string;
-  category: string;
+  location: string; // 주소 문자열
+  categoryId: string; // 서버로 보낼 카테고리 ID
   maxParticipants: number;
-  meetingDate: string;
+  meetingDate: string; // 'YYYY-MM-DDTHH:mm'
   tags: string[];
-  image?: string;
 }
+
+type Coords = { lat: number; lng: number };
 
 export default function Step2() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null); // 현재 사용하지 않지만 유지(추후 확장 용)
+
+  // Step1에서 넘어온 값: { categoryId, categoryName } 를 기대
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   const [formData, setFormData] = useState<FormData>({
     title: "",
     content: "",
     venue: "",
     location: "",
-    category: "",
+    categoryId: "", // 서버 전송용 카테고리 ID
     maxParticipants: 4,
     meetingDate: "",
     tags: [],
-    image: undefined,
   });
 
-  // 이미지 상태 제거 - 카테고리별 기본 이미지만 사용
+  // 태그/위치/검색 관련 상태
   const [newTag, setNewTag] = useState("");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
-    null
-  );
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [currentLocationCoords, setCurrentLocationCoords] =
+    useState<Coords | null>(null);
   const [locationInput, setLocationInput] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [isMapUpdating, setIsMapUpdating] = useState(false);
-  const [currentLocationCoords, setCurrentLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  // 향후 위치 선택 기능 확장 시 사용
+  // 인원 빠른 선택
   const participantQuickOptions = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30];
 
-  // 현재 위치를 가져오는 함수
-  const getCurrentLocationCoords = useCallback(() => {
-    return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+  /** 현재 위치 좌표 가져오기 */
+  const getCurrentLocationCoords = useCallback((): Promise<Coords> => {
+    return new Promise((resolve) => {
       if (!navigator.geolocation) {
-        reject(new Error('위치 서비스를 지원하지 않습니다'));
+        const fallback = { lat: 37.5665, lng: 126.978 }; // 서울시청
+        setCurrentLocationCoords(fallback);
+        resolve(fallback);
         return;
       }
-
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          setCurrentLocationCoords(coords);
-          resolve(coords);
+        (pos) => {
+          const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setCurrentLocationCoords(c);
+          resolve(c);
         },
-        (error) => {
-          console.error('위치 가져오기 실패:', error);
-          // 기본 위치 (서울시청)
-          const defaultCoords = { lat: 37.5665, lng: 126.978 };
-          setCurrentLocationCoords(defaultCoords);
-          resolve(defaultCoords);
+        () => {
+          const fallback = { lat: 37.5665, lng: 126.978 };
+          setCurrentLocationCoords(fallback);
+          resolve(fallback);
         }
       );
     });
   }, []);
 
-  // 좌표를 주소로 변환하는 함수
-  const coordsToAddress = useCallback((lat: number, lng: number): Promise<string> => {
-    return new Promise((resolve) => {
-      if (!window.kakao?.maps?.services) {
-        resolve(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`);
-        return;
-      }
-
-      const geocoder = new window.kakao.maps.services.Geocoder();
-      geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
-        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
-          const roadAddress = result[0].road_address;
-          const address = roadAddress ? roadAddress.address_name : result[0].address.address_name;
-          resolve(address);
-        } else {
+  /** 좌표 → 주소 변환 */
+  const coordsToAddress = useCallback(
+    (lat: number, lng: number): Promise<string> => {
+      return new Promise((resolve) => {
+        if (!window.kakao?.maps?.services) {
           resolve(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`);
+          return;
         }
+        const geocoder = new window.kakao.maps.services.Geocoder();
+        geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
+          if (
+            status === window.kakao.maps.services.Status.OK &&
+            result.length > 0
+          ) {
+            const roadAddress = result[0].road_address;
+            const address = roadAddress
+              ? roadAddress.address_name
+              : result[0].address.address_name;
+            resolve(address);
+          } else {
+            resolve(`위도: ${lat.toFixed(6)}, 경도: ${lng.toFixed(6)}`);
+          }
+        });
       });
-    });
-  }, []);
-
-  // 컴포넌트 마운트 시 현재 위치 가져오기
-  useEffect(() => {
-    getCurrentLocationCoords();
-  }, [getCurrentLocationCoords]);
-
-  useEffect(() => {
-    if (location.state?.category) {
-      setSelectedCategory(location.state.category);
-      setFormData((prev) => ({
-        ...prev,
-        category: location.state.category,
-      }));
-    }
-  }, [location.state]);
-
-  // MapPicker에서 위치가 변경될 때 호출되는 함수
-  const handleLocationChange = useCallback(
-    (location: string, coordinates: { lat: number; lng: number }) => {
-      setIsMapUpdating(true);
-      setLocationInput(location);
-      setFormData((prev) => ({ ...prev, location }));
-      setCoords(coordinates);
-      // 지도에서 업데이트된 것이므로 검색 키워드는 업데이트하지 않음
-      setTimeout(() => setIsMapUpdating(false), 100);
     },
     []
   );
 
-  // 위치 입력 필드가 변경될 때 검색 키워드 업데이트 (디바운싱 적용)
-  useEffect(() => {
-    // 지도에서 업데이트 중이면 검색하지 않음
-    if (isMapUpdating) return;
+  /** 표시용 위치 문자열 */
+  const getDisplayLocation = () =>
+    locationInput?.trim() || formData.location?.trim() || "위치를 선택해주세요";
 
+  /** MapPicker 콜백 */
+  const handleLocationChange = useCallback((locText: string, c: Coords) => {
+    setIsMapUpdating(true);
+    setLocationInput(locText);
+    setFormData((prev) => ({ ...prev, location: locText }));
+    setCoords(c);
+    setTimeout(() => setIsMapUpdating(false), 100);
+  }, []);
+
+  // 마운트 시 현재 위치 시도
+  useEffect(() => {
+    getCurrentLocationCoords();
+  }, [getCurrentLocationCoords]);
+
+  // Step1에서 넘어온 카테고리 반영 (ID를 서버에 보냄)
+  useEffect(() => {
+    const state = (location.state || {}) as {
+      categoryId?: string;
+      categoryName?: string;
+    };
+    if (state.categoryId && state.categoryName) {
+      setSelectedCategoryId(state.categoryId);
+      setSelectedCategoryName(state.categoryName);
+      setFormData((prev) => ({ ...prev, categoryId: state.categoryId || "" }));
+    } else {
+      // 폴백: 기타
+      setSelectedCategoryId("fallback");
+      setSelectedCategoryName("기타");
+      setFormData((prev) => ({ ...prev, category: "fallback" }));
+    }
+  }, [location.state]);
+
+  // 위치 입력 → 검색 키워드(디바운스)
+  useEffect(() => {
+    if (isMapUpdating) return;
     if (
       !locationInput.trim() ||
       locationInput.includes("위도:") ||
@@ -152,151 +164,124 @@ export default function Step2() {
     ) {
       return;
     }
-
-    const timer = setTimeout(() => {
-      setSearchKeyword(locationInput);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setSearchKeyword(locationInput), 1000);
+    return () => clearTimeout(t);
   }, [locationInput, isMapUpdating]);
 
+  /** 기본이미지(카테고리 기반) */
+  const getDefaultImages = (): string[] => {
+    const url = getDefaultImageByCategory(selectedCategoryName || "기타");
+    return url ? [url] : [];
+  };
+
+  /** 태그 추가/삭제 */
+  const handleAddTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData((prev) => ({ ...prev, tags: [...prev.tags, newTag.trim()] }));
+      setNewTag("");
+    }
+  };
+  const handleRemoveTag = (tagToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((t) => t !== tagToRemove),
+    }));
+  };
+
+  const isFormValid = formData.title.trim().length > 0;
+
+  /** 제출 */
   const handleSubmit = async () => {
     if (!formData.title.trim()) {
-      alert("제목을 입력해주세요.");
+      alert("제목을 입력해 주세요.");
       return;
     }
-
     if (!formData.content.trim()) {
-      alert("내용을 입력해주세요.");
+      alert("소개글을 입력해 주세요.");
       return;
     }
-
     if (formData.content.trim().length < 5) {
-      alert("내용은 최소 5자 이상 입력해주세요.");
+      alert("소개글은 최소 5자 이상 입력해 주세요.");
       return;
     }
 
     try {
-      // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
-      const finalImages = images;
-
-      // 위치 정보 설정 (필수) - 위치가 입력되지 않으면 현재 위치 사용
-      let finalCoords = coords;
+      // 좌표/주소 보완
+      let finalCoords = coords ?? currentLocationCoords;
       let displayLocation = locationInput?.trim() || formData.location?.trim();
 
-      // 위치가 설정되지 않았으면 현재 위치 사용
-      if (!finalCoords || !displayLocation) {
-        if (!currentLocationCoords) {
-          // 현재 위치를 아직 가져오지 못했다면 다시 시도
-          try {
-            finalCoords = await getCurrentLocationCoords();
-          } catch (error) {
-            console.error('현재 위치 가져오기 실패:', error);
-            finalCoords = { lat: 37.5665, lng: 126.978 }; // 기본 위치
-          }
-        } else {
-          finalCoords = currentLocationCoords;
-        }
-
-        // 좌표를 주소로 변환
-        if (!displayLocation) {
-          displayLocation = await coordsToAddress(finalCoords.lat, finalCoords.lng);
+      if (!finalCoords) {
+        try {
+          finalCoords = await getCurrentLocationCoords();
+        } catch {
+          finalCoords = { lat: 37.5665, lng: 126.978 };
         }
       }
+      if (!displayLocation && finalCoords) {
+        displayLocation = await coordsToAddress(
+          finalCoords.lat,
+          finalCoords.lng
+        );
+      }
 
-      const locationData = {
-        type: "Point" as const,
-        coordinates: [finalCoords.lng, finalCoords.lat], // [경도, 위도] 순서
-        address: displayLocation, // 백엔드에서 address 필드 지원
-      };
+      const locationData = finalCoords
+        ? {
+            type: "Point" as const,
+            coordinates: [finalCoords.lng, finalCoords.lat], // [lng, lat]
+            address: displayLocation || "",
+          }
+        : undefined;
 
-      // 백엔드 API 스키마에 맞춘 게시글 데이터
+      const finalImageUrls = getDefaultImages();
+
       const postPayload = {
-        title: formData.title,
-        content: formData.content, // 필수 필드로 변경
+        title: formData.title.trim(),
+        content: formData.content.trim(),
         tags: formData.tags,
         maxParticipants: formData.maxParticipants,
-<<<<<<< HEAD
-        // 선택적 필드들
-        ...(locationData && { location: locationData }),
-        // ...(formData.category && { category: formData.category }),
-        ...(formData.venue && { venue: formData.venue }),
-=======
-        content: formData.content.trim(),
-        location: locationData, // 위치 정보는 항상 포함 (필수)
-        ...(formData.category && { category: formData.category }),
-        ...(formData.venue?.trim() && { venue: formData.venue.trim() }),
->>>>>>> feature/mypage
+        ...(locationData && { location: locationData }), // 백엔드가 필수라면 항상 포함으로 변경 가능
+        categoryId: selectedCategoryId || formData.categoryId, // 반드시 ID로 전송
+        ...(formData.venue.trim() && { venue: formData.venue.trim() }),
         ...(formData.meetingDate && {
-          meetingDate: new Date(formData.meetingDate).toISOString()
+          meetingDate: new Date(formData.meetingDate).toISOString(),
         }),
-        // 이미지 필드 - 백엔드 호환성을 위해 둘 다 전송
         ...(finalImageUrls.length > 0 && {
           imageUrls: finalImageUrls,
-          images: finalImageUrls // 백엔드 호환성을 위해 추가
+          images: finalImageUrls, // 백엔드 호환
         }),
       };
 
-      // 백엔드 API 호출
       const response = await api.posts.create(postPayload);
-      
       console.log("게시글 작성 성공:", response);
       alert("게시글이 성공적으로 작성되었습니다!");
       navigate("/", { state: { refreshPosts: true } });
     } catch (error: any) {
       console.error("게시글 생성 실패:", error);
-      console.error("🚨 오류 상세:", error?.response?.data);
-      console.error("🚨 오류 상태:", error?.response?.status);
-
-      let errorMessage = "게시글 생성에 실패했습니다.";
-      if (error?.response?.status === 400) {
-        const serverError = error?.response?.data?.message || error?.response?.data?.error;
-        errorMessage = serverError ? `입력 오류: ${serverError}` : "입력 정보를 확인해주세요.";
-        console.error("🔍 400 오류 상세:", serverError);
-      } else if (error?.response?.status === 401) {
-        errorMessage = "로그인이 필요합니다.";
-      } else if (error?.message) {
-        errorMessage = error.message;
+      const status = error?.response?.status;
+      const serverMsg =
+        error?.response?.data?.message || error?.response?.data?.error;
+      if (status === 400) {
+        alert(`입력 오류: ${serverMsg || "입력 정보를 확인해 주세요."}`);
+      } else if (status === 401) {
+        alert("로그인이 필요합니다.");
+      } else {
+        alert(
+          serverMsg ||
+            error?.message ||
+            "서버 오류가 발생했습니다. 다시 시도해 주세요."
+        );
       }
-
-      alert(errorMessage + " 다시 시도해주세요.");
     }
   };
 
-  // 이미지 업로드 함수 제거
-
-  // 이미지 업로드 기능 제거 - 카테고리별 기본 이미지만 사용
-
-  const handleAddTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData({
-        ...formData,
-        tags: [...formData.tags, newTag.trim()],
-      });
-      setNewTag("");
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setFormData({
-      ...formData,
-      tags: formData.tags.filter((tag) => tag !== tagToRemove),
-    });
-  };
-
-
-  const isFormValid = formData.title.trim().length > 0;
-
-  // Step1에서 전달받지 못한 경우 기본값 설정
+  // 초기 카테고리 폴백(안전망)
   useEffect(() => {
-    if (!selectedCategory && !location.state?.category) {
-      setSelectedCategory("기타");
-      setFormData((prev) => ({
-        ...prev,
-        category: "기타",
-      }));
+    if (!selectedCategoryName && !(location.state as any)?.categoryName) {
+      setSelectedCategoryName("기타");
+      setSelectedCategoryId("fallback");
+      setFormData((prev) => ({ ...prev, categoryId: "fallback" }));
     }
-  }, [selectedCategory, location.state]);
+  }, [selectedCategoryName, location.state]);
 
   return (
     <Box
@@ -308,9 +293,7 @@ export default function Step2() {
         width: "100%",
         maxWidth: "600px",
         margin: "0 auto",
-        "@media (min-width:600px)": {
-          maxWidth: "600px",
-        },
+        "@media (min-width:600px)": { maxWidth: "600px" },
       }}
     >
       {/* Header */}
@@ -329,12 +312,7 @@ export default function Step2() {
         </IconButton>
         <Typography
           variant="h6"
-          sx={{
-            flexGrow: 1,
-            textAlign: "center",
-            mr: 4,
-            fontWeight: 700,
-          }}
+          sx={{ flexGrow: 1, textAlign: "center", mr: 4, fontWeight: 700 }}
         >
           모임 상세 정보
         </Typography>
@@ -346,14 +324,10 @@ export default function Step2() {
           px: 3,
           py: 3,
           maxWidth: "600px !important",
-          "@media (min-width: 600px)": {
-            maxWidth: "600px !important",
-          },
+          "@media (min-width: 600px)": { maxWidth: "600px !important" },
         }}
       >
-        {/* 항상 모바일 폭처럼 보이도록 */}
-
-        {/* 프로그레스 */}
+        {/* 진행 표시 */}
         <Box mb={4}>
           <Stepper activeStep={1} sx={{ mb: 2 }}>
             <Step>
@@ -368,7 +342,7 @@ export default function Step2() {
           </Stepper>
         </Box>
 
-        {/* 선택된 카테고리 표시 */}
+        {/* 선택된 카테고리 */}
         <Card
           sx={{
             borderRadius: 3,
@@ -383,11 +357,11 @@ export default function Step2() {
             선택한 카테고리
           </Typography>
           <Typography variant="h6" color="white" fontWeight={700}>
-            {selectedCategory}
+            {selectedCategoryName}
           </Typography>
         </Card>
 
-        {/* 제목 입력 */}
+        {/* 제목 */}
         <Box mb={3}>
           <TextField
             fullWidth
@@ -395,9 +369,7 @@ export default function Step2() {
             value={formData.title}
             onChange={(e) => {
               const title = e.target.value;
-              if (title.length <= 20) {
-                setFormData({ ...formData, title });
-              }
+              if (title.length <= 20) setFormData((p) => ({ ...p, title }));
             }}
             variant="outlined"
             helperText={`${formData.title.length}/20자`}
@@ -405,9 +377,7 @@ export default function Step2() {
               "& .MuiOutlinedInput-root": {
                 borderRadius: 2,
                 fontSize: "1.1rem",
-                "&:hover": {
-                  borderColor: "#E762A9",
-                },
+                "&:hover": { borderColor: "#E762A9" },
                 "&.Mui-focused": {
                   borderColor: "#E762A9",
                   boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
@@ -417,114 +387,25 @@ export default function Step2() {
           />
         </Box>
 
-        {/* 이미지 업로드 */}
-        <Box mb={3}>
-          <Typography variant="subtitle2" fontWeight={600} mb={1} color="#333">
-            사진 첨부
-          </Typography>
-          <Box display="flex" gap={2}>
-            {images.map((img, idx) => (
-              <Box key={idx} sx={{ position: "relative" }}>
-                <Box
-                  component="img"
-                  src={img}
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    objectFit: "cover",
-                    borderRadius: 2,
-                    border: "1px solid #e0e0e0",
-                  }}
-                />
-                <IconButton
-                  onClick={() =>
-                    setImages((prev) => prev.filter((_, i) => i !== idx))
-                  }
-                  size="small"
-                  sx={{
-                    position: "absolute",
-                    top: -8,
-                    right: -8,
-                    bgcolor: "white",
-                    color: "#666",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                    "&:hover": { bgcolor: "#f5f5f5" },
-                  }}
-                >
-                  ×
-                </IconButton>
-              </Box>
-            ))}
-            {images.length < 3 && (
-              <Box
-                onClick={handleImageUpload}
-                sx={{
-                  width: 80,
-                  height: 80,
-                  border: "2px dashed #E762A9",
-                  borderRadius: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  bgcolor: "rgba(231, 98, 169, 0.02)",
-                  "&:hover": {
-                    bgcolor: "rgba(231, 98, 169, 0.05)",
-                    borderColor: "#D554A0",
-                  },
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <PhotoCameraIcon
-                  sx={{ fontSize: 24, color: "#E762A9", mb: 0.5 }}
-                />
-                <Typography
-                  variant="caption"
-                  color="#E762A9"
-                  textAlign="center"
-                >
-                  {images.length}/3
-                  <br />
-                  (선택)
-                </Typography>
-              </Box>
-            )}
-            {/* 모바일/데스크탑 파일 선택 인풋 (숨김) */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              capture="environment"
-              onChange={handleFilesChange}
-              style={{ display: "none" }}
-            />
-          </Box>
-        </Box>
-
-        {/* 소개글 입력 */}
+        {/* 소개글 */}
         <Box mb={3}>
           <TextField
             fullWidth
             multiline
             rows={4}
-            placeholder="소개글을 입력해 주세요 (최대 100글자, 선택사항)"
+            placeholder="소개글을 입력해 주세요 (최대 100글자)"
             value={formData.content}
             onChange={(e) => {
               const content = e.target.value;
-              if (content.length <= 100) {
-                setFormData({ ...formData, content });
-              }
+              if (content.length <= 100)
+                setFormData((p) => ({ ...p, content }));
             }}
             helperText={`${formData.content.length}/100자`}
             variant="outlined"
             sx={{
               "& .MuiOutlinedInput-root": {
                 borderRadius: 2,
-                "&:hover": {
-                  borderColor: "#E762A9",
-                },
+                "&:hover": { borderColor: "#E762A9" },
                 "&.Mui-focused": {
                   borderColor: "#E762A9",
                   boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
@@ -540,7 +421,7 @@ export default function Step2() {
             만날 위치 및 시간
           </Typography>
 
-          {/* 날짜/시간 표시 */}
+          {/* 위치/시간 표시 카드 */}
           <Box
             sx={{
               p: 2,
@@ -599,58 +480,23 @@ export default function Step2() {
             </Typography>
           </Box>
 
-          {/* 위치 입력 필드 */}
+          {/* 위치 입력(텍스트) */}
           <Box mb={2}>
             <TextField
               fullWidth
-              placeholder="위치를 입력해주세요"
+              placeholder="위치를 입력해주세요 (미입력 시 현재 위치로 설정됩니다)"
               value={locationInput}
               onChange={(e) => {
-                const newLocation = e.target.value;
-                setLocationInput(newLocation);
-                setFormData({
-                  ...formData,
-                  location: newLocation,
-                });
+                const v = e.target.value;
+                setLocationInput(v);
+                setFormData((p) => ({ ...p, location: v }));
               }}
               variant="outlined"
               size="small"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2,
-                  "&:hover": {
-                    borderColor: "#E762A9",
-                  },
-                  "&.Mui-focused": {
-                    borderColor: "#E762A9",
-                    boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
-                  },
-                },
-              }}
-            />
-          </Box>
-          {/* 위치 입력 필드 */}
-          <Box mb={2}>
-            <TextField
-              fullWidth
-              placeholder="위치를 입력해주세요 (미입력시 현재위치로 설정됩니다)"
-              value={locationInput}
-              onChange={(e) => {
-                const newLocation = e.target.value;
-                setLocationInput(newLocation);
-                setFormData({
-                  ...formData,
-                  location: newLocation,
-                });
-              }}
-              variant="outlined"
-              size="small"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                  "&:hover": {
-                    borderColor: "#E762A9",
-                  },
+                  "&:hover": { borderColor: "#E762A9" },
                   "&.Mui-focused": {
                     borderColor: "#E762A9",
                     boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
@@ -660,14 +506,7 @@ export default function Step2() {
             />
           </Box>
 
-          {/* 지도 영역 */}
-          <Box mb={3}>
-            <MapPicker
-              onLocationChange={handleLocationChange}
-              searchKeyword={searchKeyword}
-            />
-          </Box>
-          {/* 지도 영역 */}
+          {/* 지도 한 번만 렌더 */}
           <Box mb={3}>
             <MapPicker
               onLocationChange={handleLocationChange}
@@ -675,7 +514,7 @@ export default function Step2() {
             />
           </Box>
 
-          {/* 날짜/시간 설정 */}
+          {/* 날짜/시간 설정 (한 번만) */}
           <Box display="flex" gap={2} mb={2}>
             <TextField
               fullWidth
@@ -688,18 +527,14 @@ export default function Step2() {
                 const time = formData.meetingDate
                   ? formData.meetingDate.split("T")[1]
                   : "18:00";
-                setFormData({
-                  ...formData,
+                setFormData((p) => ({
+                  ...p,
                   meetingDate: date ? `${date}T${time}` : "",
-                });
+                }));
               }}
               variant="outlined"
               size="small"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             />
             <TextField
               fullWidth
@@ -713,73 +548,18 @@ export default function Step2() {
                 const date = formData.meetingDate
                   ? formData.meetingDate.split("T")[0]
                   : new Date().toISOString().split("T")[0];
-                setFormData({
-                  ...formData,
+                setFormData((p) => ({
+                  ...p,
                   meetingDate: `${date}T${e.target.value}`,
-                });
+                }));
               }}
               variant="outlined"
               size="small"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
-            />
-          {/* 날짜/시간 설정 */}
-          <Box display="flex" gap={2} mb={2}>
-            <TextField
-              fullWidth
-              type="date"
-              value={
-                formData.meetingDate ? formData.meetingDate.split("T")[0] : ""
-              }
-              onChange={(e) => {
-                const date = e.target.value;
-                const time = formData.meetingDate
-                  ? formData.meetingDate.split("T")[1]
-                  : "18:00";
-                setFormData({
-                  ...formData,
-                  meetingDate: date ? `${date}T${time}` : "",
-                });
-              }}
-              variant="outlined"
-              size="small"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
-            />
-            <TextField
-              fullWidth
-              type="time"
-              value={
-                formData.meetingDate
-                  ? formData.meetingDate.split("T")[1]
-                  : "18:00"
-              }
-              onChange={(e) => {
-                const date = formData.meetingDate
-                  ? formData.meetingDate.split("T")[0]
-                  : new Date().toISOString().split("T")[0];
-                setFormData({
-                  ...formData,
-                  meetingDate: `${date}T${e.target.value}`,
-                });
-              }}
-              variant="outlined"
-              size="small"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                },
-              }}
+              sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
             />
           </Box>
 
-          {/* 최대 모집 인원 - 직관적 컨트롤 */}
+          {/* 최대 모집 인원 */}
           <Box>
             <Typography variant="subtitle2" fontWeight={600} mb={1}>
               최대 모집 인원
@@ -788,23 +568,24 @@ export default function Step2() {
               <IconButton
                 aria-label="decrease"
                 onClick={() =>
-                  setFormData({
-                    ...formData,
-                    maxParticipants: Math.max(2, formData.maxParticipants - 1),
-                  })
+                  setFormData((p) => ({
+                    ...p,
+                    maxParticipants: Math.max(2, p.maxParticipants - 1),
+                  }))
                 }
                 size="small"
               >
                 <RemoveIcon />
               </IconButton>
+
               <TextField
                 value={formData.maxParticipants}
                 onChange={(e) => {
                   const v = Number(e.target.value.replace(/[^0-9]/g, "")) || 2;
-                  setFormData({
-                    ...formData,
+                  setFormData((p) => ({
+                    ...p,
                     maxParticipants: Math.min(30, Math.max(2, v)),
-                  });
+                  }));
                 }}
                 slotProps={{
                   input: {
@@ -814,13 +595,14 @@ export default function Step2() {
                 }}
                 size="small"
               />
+
               <IconButton
                 aria-label="increase"
                 onClick={() =>
-                  setFormData({
-                    ...formData,
-                    maxParticipants: Math.min(30, formData.maxParticipants + 1),
-                  })
+                  setFormData((p) => ({
+                    ...p,
+                    maxParticipants: Math.min(30, p.maxParticipants + 1),
+                  }))
                 }
                 size="small"
               >
@@ -831,68 +613,53 @@ export default function Step2() {
               </Typography>
             </Box>
 
-            {/* 빠른 선택 옵션 */}
             <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-              {participantQuickOptions.map((num) => (
-                <Chip
-                  key={num}
-                  label={`${num}`}
-                  size="small"
-                  onClick={() =>
-                    setFormData({ ...formData, maxParticipants: num })
-                  }
-                  sx={{
-                    cursor: "pointer",
-                    bgcolor:
-                      formData.maxParticipants === num ? "#E762A9" : "white",
-                    color: formData.maxParticipants === num ? "white" : "#666",
-                    border: `1px solid ${
-                      formData.maxParticipants === num ? "#E762A9" : "#e0e0e0"
-                    }`,
-                    "&:hover": {
-                      bgcolor:
-                        formData.maxParticipants === num
-                          ? "#D554A0"
-                          : "#f5f5f5",
-                    },
-                  }}
-                />
-              ))}
+              {participantQuickOptions.map((num) => {
+                const active = formData.maxParticipants === num;
+                return (
+                  <Chip
+                    key={num}
+                    label={`${num}`}
+                    size="small"
+                    onClick={() =>
+                      setFormData((p) => ({ ...p, maxParticipants: num }))
+                    }
+                    sx={{
+                      cursor: "pointer",
+                      bgcolor: active ? "#E762A9" : "white",
+                      color: active ? "white" : "#666",
+                      border: `1px solid ${active ? "#E762A9" : "#e0e0e0"}`,
+                      "&:hover": { bgcolor: active ? "#D554A0" : "#f5f5f5" },
+                    }}
+                  />
+                );
+              })}
             </Box>
           </Box>
         </Box>
 
-        {/* 해시태그 입력 */}
+        {/* 해시태그 */}
         <Box mb={3}>
           <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
             해시태그 입력
           </Typography>
 
-          {/* 해시태그 입력 필드 */}
           <TextField
             fullWidth
             placeholder="#태그입력"
             value={newTag}
-            onChange={(e) => {
-              // # 기호 자동 제거
-              const value = e.target.value.replace(/^#+/, "");
-              setNewTag(value);
-            }}
+            onChange={(e) => setNewTag(e.target.value.replace(/^#+/, ""))}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                if (newTag.trim()) {
-                  handleAddTag();
-                }
+                if (newTag.trim()) handleAddTag();
               }
             }}
             variant="outlined"
             sx={{
               "& .MuiOutlinedInput-root": {
                 borderRadius: 2,
-                "&:hover": {
-                  borderColor: "#E762A9",
-                },
+                "&:hover": { borderColor: "#E762A9" },
                 "&.Mui-focused": {
                   borderColor: "#E762A9",
                   boxShadow: "0 0 0 2px rgba(231, 98, 169, 0.2)",
@@ -901,35 +668,27 @@ export default function Step2() {
             }}
           />
 
-          {/* 입력된 해시태그 표시 */}
           {formData.tags.length > 0 && (
-            <Box mt={2}>
-              <Box display="flex" flexWrap="wrap" gap={1}>
-                {formData.tags.map((tag, index) => (
-                  <Chip
-                    key={index}
-                    label={`#${tag}`}
-                    onDelete={() => handleRemoveTag(tag)}
-                    size="small"
-                    sx={{
-                      bgcolor: "#E762A9",
-                      color: "white",
-                      fontWeight: 600,
-                      "& .MuiChip-deleteIcon": {
-                        color: "rgba(255,255,255,0.8)",
-                        "&:hover": {
-                          color: "white",
-                        },
-                      },
-                      "&:hover": {
-                        bgcolor: "#D554A0",
-                        transform: "scale(1.05)",
-                      },
-                      transition: "all 0.2s ease",
-                    }}
-                  />
-                ))}
-              </Box>
+            <Box mt={2} display="flex" flexWrap="wrap" gap={1}>
+              {formData.tags.map((tag, i) => (
+                <Chip
+                  key={`${tag}-${i}`}
+                  label={`#${tag}`}
+                  onDelete={() => handleRemoveTag(tag)}
+                  size="small"
+                  sx={{
+                    bgcolor: "#E762A9",
+                    color: "white",
+                    fontWeight: 600,
+                    "& .MuiChip-deleteIcon": {
+                      color: "rgba(255,255,255,0.8)",
+                      "&:hover": { color: "white" },
+                    },
+                    "&:hover": { bgcolor: "#D554A0", transform: "scale(1.05)" },
+                    transition: "all 0.2s ease",
+                  }}
+                />
+              ))}
             </Box>
           )}
         </Box>
@@ -942,13 +701,8 @@ export default function Step2() {
           disabled={!isFormValid}
           sx={{
             bgcolor: "#E762A9",
-            "&:hover": {
-              bgcolor: "#D554A0",
-            },
-            "&:disabled": {
-              bgcolor: "#e0e0e0",
-              color: "#9e9e9e",
-            },
+            "&:hover": { bgcolor: "#D554A0" },
+            "&:disabled": { bgcolor: "#e0e0e0", color: "#9e9e9e" },
             borderRadius: 2,
             py: 1.5,
             fontSize: "1.1rem",

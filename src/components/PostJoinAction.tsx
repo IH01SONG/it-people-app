@@ -64,6 +64,28 @@ export function PostJoinAction({ postId, disabled = false, authorId, joinStatus 
         switch (errorMessage) {
           case '이미 참여 요청을 보냈습니다.':
             userMessage = '이미 참여 신청을 하셨습니다. 🤔';
+            // 중복 에러 시 상태 동기화
+            try {
+              console.log('🔄 [동기화] 기존 요청 상태 조회 중...');
+              const sentList = await api.joinRequests.getSent({ status: 'all' });
+              const existingRequest = sentList?.data?.requests?.find((req: any) =>
+                req?.post?._id === postId || req?.postId === postId
+              );
+              if (existingRequest) {
+                console.log('✅ [동기화] 기존 요청 발견:', existingRequest);
+                localStorage.setItem(`join_request_id:${postId}`, existingRequest._id);
+                // 상태에 따른 메시지 업데이트
+                if (existingRequest.status === 'pending') {
+                  userMessage = '이미 참여 신청 중입니다. 취소가 가능해요. 🔄';
+                } else if (existingRequest.status === 'approved') {
+                  userMessage = '이미 참여 승인되었습니다! 🎉';
+                } else if (existingRequest.status === 'rejected') {
+                  userMessage = '이전 신청이 거절되었습니다. 😔';
+                }
+              }
+            } catch (syncError) {
+              console.warn('⚠️ [동기화] 상태 조회 실패:', syncError);
+            }
             break;
           case '자신의 게시글에는 참여 요청할 수 없습니다.':
             userMessage = '본인이 작성한 모임에는 참여할 수 없어요. 😅';

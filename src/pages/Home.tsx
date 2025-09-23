@@ -270,9 +270,30 @@ export default function Home() {
       loadMyActivities();
 
       alert("참여 요청을 수락했습니다.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ 참여 요청 수락 실패:", error);
-      alert("참여 요청 수락에 실패했습니다. 다시 시도해주세요.");
+
+      const errorMessage = error?.response?.data?.message;
+      let userMessage = "참여 요청 수락에 실패했습니다.";
+
+      if (errorMessage) {
+        switch (errorMessage) {
+          case "참여 요청을 승인할 권한이 없습니다.":
+          case "게시글 작성자만 승인/거절할 수 있습니다":
+            userMessage = "본인이 작성한 모임의 요청만 승인할 수 있습니다. 🔒";
+            break;
+          case "이미 처리된 요청입니다.":
+            userMessage = "이미 처리된 요청입니다. 다른 요청을 확인해보세요. ⏰";
+            break;
+          case "만료된 요청입니다.":
+            userMessage = "만료된 요청입니다. 새로운 요청을 기다려보세요. 📅";
+            break;
+          default:
+            userMessage = errorMessage;
+        }
+      }
+
+      alert(userMessage);
     }
   };
 
@@ -298,9 +319,30 @@ export default function Home() {
       loadMyActivities();
 
       alert("참여 요청을 거절했습니다.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ 참여 요청 거절 실패:", error);
-      alert("참여 요청 거절에 실패했습니다. 다시 시도해주세요.");
+
+      const errorMessage = error?.response?.data?.message;
+      let userMessage = "참여 요청 거절에 실패했습니다.";
+
+      if (errorMessage) {
+        switch (errorMessage) {
+          case "참여 요청을 거절할 권한이 없습니다.":
+          case "게시글 작성자만 승인/거절할 수 있습니다":
+            userMessage = "본인이 작성한 모임의 요청만 거절할 수 있습니다. 🔒";
+            break;
+          case "이미 처리된 요청입니다.":
+            userMessage = "이미 처리된 요청입니다. 다른 요청을 확인해보세요. ⏰";
+            break;
+          case "만료된 요청입니다.":
+            userMessage = "만료된 요청입니다. 새로운 요청을 기다려보세요. 📅";
+            break;
+          default:
+            userMessage = errorMessage;
+        }
+      }
+
+      alert(userMessage);
     }
   };
 
