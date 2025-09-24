@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { setAuthToken } from '../lib/axios';
-import { createSocket } from '../lib/socket';
+import { socketService } from '../lib/socket';
 
-type User = { id: string; email: string; name?: string };
+type User = { id: string; email: string; name?: string; _id?: string };
 type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
@@ -14,34 +14,31 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-type Socket = ReturnType<typeof createSocket>;
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const socketRef = useRef<Socket | null>(null);
+  const socketInitialized = useRef(false);
 
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('access_token');
-      
+
       if (!token) {
         setIsLoading(false);
         return;
       }
 
-      // 토큰을 axios 헤더에 즉시 설정
       setAuthToken(token);
 
       try {
-        const me = await api.getMe();
+        const me = await api.users.getMe();
         setUser(me);
-        
-        // 소켓 연결
-        socketRef.current = createSocket(() => localStorage.getItem('access_token'));
-        socketRef.current.emit('joinRoom', { roomId: 'global' });
+
+        if (!socketInitialized.current) {
+          await initializeSocket(me);
+          socketInitialized.current = true;
+        }
       } catch (error) {
-        // 토큰이 유효하지 않은 경우
         console.error('Token validation failed:', error);
         localStorage.removeItem('access_token');
         setAuthToken(null);
@@ -54,21 +51,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
+  const initializeSocket = async (userData: User) => {
+    try {
+      await socketService.connect();
+      const userId = userData._id || userData.id;
+      if (userId) {
+        socketService.registerUser(userId);
+      }
+
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    } catch (error) {
+      console.error('Socket 연결 실패:', error);
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       const { token } = await api.login(email, password);
       localStorage.setItem('access_token', token);
-      
-      // 토큰을 axios 헤더에 즉시 설정
+
       setAuthToken(token);
-      
-      const me = await api.getMe();
+
+      const me = await api.users.getMe();
       setUser(me);
 
-      socketRef.current?.disconnect();
-      socketRef.current = createSocket(() => localStorage.getItem('access_token'));
-      socketRef.current.emit('joinRoom', { roomId: 'global' });
+      if (!socketInitialized.current) {
+        await initializeSocket(me);
+        socketInitialized.current = true;
+      }
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('access_token');
     setAuthToken(null);
     setUser(null);
-    socketRef.current?.disconnect();
+    socketService.disconnect();
+    socketInitialized.current = false;
   };
 
   return (

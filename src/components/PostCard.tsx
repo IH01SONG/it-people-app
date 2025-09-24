@@ -25,6 +25,7 @@ import PersonIcon from "@mui/icons-material/Person";
 
 // 타입 정의
 import type { Post } from "../types/home.types";
+import { getCategoryDisplay, getCategoryName } from "../utils/hardcodedCategories";
 import { useState } from "react";
 import { useBlockUser } from "../contexts/BlockUserContext";
 import { useAuth } from "../auth/AuthContext";
@@ -136,7 +137,7 @@ export default function PostCard({
           {(() => {
 
             // 카테고리별 기본 이미지 함수
-            const getDefaultImages = (category: string): string[] => {
+            const getDefaultImages = (categoryName: string): string[] => {
               const defaultImages: { [key: string]: string[] } = {
                 '자기계발': [
                   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=center',
@@ -189,7 +190,7 @@ export default function PostCard({
                   'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&h=300&fit=crop&crop=center'
                 ]
               };
-              return defaultImages[category] || defaultImages['default'];
+              return defaultImages[categoryName] || defaultImages['default'];
             };
 
             // 실제 이미지가 있으면 사용, 없으면 카테고리별 기본 이미지의 첫 번째만 사용
@@ -202,12 +203,7 @@ export default function PostCard({
               images = [post.image];
             } else {
               // 기본 이미지는 첫 번째 이미지만 사용 (스와이핑 없음)
-              let categoryName = '기타';
-              if (typeof post.category === 'object' && post.category !== null) {
-                categoryName = post.category.name || post.category._id || '기타';
-              } else if (typeof post.category === 'string') {
-                categoryName = post.category;
-              }
+              const categoryName = getCategoryName(post.category);
               const defaultImages = getDefaultImages(categoryName);
               images = [defaultImages[0]]; // 첫 번째 이미지만 사용
             }
@@ -359,15 +355,7 @@ export default function PostCard({
             <span
               className={`text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700`}
             >
-              {(() => {
-                if (typeof post.category === 'object' && post.category !== null) {
-                  return post.category.name || post.category._id || '기타';
-                } else if (typeof post.category === 'string') {
-                  return post.category;
-                } else {
-                  return '기타';
-                }
-              })()}
+              {getCategoryDisplay(post.category)}
             </span>
             {post.status === 'full' && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">
@@ -400,7 +388,7 @@ export default function PostCard({
           <Box display="flex" flexWrap="wrap" gap={0.5} mb={2}>
             {post.tags.map((tag, index) => (
               <span
-                key={index}
+                key={`tag-${tag}-${index}`}
                 className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600"
               >
                 #{tag}
@@ -435,6 +423,7 @@ export default function PostCard({
             <PostJoinAction
               postId={post.id}
               disabled={post.status === 'full'}
+              authorId={post.authorId}
             />
           )}
         </Box>

@@ -1,5 +1,6 @@
 // src/lib/api.ts
 import axios from './axios';
+import { extractCategoryId } from '../utils/category';
 
 // 인증 상태 확인 헬퍼 함수
 const checkAuth = () => {
@@ -125,18 +126,36 @@ export const api = {
     getNearby: (lat: number, lng: number, radius: number = 5000) => 
       axios.get(`/posts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`).then(r => r.data),
 
+    // 게시글 상세 조회
+    getById: (postId: string) =>
+      axios.get(`/posts/${postId}`).then(r => r.data),
+
     // 게시글 작성
-    create: (postData: any) => 
-      axios.post('/posts', postData).then(r => r.data),
+    create: (postData: any) => {
+      // categoryId 기반으로 변환
+      if (!postData.categoryId && postData.category) {
+        postData.categoryId = extractCategoryId(postData.category);
+        delete postData.category;
+      }
+      console.log('📝 게시글 생성 API 호출:', postData);
+      return axios.post('/posts', postData).then(r => r.data);
+    },
 
     // 게시글 수정
     update: (postId: string, postData: any) => {
       if (!checkAuth()) return Promise.reject(new Error('인증이 필요합니다.'));
+
+      // categoryId 기반으로 변환
+      if (!postData.categoryId && postData.category) {
+        postData.categoryId = extractCategoryId(postData.category);
+        delete postData.category;
+      }
+
       console.log('✏️ 게시글 수정 API 호출:');
       console.log('📝 게시글 ID:', postId);
       console.log('📦 수정 데이터:', postData);
       console.log('🔗 요청 URL:', `/posts/${postId}`);
-      
+
       return axios.put(`/posts/${postId}`, postData)
         .then(r => {
           console.log('✅ 게시글 수정 성공:', r.data);
@@ -155,9 +174,14 @@ export const api = {
       return axios.delete(`/posts/${postId}`).then(r => r.data);
     },
 
-    // 모임 참여 신청
+    // 모임 참여 요청 (승인/거절 시스템)
     join: (postId: string) =>
-      axios.post(`/posts/${postId}/join`).then(r => r.data),
+      axios.post(`/posts/${postId}/request`).then(r => r.data),
+
+    // 모임 탈퇴 (approved 상태 전용)
+    leave: (postId: string) =>
+      axios.post(`/posts/${postId}/leave`).then(r => r.data),
+
   },
 
   // 사용자 관련 API
@@ -255,14 +279,14 @@ export const api = {
       axios.get(`/join-requests/${requestId}`).then(r => r.data),
 
     // 승인
-    approve: (requestId: string) =>
-      axios.post(`/join-requests/${requestId}/approve`).then(r => r.data),
+    approve: (requestId: string, responseMessage: string = "환영합니다! 함께 즐겁게 활동해요.") =>
+      axios.post(`/join-requests/${requestId}/approve`, { responseMessage }).then(r => r.data),
 
     // 거절
-    reject: (requestId: string) =>
-      axios.post(`/join-requests/${requestId}/reject`).then(r => r.data),
+    reject: (requestId: string, responseMessage: string = "죄송합니다. 이번에는 함께할 수 없을 것 같아요.") =>
+      axios.post(`/join-requests/${requestId}/reject`, { responseMessage }).then(r => r.data),
 
-    // 취소 (요청자 본인의 취소)
+    // 취소 (요청자 본인의 취소) - pending 상태 전용
     cancel: (requestId: string) =>
       axios.delete(`/join-requests/${requestId}`).then(r => r.data),
 
@@ -339,5 +363,11 @@ export const api = {
       const body = messageId ? { messageId } : {};
       return axios.post(`/chat/rooms/${roomId}/read`, body).then(r => r.data);
     },
+  },
+
+  // 카테고리 관련 API
+  categories: {
+    // 카테고리 목록 조회
+    getAll: () => axios.get('/categories').then(r => r.data),
   },
 };

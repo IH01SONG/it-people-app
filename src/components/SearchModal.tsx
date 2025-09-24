@@ -228,7 +228,7 @@ export default function SearchModal({
                 <Box display="flex" flexWrap="wrap" gap={1}>
                   {recentSearches.map((search, index) => (
                     <Chip
-                      key={index}
+                      key={`search-${search}-${index}`}
                       label={search}
                       size="small"
                       onClick={() => handleTagClick(search)}
@@ -265,7 +265,7 @@ export default function SearchModal({
               <Box display="flex" flexWrap="wrap" gap={1}>
                 {trendingTags.map((tag, index) => (
                   <Chip
-                    key={index}
+                    key={`trending-${tag}-${index}`}
                     label={tag}
                     size="small"
                     onClick={() => handleTagClick(tag)}
