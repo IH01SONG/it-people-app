@@ -2,7 +2,6 @@ import { useJoinCancel } from '../hooks/useJoinCancel';
 import { useState } from 'react';
 import { Button } from '@mui/material';
 import { api } from '../lib/api';
-import { requestJoin } from '../lib/joinRequest.api'; // 가이드 3번
 import logoSvg from '../assets/logo.png';
 
 export function PostJoinAction({ postId, disabled = false, authorId, joinStatus }: {
@@ -276,73 +275,6 @@ export function PostJoinAction({ postId, disabled = false, authorId, joinStatus 
         </div>
       )}
 
-      {/* 가이드 7번: 임시 DEBUG 버튼들 */}
-      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
-        <button
-          onClick={async () => {
-            try {
-              console.log('[DEBUG] forcing requestJoin with {}', postId);
-              const created = await requestJoin(postId);
-              console.log('[DEBUG] direct requestJoin {} =>', created);
-            } catch (e) {
-              console.error('[DEBUG] create error {}', e);
-            }
-          }}
-          style={{ fontSize: '9px', padding: '2px 4px', background: '#ff0000', color: 'white' }}
-        >
-          DEBUG: {}
-        </button>
-        <button
-          onClick={async () => {
-            try {
-              console.log('[DEBUG] forcing requestJoin with message', postId);
-              const created = await requestJoin(postId, { message: "테스트 신청" });
-              console.log('[DEBUG] direct requestJoin message =>', created);
-            } catch (e) {
-              console.error('[DEBUG] create error message', e);
-            }
-          }}
-          style={{ fontSize: '9px', padding: '2px 4px', background: '#0000ff', color: 'white' }}
-        >
-          DEBUG: message
-        </button>
-        <button
-          onClick={async () => {
-            // 체크리스트 부록: 서버 독립 검증
-            const token = localStorage.getItem('access_token');
-            const baseURL = import.meta.env.VITE_API_URL || '/api';
-            console.log('[FETCH TEST] 브라우저 fetch로 직접 테스트');
-            console.log('[FETCH TEST] Token:', token?.substring(0, 20) + '...');
-            console.log('[FETCH TEST] Base URL:', baseURL);
-
-            try {
-              const response = await fetch(`${baseURL}/posts/${postId}/request`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message: '브라우저 fetch 테스트' })
-              });
-
-              const result = await response.json();
-              console.log('[FETCH TEST] Response status:', response.status);
-              console.log('[FETCH TEST] Response data:', result);
-
-              if (response.ok) {
-                console.log('✅ [FETCH TEST] 서버 정상, 프론트 확인 필요');
-              } else {
-                console.log('❌ [FETCH TEST] 서버 에러:', result);
-              }
-            } catch (error) {
-              console.error('[FETCH TEST] Fetch 에러:', error);
-            }
-          }}
-          style={{ fontSize: '8px', padding: '2px 4px', background: '#00ff00', color: 'black' }}
-        >
-          FETCH TEST
-        </button>
-      </div>
     </div>
   );
 }
