@@ -178,9 +178,10 @@ export const api = {
     join: (postId: string) =>
       axios.post(`/posts/${postId}/request`).then(r => r.data),
 
-    // 모임 참여 취소 (승인된 참가자인 경우)
+    // 모임 탈퇴 (approved 상태 전용)
     leave: (postId: string) =>
       axios.post(`/posts/${postId}/leave`).then(r => r.data),
+
   },
 
   // 사용자 관련 API
@@ -285,7 +286,7 @@ export const api = {
     reject: (requestId: string, responseMessage: string = "죄송합니다. 이번에는 함께할 수 없을 것 같아요.") =>
       axios.post(`/join-requests/${requestId}/reject`, { responseMessage }).then(r => r.data),
 
-    // 취소 (요청자 본인의 취소)
+    // 취소 (요청자 본인의 취소) - pending 상태 전용
     cancel: (requestId: string) =>
       axios.delete(`/join-requests/${requestId}`).then(r => r.data),
 

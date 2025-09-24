@@ -49,12 +49,12 @@ export function useJoinCancel(postId: string) {
     }
   }, [postId]);
 
-  /** 신청 취소: 저장된 requestId만 사용 */
+  /** 신청 취소: pending 상태 전용 DELETE API */
   const cancel = useCallback(async () => {
     if (!requestId) throw new Error('NO_REQUEST_ID');
     setLoading(true);
     try {
-      await api.joinRequests.cancel(requestId);
+      await api.joinRequests.cancel(requestId); // 순수 DELETE 요청
       // 성공 시 정리
       localStorage.removeItem(KEY(postId));
       setRequestId(null);

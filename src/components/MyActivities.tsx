@@ -416,7 +416,7 @@ export default function MyActivities({
                   )}
 
                   {item.role === "참여자" && (
-                    <Box display="flex" gap={1}>
+                    <Box display="flex" flexDirection="column" gap={0.5}>
                       <Button
                         size="small"
                         variant="outlined"
@@ -445,8 +445,22 @@ export default function MyActivities({
                           },
                         }}
                       >
-                        {item.status === "pending" ? "신청 취소" : "참여 취소"}
+                        {item.status === "pending" ? "참여 신청 취소" : "모임 탈퇴"}
                       </Button>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{
+                          fontSize: "0.6rem",
+                          fontStyle: 'italic',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {item.status === "pending"
+                          ? "신청만 취소됩니다"
+                          : "참가자·채팅방에서 제거됩니다"
+                        }
+                      </Typography>
                     </Box>
                   )}
                 </Box>
