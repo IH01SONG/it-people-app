@@ -4,6 +4,7 @@ import RootLayout from "./RootLayout";
 import RouteFallbackSkeleton from "../components/RouteFallbackSkeleton";
 import ProtectedRoute from "../auth/ProtectedRoute";
 
+
 const Home = lazy(() => import("../pages/Home"));
 const Search = lazy(() => import("../pages/Search"));
 const SearchResults = lazy(() => import("../pages/SearchResults"));
@@ -32,6 +33,7 @@ const ForgotPasswordRequest = lazy(() => import("../pages/ForgotPasswordRequest"
 const ForgotPasswordVerify = lazy(() => import("../pages/ForgotPasswordVerify"));
 const ResetPassword = lazy(() => import("../pages/ResetPassword"));
 const GoogleCallback = lazy(() => import("../pages/GoogleCallback"));
+const OAuthCallback = lazy(() => import("../pages/OAuthCallback"));
 
 
 export default function AppRoutes() {
@@ -39,9 +41,9 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Suspense fallback={<RouteFallbackSkeleton />}>
         <Routes>
-          {/* Google OAuth Callback - RootLayout 밖에 배치 */}
+          {/* OAuth Callback - RootLayout 밖에 배치 */}
           <Route path="/auth/callback/google" element={<GoogleCallback />} />
-          <Route path="/auth/callback" element={<GoogleCallback />} />
+          <Route path="/auth/callback" element={<OAuthCallback />} />
           
           {/* Pages without bottom navigation */}
           <Route path="/search-results" element={<SearchResults />} />

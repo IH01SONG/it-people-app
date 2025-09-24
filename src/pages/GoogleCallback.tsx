@@ -1,5 +1,5 @@
 // src/pages/GoogleCallback.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Box, CircularProgress, Typography, Stack } from "@mui/material";

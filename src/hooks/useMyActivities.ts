@@ -53,7 +53,7 @@ export function useMyActivities() {
       const deletedPosts = JSON.parse(localStorage.getItem('deletedPosts') || '[]');
 
       // 현재 참여 중인 게시글 ID 목록 가져오기 (참여 취소하지 않은 것들)
-      const appliedPosts = JSON.parse(localStorage.getItem('appliedPosts') || '[]');
+      // const appliedPosts = JSON.parse(localStorage.getItem('appliedPosts') || '[]');
 
       // 참여 취소한 게시글 ID 목록 가져오기
       const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');

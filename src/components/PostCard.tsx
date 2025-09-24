@@ -12,7 +12,7 @@ import {
   Card,
   Typography,
   Box,
-  Button,
+  // Button,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -203,7 +203,7 @@ export default function PostCard({
               // 기본 이미지는 첫 번째 이미지만 사용 (스와이핑 없음)
               let categoryName = '기타';
               if (typeof post.category === 'object' && post.category !== null) {
-                categoryName = post.category.name || post.category._id || '기타';
+                categoryName = (post.category as any).name || (post.category as any)._id || '기타';
               } else if (typeof post.category === 'string') {
                 categoryName = post.category;
               }
@@ -360,7 +360,7 @@ export default function PostCard({
             >
               {(() => {
                 if (typeof post.category === 'object' && post.category !== null) {
-                  return post.category.name || post.category._id || '기타';
+                  return (post.category as any).name || (post.category as any)._id || '기타';
                 } else if (typeof post.category === 'string') {
                   return post.category;
                 } else {

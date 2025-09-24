@@ -1,24 +1,12 @@
 {
-    "rewrites": [
-      {
-        "source": "/api/:path*",
-        "destination": "https://it-people-server-140857839854.asia-northeast3.run.app/api/:path*"
-      },
-      {
-        "source": "/socket.io/:path*",
-        "destination": "https://it-people-server-140857839854.asia-northeast3.run.app/socket.io/:path*"
-      },
-      {
-        "source": "/auth/callback/google",
-        "destination": "/index.html"
-      },
-      {
-        "source": "/auth/callback",
-        "destination": "/index.html"
-      },
-      {
-        "source": "/(.*)",
-        "destination": "/index.html"
-      }
-    ]
-  }
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://it-people-server-140857839854.asia-northeast3.run.app/api/:path*" },
+    { "source": "/socket.io/:path*", "destination": "https://it-people-server-140857839854.asia-northeast3.run.app/socket.io/:path*" },
+
+    { "source": "/auth/callback/google", "destination": "/index.html" },
+    { "source": "/auth/callback", "destination": "/index.html" },
+
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

@@ -18,7 +18,7 @@ import RemoveIcon from "@mui/icons-material/Remove";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import MapPicker from "../../components/MapPicker";
-import { getDefaultImageByCategory } from "../../utils/defaultImages";
+// import { getDefaultImageByCategory } from "../../utils/defaultImages";
 
 interface FormData {
   title: string;
@@ -178,7 +178,7 @@ export default function Step2() {
 
     try {
       // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
-      const finalImages = images;
+      const finalImages: string[] = [];
 
       // 위치 정보 설정 (필수) - 위치가 입력되지 않으면 현재 위치 사용
       let finalCoords = coords;
@@ -223,9 +223,9 @@ export default function Step2() {
           meetingDate: new Date(formData.meetingDate).toISOString()
         }),
         // 이미지 필드 - 백엔드 호환성을 위해 둘 다 전송
-        ...(finalImageUrls.length > 0 && {
-          imageUrls: finalImageUrls,
-          images: finalImageUrls // 백엔드 호환성을 위해 추가
+        ...(finalImages.length > 0 && {
+          imageUrls: finalImages,
+          images: finalImages // 백엔드 호환성을 위해 추가
         }),
       };
 
@@ -415,7 +415,7 @@ export default function Step2() {
             사진 첨부
           </Typography>
           <Box display="flex" gap={2}>
-            {images.map((img, idx) => (
+            {[].map((img, idx) => (
               <Box key={idx} sx={{ position: "relative" }}>
                 <Box
                   component="img"
@@ -430,7 +430,7 @@ export default function Step2() {
                 />
                 <IconButton
                   onClick={() =>
-                    setImages((prev) => prev.filter((_, i) => i !== idx))
+                    console.log('이미지 삭제 기능 비활성화')
                   }
                   size="small"
                   sx={{
@@ -447,9 +447,9 @@ export default function Step2() {
                 </IconButton>
               </Box>
             ))}
-            {images.length < 3 && (
+            {false && (
               <Box
-                onClick={handleImageUpload}
+                onClick={() => console.log('이미지 업로드 기능 비활성화')}
                 sx={{
                   width: 80,
                   height: 80,
@@ -468,15 +468,13 @@ export default function Step2() {
                   transition: "all 0.2s ease",
                 }}
               >
-                <PhotoCameraIcon
-                  sx={{ fontSize: 24, color: "#E762A9", mb: 0.5 }}
-                />
+                {/* <PhotoCameraIcon sx={{ fontSize: 24, color: "#E762A9", mb: 0.5 }} /> */}
                 <Typography
                   variant="caption"
                   color="#E762A9"
                   textAlign="center"
                 >
-                  {images.length}/3
+                  0/3
                   <br />
                   (선택)
                 </Typography>
@@ -489,7 +487,7 @@ export default function Step2() {
               accept="image/*"
               multiple
               capture="environment"
-              onChange={handleFilesChange}
+              onChange={() => console.log('파일 변경 기능 비활성화')}
               style={{ display: "none" }}
             />
           </Box>
@@ -543,18 +541,18 @@ export default function Step2() {
             }}
           >
             <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
+              {/* <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} /> */}
               <Typography
                 variant="body2"
                 fontWeight={600}
                 sx={{
                   color:
-                    getDisplayLocation() === "위치를 선택해주세요"
+                    "위치를 선택해주세요" === "위치를 선택해주세요"
                       ? "#999"
                       : "#333",
                 }}
               >
-                {getDisplayLocation()}
+                위치를 선택해주세요
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary">

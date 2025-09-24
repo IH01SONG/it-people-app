@@ -57,7 +57,7 @@ export function useJoinRequest(postId?: string) {
       console.log('📋 [JoinRequest] 보낸 요청 개수:', list.length);
 
       const mine = list.find(r =>
-        (r.post?._id === pid || r.post === pid) &&
+        (r.post?._id === pid || (r.post as any) === pid) &&
         (r.requester?._id === uid || r.requester === uid) &&
         (r.status === 'pending')
       ) ?? null;

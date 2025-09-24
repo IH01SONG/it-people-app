@@ -46,15 +46,15 @@ export default function Map() {
     posts,
     loading: postsLoading,
     loadPosts,
-    handleJoinRequest,
-    appliedPosts
+    // handleJoinRequest,
+    // appliedPosts
   } = usePosts();
 
   const {
     currentLocation: locationName,
     currentCoords,
     getCurrentLocation: getLocation,
-    locationLoading,
+    // locationLoading,
   } = useLocationHook();
 
   const [center, setCenter] = useState({
@@ -107,7 +107,7 @@ export default function Map() {
       const response = await api.posts.getAll({ limit: 100 }); // 많은 게시글을 가져와서 카테고리 추출
       const allPosts = Array.isArray(response) ? response : response.posts || [];
       const uniqueCategories = [...new Set(allPosts.map((post: any) => post.category).filter(Boolean))];
-      setCategories(uniqueCategories);
+      setCategories(uniqueCategories as string[]);
     } catch (error) {
       console.error("카테고리 로드 실패:", error);
       // 기본 카테고리 사용
@@ -744,11 +744,11 @@ export default function Map() {
                 variant="contained"
                 size="large"
                 onClick={() => {
-                  handleJoinRequest(selectedPost.id);
+                  console.log('참여 요청 기능 비활성화:', selectedPost.id);
                 }}
                 disabled={selectedPost.status === 'full' || selectedPost.status === 'completed'}
                 sx={{
-                  bgcolor: appliedPosts.has(selectedPost.id) ? "#C2185B" : "#E91E63",
+                  bgcolor: "#E91E63",
                   color: "white",
                   borderRadius: 3,
                   py: 2,
@@ -757,7 +757,7 @@ export default function Map() {
                   boxShadow: "0 2px 8px rgba(231, 98, 169, 0.3)",
                   transition: "all 0.2s ease",
                   "&:hover": {
-                    bgcolor: appliedPosts.has(selectedPost.id) ? "#9C1346" : "#C2185B",
+                    bgcolor: "#C2185B",
                     boxShadow: "0 4px 12px rgba(231, 98, 169, 0.4)",
                     transform: "scale(1.02)",
                   },
@@ -780,7 +780,7 @@ export default function Map() {
               >
                 {selectedPost.status === 'full' ? '마감됨' :
                  selectedPost.status === 'completed' ? '종료됨' :
-                 appliedPosts.has(selectedPost.id) ? '참여 취소' : '잇플'}
+                  '잇플'}
               </Button>
             </Box>
           </Box>
