@@ -300,13 +300,77 @@ export const api = {
     // 알림 목록 조회
     getAll: () => axios.get('/notifications').then(r => r.data),
 
-    // 알림 읽음 처리
-    markAsRead: (notificationId: string) =>
-      axios.post(`/notifications/${notificationId}/read`).then(r => r.data),
+    // 알림 읽음 처리 - 여러 가능한 엔드포인트 시도
+    markAsRead: async (notificationId: string) => {
+      const possibleEndpoints = [
+        { method: 'put', url: `/notifications/${notificationId}/read` },
+        { method: 'post', url: `/notifications/${notificationId}/read` },
+        { method: 'put', url: `/notifications/${notificationId}/mark-read` },
+        { method: 'post', url: `/notifications/${notificationId}/mark-read` },
+        { method: 'patch', url: `/notifications/${notificationId}` }
+      ];
 
-    // 모든 알림 읽음 처리
-    markAllAsRead: () =>
-      axios.post('/notifications/read-all').then(r => r.data),
+      let lastError;
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log(`🔄 개별 알림 읽음 처리 시도: ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+          let response;
+
+          if (endpoint.method === 'put') {
+            response = await axios.put(endpoint.url);
+          } else if (endpoint.method === 'patch') {
+            response = await axios.patch(endpoint.url, { read: true });
+          } else {
+            response = await axios.post(endpoint.url);
+          }
+
+          console.log(`✅ 개별 알림 읽음 처리 성공: ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+          return response.data;
+        } catch (error: any) {
+          console.log(`❌ 개별 알림 읽음 처리 실패: ${endpoint.method.toUpperCase()} ${endpoint.url} - ${error.response?.status}`);
+          lastError = error;
+          continue;
+        }
+      }
+
+      console.error('❌ 모든 개별 알림 읽음 처리 API 엔드포인트 시도 실패');
+      throw lastError;
+    },
+
+    // 모든 알림 읽음 처리 - 여러 가능한 엔드포인트 시도
+    markAllAsRead: async () => {
+      const possibleEndpoints = [
+        { method: 'put', url: '/notifications/mark-all-read' },
+        { method: 'post', url: '/notifications/mark-all-read' },
+        { method: 'put', url: '/notifications/read-all' },
+        { method: 'post', url: '/notifications/read-all' },
+        { method: 'put', url: '/notifications/all/read' },
+        { method: 'post', url: '/notifications/all/read' }
+      ];
+
+      let lastError;
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log(`🔄 API 시도: ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+          if (endpoint.method === 'put') {
+            const response = await axios.put(endpoint.url);
+            console.log(`✅ 성공: ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+            return response.data;
+          } else {
+            const response = await axios.post(endpoint.url);
+            console.log(`✅ 성공: ${endpoint.method.toUpperCase()} ${endpoint.url}`);
+            return response.data;
+          }
+        } catch (error: any) {
+          console.log(`❌ 실패: ${endpoint.method.toUpperCase()} ${endpoint.url} - ${error.response?.status}`);
+          lastError = error;
+          continue;
+        }
+      }
+
+      console.error('❌ 모든 API 엔드포인트 시도 실패');
+      throw lastError;
+    },
 
     // 1. 참여 신청 알림 생성 (모임장에게)
     createJoinRequestNotification: (postId: string, requesterId: string) =>

@@ -69,6 +69,7 @@ export default function NotificationModal({
     // 읽지 않은 알림인 경우 읽음 처리
     if (!notification.read) {
       try {
+        console.log('🔄 알림 읽음 처리 중...', notification.id);
         await api.notifications.markAsRead(notification.id);
         console.log('✅ 알림 읽음 처리 완료:', notification.id);
         // 알림 목록 새로고침
@@ -77,6 +78,7 @@ export default function NotificationModal({
         }
       } catch (error) {
         console.error('❌ 알림 읽음 처리 실패:', error);
+        // 개별 알림 읽음 처리 실패는 사용자에게 알리지 않음 (UX 고려)
       }
     }
 
@@ -113,8 +115,30 @@ export default function NotificationModal({
         </Box>
 
         <Box sx={{ flex: 1, overflowY: "auto" }}>
-          <List sx={{ p: 0 }}>
-            {notifications.map((notification) => (
+          {notifications.length === 0 ? (
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              py={8}
+              px={3}
+            >
+              <Typography
+                variant="h6"
+                color="text.secondary"
+                mb={1}
+                fontWeight={500}
+              >
+                알림이 없습니다
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                새로운 알림이 있으면 여기에 표시됩니다
+              </Typography>
+            </Box>
+          ) : (
+            <List sx={{ p: 0 }}>
+              {notifications.map((notification) => (
               <ListItem
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
@@ -195,25 +219,76 @@ export default function NotificationModal({
                 </Box>
               </ListItem>
             ))}
-          </List>
+            </List>
+          )}
         </Box>
 
-        <Box p={3} sx={{ borderTop: "1px solid #f0f0f0" }}>
-          <Button
+        {notifications.length > 0 && (
+          <Box p={3} sx={{ borderTop: "1px solid #f0f0f0" }}>
+            <Button
             fullWidth
             variant="outlined"
             onClick={async () => {
+              const unreadCount = notifications.filter(n => !n.read).length;
+
+              if (unreadCount === 0) {
+                console.log('📝 읽지 않은 알림이 없습니다.');
+                return;
+              }
+
               try {
-                await api.notifications.markAllAsRead();
-                console.log('✅ 모든 알림 읽음 처리 완료');
-                // 알림 목록 새로고침
-                if (onRefreshNotifications) {
-                  onRefreshNotifications();
+                console.log(`🔄 ${unreadCount}개의 읽지 않은 알림을 읽음 처리 중...`);
+
+                // 첫 번째 시도: 모든 알림 일괄 처리
+                try {
+                  await api.notifications.markAllAsRead();
+                  console.log('✅ 모든 알림 읽음 처리 완료');
+
+                  // 알림 목록 새로고침
+                  if (onRefreshNotifications) {
+                    onRefreshNotifications();
+                  }
+                  return;
+                } catch (batchError) {
+                  console.warn('⚠️ 일괄 처리 실패, 개별 처리로 전환:', batchError);
+
+                  // 두 번째 시도: 개별 알림 하나씩 처리
+                  const unreadNotifications = notifications.filter(n => !n.read);
+                  const errors = [];
+
+                  for (const notification of unreadNotifications) {
+                    try {
+                      await api.notifications.markAsRead(notification.id);
+                      console.log(`✅ 개별 알림 읽음 처리 완료: ${notification.id}`);
+                    } catch (individualError) {
+                      console.error(`❌ 개별 알림 읽음 처리 실패: ${notification.id}`, individualError);
+                      errors.push(individualError);
+                    }
+                  }
+
+                  if (errors.length === 0) {
+                    console.log('✅ 모든 알림 개별 읽음 처리 완료');
+                    // 알림 목록 새로고침
+                    if (onRefreshNotifications) {
+                      onRefreshNotifications();
+                    }
+                  } else if (errors.length < unreadNotifications.length) {
+                    console.log(`⚠️ 일부 알림 읽음 처리 실패 (${errors.length}/${unreadNotifications.length})`);
+                    // 부분 성공이므로 새로고침
+                    if (onRefreshNotifications) {
+                      onRefreshNotifications();
+                    }
+                    alert(`${unreadNotifications.length - errors.length}개 알림이 읽음 처리되었습니다. (${errors.length}개 실패)`);
+                  } else {
+                    throw batchError; // 원래 에러 던지기
+                  }
                 }
               } catch (error) {
                 console.error('❌ 모든 알림 읽음 처리 실패:', error);
+                alert('알림 읽음 처리에 실패했습니다. 서버 상태를 확인해주세요.');
               }
             }}
+            disabled={notifications.filter(n => !n.read).length === 0}
             sx={{
               borderColor: "#E91E63",
               color: "#E91E63",
@@ -221,11 +296,19 @@ export default function NotificationModal({
                 borderColor: "#C2185B",
                 bgcolor: "rgba(233, 30, 99, 0.04)",
               },
+              "&:disabled": {
+                borderColor: "#ccc",
+                color: "#999",
+              },
             }}
           >
-            모든 알림 읽음 처리
-          </Button>
-        </Box>
+            {notifications.filter(n => !n.read).length === 0
+              ? "모든 알림이 읽음 처리됨"
+              : `모든 알림 읽음 처리 (${notifications.filter(n => !n.read).length}개)`
+            }
+            </Button>
+          </Box>
+        )}
       </Box>
     </Modal>
   );
