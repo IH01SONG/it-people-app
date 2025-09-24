@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
-import { extractRequestId, getPostId, getRequesterId, findMyPendingRequest } from '../utils/joinRequestId';
+import { extractRequestId, findMyPendingRequest } from '../utils/joinRequestId';
 import { handleJoinError, handleCancelError, logDetailedError } from '../utils/errorHandling';
 import { joinRequestStorage } from '../utils/localStorage';
 import { requestJoin } from '../lib/joinRequest.api';
@@ -8,9 +8,10 @@ import { requestJoin } from '../lib/joinRequest.api';
 
 type JoinRequest = {
   _id: string;
-  post?: { _id: string };
-  requester?: { _id: string };
+  postId: string;
+  requesterId: string;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  [k: string]: unknown;
 };
 
 export function useJoinRequest(postId?: string) {
@@ -80,7 +81,7 @@ export function useJoinRequest(postId?: string) {
       });
 
       // 새로운 통합 매칭 함수 사용
-      const mine = findMyPendingRequest(list, pid, uid);
+      const mine = findMyPendingRequest(list, pid, uid) as JoinRequest | null;
 
       setMyPendingRequest(mine);
       if (mine) {
@@ -222,7 +223,7 @@ export function useJoinRequest(postId?: string) {
       // 상세 에러 로깅 (백엔드 개발자용)
       logDetailedError(e, 'CancelRequest', {
         targetPostId,
-        targetId,
+        targetId: myPendingRequest?._id,
         userId: myId,
         action: 'cancel',
       });

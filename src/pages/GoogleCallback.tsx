@@ -1,8 +1,8 @@
 // src/pages/GoogleCallback.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, Stack } from "@mui/material";
 import { api } from "../lib/api";
 
 export default function GoogleCallback() {
@@ -119,7 +119,11 @@ export default function GoogleCallback() {
           
         } catch (serverError) {
           console.error('❌ 서버 통신 실패:', serverError);
-          setErrorMessage(`서버와의 통신에 실패했습니다: ${serverError.message}`);
+          setErrorMessage(
+            `서버와의 통신에 실패했습니다: ${
+              serverError instanceof Error ? serverError.message : String(serverError)
+            }`
+          );
           setStatus('error');
         }
 

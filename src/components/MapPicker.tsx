@@ -232,7 +232,7 @@ export default function MapPicker({
         const initializeMapWithLocation = (
           lat: number,
           lng: number,
-          isCurrentLocation: boolean
+          _isCurrentLocation: boolean
         ) => {
           const mapOption = {
             center: new window.kakao.maps.LatLng(lat, lng),

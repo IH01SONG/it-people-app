@@ -25,6 +25,7 @@ import type { Post } from "../types/home.types";
 
 // 로고 이미지
 import logoSvg from "../assets/logo.png";
+import { getCategoryName } from "../utils/hardcodedCategories";
 
 interface MapPost extends Omit<Post, 'location'> {
   location: {
@@ -398,7 +399,7 @@ export default function Map() {
                   lat: post.location.coordinates[1],
                   lng: post.location.coordinates[0],
                 }}
-                image={createMarkerImage(post.category, selectedPost?.id === post.id)}
+                image={createMarkerImage(getCategoryName(post.category), selectedPost?.id === post.id)}
                 onClick={() => handlePostClick(post)}
                 clickable={true}
               />
@@ -457,8 +458,8 @@ export default function Map() {
 
                 <Box sx={{ p: 2 }}>
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
-                    <Chip 
-                      label={selectedPost.category} 
+                    <Chip
+                      label={getCategoryName(selectedPost.category)}
                       size="small" 
                       sx={{ 
                         bgcolor: '#E762A9',

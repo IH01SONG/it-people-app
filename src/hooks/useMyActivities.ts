@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { api } from "../lib/api";
 import type { Activity } from "../types/home.types";
-import { findMyPendingRequest } from "../utils/joinRequestId";
 import {
   joinRequestStorage,
   postStorage,

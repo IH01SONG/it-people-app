@@ -8,6 +8,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BlockIcon from '@mui/icons-material/Block';
 import PersonIcon from '@mui/icons-material/Person';
+import { getCategoryName } from '../../utils/hardcodedCategories';
 import GroupIcon from '@mui/icons-material/Group';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useBlockUser } from '../../contexts/BlockUserContext';
@@ -200,8 +201,8 @@ const MyActivity: React.FC = () => {
                           <Typography variant="body1" className="font-semibold">
                                 {activity.title}
                           </Typography>
-                              <Chip 
-                                label={activity.category} 
+                              <Chip
+                                label={getCategoryName(activity.category)}
                                 size="small" 
                                 sx={{ 
                                   backgroundColor: theme.palette.primary.light,
@@ -320,7 +321,7 @@ const MyActivity: React.FC = () => {
                                 {activity.title}
                               </Typography>
                               <Chip
-                                label={activity.category}
+                                label={getCategoryName(activity.category)}
                                 size="small"
                                 sx={{
                                   backgroundColor: theme.palette.primary.light,

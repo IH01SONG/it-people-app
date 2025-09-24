@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Map as KakaoMap,
   MapMarker,
@@ -31,8 +32,10 @@ import { usePosts } from "../hooks/usePosts";
 import { useLocation as useLocationHook } from "../hooks/useLocation";
 import type { Post } from "../types/home.types";
 import { api } from "../lib/api";
+import { getCategoryName } from "../utils/hardcodedCategories";
 
 export default function Map() {
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -46,8 +49,6 @@ export default function Map() {
     posts,
     loading: postsLoading,
     loadPosts,
-    handleJoinRequest,
-    appliedPosts
   } = usePosts();
 
   const {
@@ -93,7 +94,7 @@ export default function Map() {
       !filters.searchQuery ||
       post.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
       post.content.toLowerCase().includes(filters.searchQuery.toLowerCase()) ||
-      post.category.toLowerCase().includes(filters.searchQuery.toLowerCase());
+      getCategoryName(post.category).toLowerCase().includes(filters.searchQuery.toLowerCase());
 
     return matchesCategory && matchesTags && matchesSearch;
   });
@@ -509,7 +510,7 @@ export default function Map() {
                         lng: lng,
                       }}
                       image={createMarkerImage(
-                        post.category,
+                        getCategoryName(post.category),
                         selectedPost?.id === post.id
                       )}
                       title={post.title}
@@ -688,7 +689,7 @@ export default function Map() {
 
               <Box display="flex" alignItems="center" gap={1} mb={2}>
                 <Chip
-                  label={selectedPost.category}
+                  label={getCategoryName(selectedPost.category)}
                   size="small"
                   sx={{
                     bgcolor: "#E762A9",
@@ -743,11 +744,11 @@ export default function Map() {
                 variant="contained"
                 size="large"
                 onClick={() => {
-                  handleJoinRequest(selectedPost.id);
+                  navigate(`/post/${selectedPost.id}`);
                 }}
                 disabled={selectedPost.status === 'full' || selectedPost.status === 'completed'}
                 sx={{
-                  bgcolor: appliedPosts.has(selectedPost.id) ? "#C2185B" : "#E91E63",
+                  bgcolor: "#E91E63",
                   color: "white",
                   borderRadius: 3,
                   py: 2,
@@ -756,7 +757,7 @@ export default function Map() {
                   boxShadow: "0 2px 8px rgba(231, 98, 169, 0.3)",
                   transition: "all 0.2s ease",
                   "&:hover": {
-                    bgcolor: appliedPosts.has(selectedPost.id) ? "#9C1346" : "#C2185B",
+                    bgcolor: "#C2185B",
                     boxShadow: "0 4px 12px rgba(231, 98, 169, 0.4)",
                     transform: "scale(1.02)",
                   },
@@ -778,8 +779,7 @@ export default function Map() {
                 }
               >
                 {selectedPost.status === 'full' ? '마감됨' :
-                 selectedPost.status === 'completed' ? '종료됨' :
-                 appliedPosts.has(selectedPost.id) ? '참여 취소' : '잇플'}
+                 selectedPost.status === 'completed' ? '종료됨' : '상세보기'}
               </Button>
             </Box>
           </Box>

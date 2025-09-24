@@ -1,12 +1,14 @@
-import { io, Socket } from 'socket.io-client';
+import io from 'socket.io-client';
 
 const SERVER_URL = 'https://it-people-server-140857839854.asia-northeast3.run.app';
 
+type SocketType = ReturnType<typeof io>;
+
 class SocketService {
-  private socket: Socket | null = null;
+  private socket: SocketType | null = null;
   private userId: string | null = null;
 
-  connect(): Promise<Socket> {
+  connect(): Promise<SocketType> {
     return new Promise((resolve, reject) => {
       if (this.socket?.connected) {
         resolve(this.socket);
@@ -14,7 +16,6 @@ class SocketService {
       }
 
       this.socket = io(SERVER_URL, {
-        withCredentials: true,
         transports: ['websocket', 'polling'],
         timeout: 20000,
       });
@@ -29,11 +30,11 @@ class SocketService {
         resolve(this.socket!);
       });
 
-      this.socket.on('disconnect', (reason) => {
+      this.socket.on('disconnect', (reason: string) => {
         console.log('❌ Socket.IO 연결 해제:', reason);
       });
 
-      this.socket.on('connect_error', (error) => {
+      this.socket.on('connect_error', (error: unknown) => {
         console.error('💥 Socket.IO 연결 오류:', error);
         reject(error);
       });
@@ -65,22 +66,22 @@ class SocketService {
   private setupNotificationListeners() {
     if (!this.socket) return;
 
-    this.socket.on('notification', (notification) => {
+    this.socket.on('notification', (notification: unknown) => {
       console.log('📢 새 알림 수신:', notification);
       this.handleNotification(notification);
     });
 
-    this.socket.on('join_request_approved', (data) => {
+    this.socket.on('join_request_approved', (data: unknown) => {
       console.log('✅ 참여 승인 알림:', data);
       this.handleJoinApproved(data);
     });
 
-    this.socket.on('join_request_rejected', (data) => {
+    this.socket.on('join_request_rejected', (data: unknown) => {
       console.log('❌ 참여 거절 알림:', data);
       this.handleJoinRejected(data);
     });
 
-    this.socket.on('new_join_request', (data) => {
+    this.socket.on('new_join_request', (data: unknown) => {
       console.log('🙋 새 참여 요청 알림:', data);
       this.handleNewJoinRequest(data);
     });
@@ -266,7 +267,7 @@ class SocketService {
     }
   }
 
-  getSocket(): Socket | null {
+  getSocket(): SocketType | null {
     return this.socket;
   }
 
@@ -279,6 +280,6 @@ export const socketService = new SocketService();
 export default socketService;
 
 // 기존 호환성을 위한 함수
-export function createSocket(getToken: () => string | null) {
+export function createSocket(_getToken: () => string | null) {
   return socketService.getSocket();
 }

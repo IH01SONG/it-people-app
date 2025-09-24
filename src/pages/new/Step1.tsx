@@ -12,7 +12,8 @@ import {
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useNavigate } from "react-router-dom";
-import { CATEGORIES, type Category } from "../../constants/categories";
+import { CATEGORIES } from "../../constants/categories";
+import type { Category } from "../../utils/category";
 
 export default function Step1() {
   const navigate = useNavigate();
