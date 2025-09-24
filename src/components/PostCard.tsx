@@ -24,8 +24,7 @@ import PersonIcon from "@mui/icons-material/Person";
 
 // 타입 정의
 import type { Post } from "../types/home.types";
-import { displayCategoryName, type Category } from "../utils/category";
-import { CATEGORY_ID_TO_NAME } from "../constants/categories";
+import { getCategoryDisplay, getCategoryName } from "../utils/hardcodedCategories";
 import { useState } from "react";
 import { useBlockUser } from "../contexts/BlockUserContext";
 import { useAuth } from "../auth/AuthContext";
@@ -203,7 +202,7 @@ export default function PostCard({
               images = [post.image];
             } else {
               // 기본 이미지는 첫 번째 이미지만 사용 (스와이핑 없음)
-              const categoryName = displayCategoryName(post.category, CATEGORY_ID_TO_NAME);
+              const categoryName = getCategoryName(post.category);
               const defaultImages = getDefaultImages(categoryName);
               images = [defaultImages[0]]; // 첫 번째 이미지만 사용
             }
@@ -355,7 +354,7 @@ export default function PostCard({
             <span
               className={`text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700`}
             >
-              {displayCategoryName(post.category, CATEGORY_ID_TO_NAME)}
+              {getCategoryDisplay(post.category)}
             </span>
             {post.status === 'full' && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">

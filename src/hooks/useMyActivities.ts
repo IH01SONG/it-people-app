@@ -8,8 +8,7 @@ import {
   authStorage,
 } from "../utils/localStorage";
 import { handleCancelError, logDetailedError } from "../utils/errorHandling";
-import { displayCategoryName } from "../utils/category";
-import { CATEGORY_ID_TO_NAME } from "../constants/categories";
+import { getCategoryName } from "../utils/hardcodedCategories";
 import { joinRequestApi } from "../lib/joinRequest.api";
 import { linkReqMap, unlinkReqMap, findRequestIdByPost } from "../utils/joinRequestMapping";
 
@@ -70,7 +69,7 @@ export function useMyActivities() {
           if (meId && authorId && meId !== authorId) return;
 
           // 카테고리 표시명
-          const categoryName = displayCategoryName(post?.category, CATEGORY_ID_TO_NAME);
+          const categoryName = getCategoryName(post?.category);
 
           // createdAt 폴백(정렬 안정화)
           const created =
@@ -110,7 +109,7 @@ export function useMyActivities() {
           // 참여 취소한 게시글 제외
           if (cancelledPosts.includes(String(postId))) return;
 
-          const categoryName = displayCategoryName(post?.category, CATEGORY_ID_TO_NAME);
+          const categoryName = getCategoryName(post?.category);
           const created =
             post?.createdAt ??
             post?.updatedAt ??

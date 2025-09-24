@@ -29,8 +29,7 @@ import {
 import type { Activity } from "../types/home.types";
 
 // 카테고리 유틸
-import { displayCategoryName } from "../utils/category";
-import { CATEGORY_ID_TO_NAME, CATEGORY_ICON_BY_NAME } from "../constants/categories";
+import { getCategoryDisplay } from "../utils/hardcodedCategories";
 
 /**
  * MyActivities 컴포넌트 Props 정의
@@ -274,7 +273,7 @@ export default function MyActivities({
                   >
                     <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
                       <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                        {CATEGORY_ICON_BY_NAME[displayCategoryName(item.category, CATEGORY_ID_TO_NAME)] || "📍"} {displayCategoryName(item.category, CATEGORY_ID_TO_NAME)}
+                        {getCategoryDisplay(item.category)}
                       </span>
                       <Typography
                         variant="body2"
