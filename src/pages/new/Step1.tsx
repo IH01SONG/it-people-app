@@ -40,7 +40,7 @@ export default function Step1() {
   // 이름 기반 미리보기 이미지(서버 필드가 생기면 그걸 사용하세요)
   const previewByName: Record<string, string> = {
     자기계발:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=center",
+      "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&h=300&fit=crop&crop=center",
     봉사활동:
       "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400&h=300&fit=crop&crop=center",
     "운동/스포츠":

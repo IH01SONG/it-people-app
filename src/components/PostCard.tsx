@@ -136,7 +136,7 @@ export default function PostCard({
             const getDefaultImages = (categoryName: string): string[] => {
               const defaultImages: { [key: string]: string[] } = {
                 '자기계발': [
-                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop&crop=center',
+                  'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400&h=300&fit=crop&crop=center',
                   'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop&crop=center',
                   'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=300&fit=crop&crop=center'
                 ],
