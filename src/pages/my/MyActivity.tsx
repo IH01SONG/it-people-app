@@ -56,6 +56,20 @@ const MyActivity: React.FC = () => {
     loadMyActivities();
   }, [blockedUsers.length, cleanInvalidUsers, loadMyActivities]);
 
+  // 참여신청/취소 성공 시 내 활동 목록 자동 새로고침
+  useEffect(() => {
+    const handleJoinRequestSuccess = (event: CustomEvent) => {
+      console.log('🔄 참여신청/취소 성공, 내 활동 목록 새로고침:', event.detail);
+      loadMyActivities();
+    };
+
+    window.addEventListener('joinRequestSuccess', handleJoinRequestSuccess as EventListener);
+
+    return () => {
+      window.removeEventListener('joinRequestSuccess', handleJoinRequestSuccess as EventListener);
+    };
+  }, [loadMyActivities]);
+
   const handleBack = () => {
     navigate(-1); // Go back to the previous page
   };

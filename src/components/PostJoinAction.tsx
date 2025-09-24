@@ -43,6 +43,11 @@ export function PostJoinAction({ postId, disabled = false, authorId, joinStatus 
       await apply();
       setMsg('참여 신청이 접수되었습니다.');
 
+      // 내 활동 목록 새로고침을 위한 이벤트 발생
+      window.dispatchEvent(new CustomEvent('joinRequestSuccess', {
+        detail: { postId, type: 'apply' }
+      }));
+
       // 참여 신청 알림 생성 시도
       try {
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -122,6 +127,11 @@ export function PostJoinAction({ postId, disabled = false, authorId, joinStatus 
     try {
       await cancel();
       setMsg('신청을 취소했습니다.');
+
+      // 내 활동 목록 새로고침을 위한 이벤트 발생
+      window.dispatchEvent(new CustomEvent('joinRequestSuccess', {
+        detail: { postId, type: 'cancel' }
+      }));
 
       // 참여 신청 취소 알림 생성 시도 (모임장에게)
       try {

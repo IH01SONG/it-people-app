@@ -104,6 +104,20 @@ export default function Home() {
     loadMyActivities();
   }, [loadMyActivities]);
 
+  // 참여신청/취소 성공 시 내 활동 목록 자동 새로고침
+  useEffect(() => {
+    const handleJoinRequestSuccess = (event: CustomEvent) => {
+      console.log('🔄 [Home] 참여신청/취소 성공, 내 활동 목록 새로고침:', event.detail);
+      loadMyActivities();
+    };
+
+    window.addEventListener('joinRequestSuccess', handleJoinRequestSuccess as EventListener);
+
+    return () => {
+      window.removeEventListener('joinRequestSuccess', handleJoinRequestSuccess as EventListener);
+    };
+  }, [loadMyActivities]);
+
   // 소켓 연결 후 브라우저 알림 권한 요청
   useEffect(() => {
     if (isConnected) {

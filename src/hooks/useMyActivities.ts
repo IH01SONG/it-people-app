@@ -260,6 +260,11 @@ export function useMyActivities() {
         unlinkReqMap(postId);
         removeActivity(postId);
 
+        // 내 활동 목록 새로고침을 위한 이벤트 발생
+        window.dispatchEvent(new CustomEvent('joinRequestSuccess', {
+          detail: { postId, type: 'cancel_from_activities' }
+        }));
+
       } catch (error: any) {
         console.error("❌ [MyActivities] 참여 취소 실패:", error);
 
