@@ -37,7 +37,6 @@ type Coords = { lat: number; lng: number };
 export default function Step2() {
   const navigate = useNavigate();
   const location = useLocation();
-  const fileInputRef = useRef<HTMLInputElement | null>(null); // 현재 사용하지 않지만 유지(추후 확장 용)
 
   // Step1에서 넘어온 값: { categoryId, categoryName } 를 기대
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>("");

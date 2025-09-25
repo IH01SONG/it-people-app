@@ -13,6 +13,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import { useBlockUser } from '../../contexts/BlockUserContext';
 import { useMyActivities } from '../../hooks/useMyActivities';
 import { api } from '../../lib/api';
+import { displayCategoryName } from '../../utils/category';
 
 const theme = createTheme({
   palette: {
@@ -200,8 +201,8 @@ const MyActivity: React.FC = () => {
                           <Typography variant="body1" className="font-semibold">
                                 {activity.title}
                           </Typography>
-                              <Chip 
-                                label={activity.category} 
+                              <Chip
+                                label={displayCategoryName(activity.category)} 
                                 size="small" 
                                 sx={{ 
                                   backgroundColor: theme.palette.primary.light,
@@ -320,7 +321,7 @@ const MyActivity: React.FC = () => {
                                 {activity.title}
                               </Typography>
                               <Chip
-                                label={activity.category}
+                                label={displayCategoryName(activity.category)}
                                 size="small"
                                 sx={{
                                   backgroundColor: theme.palette.primary.light,

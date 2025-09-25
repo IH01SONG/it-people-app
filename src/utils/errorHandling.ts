@@ -109,7 +109,7 @@ export function handleApiError(error: ApiError): {
   }
 
   // 개발 환경에서는 모든 에러를 로깅
-  const shouldLog = process.env.NODE_ENV === 'development' || statusCode === 500;
+  const shouldLog = import.meta.env.MODE === 'development' || statusCode === 500;
 
   return {
     message,

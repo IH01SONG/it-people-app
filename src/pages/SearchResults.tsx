@@ -144,7 +144,7 @@ export default function SearchResults() {
       let filteredResults = normalizedResults;
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase();
-        filteredResults = normalizedResults.filter(post =>
+        filteredResults = normalizedResults.filter((post: Post) =>
           post.title?.toLowerCase().includes(searchLower) ||
           post.content?.toLowerCase().includes(searchLower) ||
           post.category?.toLowerCase().includes(searchLower) ||
@@ -355,7 +355,7 @@ export default function SearchResults() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {searchResults.map((post, index) => (
                   <PostCard
-                    key={post.id || post._id || `search-result-${index}`}
+                    key={post.id || `search-result-${index}`}
                     post={post}
                   />
                 ))}

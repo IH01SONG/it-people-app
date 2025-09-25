@@ -1,6 +1,9 @@
 // 카테고리 타입 import
 import type { Category } from '../utils/category';
 
+// Category 타입을 외부에서 사용할 수 있도록 re-export
+export type { Category };
+
 // 앱에서 사용하는 카테고리 정의 (서버 스키마와 일치)
 export const CATEGORIES: Category[] = [
   { _id: '68c3bdd957c06e06e2706f85', name: '자기계발', icon: '📚' },
