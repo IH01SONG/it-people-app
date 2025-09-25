@@ -1,7 +1,6 @@
 // MUI 아이콘
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import HistoryIcon from "@mui/icons-material/History";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 
