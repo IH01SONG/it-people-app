@@ -1,11 +1,11 @@
-// src/pages/GoogleCallback.tsx
+// src/pages/KakaoCallback.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Box, CircularProgress, Typography, Stack } from "@mui/material";
 import { api } from "../lib/api";
 
-export default function GoogleCallback() {
+export default function KakaoCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -13,9 +13,9 @@ export default function GoogleCallback() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    const handleGoogleCallback = async () => {
+    const handleKakaoCallback = async () => {
       try {
-        console.log('🔄 구글 OAuth 콜백 처리 시작');
+        console.log('🔄 카카오 OAuth 콜백 처리 시작');
         console.log('📍 현재 URL:', window.location.href);
         console.log('📍 현재 경로:', window.location.pathname);
         console.log('📍 현재 도메인:', window.location.hostname);
@@ -41,8 +41,8 @@ export default function GoogleCallback() {
         const token = searchParams.get('token'); // JWT 토큰이 직접 전달된 경우
         
         if (error) {
-          console.error('❌ 구글 OAuth 에러:', error);
-          setErrorMessage(`구글 로그인 중 오류가 발생했습니다: ${error}`);
+          console.error('❌ 카카오 OAuth 에러:', error);
+          setErrorMessage(`카카오 로그인 중 오류가 발생했습니다: ${error}`);
           setStatus('error');
           return;
         }
@@ -70,7 +70,7 @@ export default function GoogleCallback() {
               console.log('🔐 AuthContext 로그인 상태 업데이트 완료');
               
               setStatus('success');
-              console.log('🎉 구글 로그인 완료!');
+              console.log('🎉 카카오 로그인 완료!');
               
               // 5. 메인 페이지로 리다이렉트
               setTimeout(() => {
@@ -100,12 +100,12 @@ export default function GoogleCallback() {
         
         if (!code) {
           console.error('❌ 인증 코드가 없습니다.');
-          setErrorMessage('구글 인증 코드를 받지 못했습니다.');
+          setErrorMessage('카카오 인증 코드를 받지 못했습니다.');
           setStatus('error');
           return;
         }
 
-        console.log('✅ 구글 인증 코드 받음:', code.substring(0, 20) + '...');
+        console.log('✅ 카카오 인증 코드 받음:', code.substring(0, 20) + '...');
         console.log('🔍 State 파라미터:', state);
 
         // 1. 서버에 인증 코드를 전송하여 토큰 교환
@@ -113,7 +113,7 @@ export default function GoogleCallback() {
           console.log('🔄 서버에 인증 코드 전송 중...');
           console.log('📤 전송할 데이터:', { code: code.substring(0, 20) + '...', state });
           
-          const response = await fetch('/api/auth/callback/google', {
+          const response = await fetch('/api/auth/kakao/callback', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ export default function GoogleCallback() {
             body: JSON.stringify({
               code: code,
               state: state,
-              redirect_uri: window.location.origin + '/auth/callback/google'
+              redirect_uri: window.location.origin + '/auth/callback/kakao'
             })
           });
 
@@ -163,7 +163,7 @@ export default function GoogleCallback() {
             console.log('🔐 AuthContext 로그인 상태 업데이트 완료');
             
             setStatus('success');
-            console.log('🎉 구글 로그인 완료!');
+            console.log('🎉 카카오 로그인 완료!');
             
             // 5. 메인 페이지로 리다이렉트
             setTimeout(() => {
@@ -184,45 +184,37 @@ export default function GoogleCallback() {
           
         } catch (serverError: any) {
           console.error('❌ 서버 통신 실패:', serverError);
-<<<<<<< HEAD
-          setErrorMessage(
-            `서버와의 통신에 실패했습니다: ${
-              serverError instanceof Error ? serverError.message : String(serverError)
-            }`
-          );
-=======
           
           // 404 에러인 경우 백엔드 서버 문제임을 명시
           if (serverError.message?.includes('404')) {
-            setErrorMessage('백엔드 서버의 Google OAuth 콜백 엔드포인트가 구현되지 않았습니다. 서버 관리자에게 문의하세요.');
+            setErrorMessage('백엔드 서버의 카카오 OAuth 콜백 엔드포인트가 구현되지 않았습니다. 서버 관리자에게 문의하세요.');
           } else {
             setErrorMessage(`서버와의 통신에 실패했습니다: ${serverError.message || '알 수 없는 오류'}`);
           }
->>>>>>> develop
           setStatus('error');
         }
 
       } catch (error: any) {
-        console.error('❌ 구글 OAuth 콜백 처리 실패:', error);
-        setErrorMessage(error.message || '구글 로그인에 실패했습니다.');
+        console.error('❌ 카카오 OAuth 콜백 처리 실패:', error);
+        setErrorMessage(error.message || '카카오 로그인에 실패했습니다.');
         setStatus('error');
       }
     };
 
-    handleGoogleCallback();
+    handleKakaoCallback();
   }, [searchParams, navigate, login]);
 
   if (status === 'loading') {
     return (
       <Box className="flex flex-col items-center justify-center min-h-screen p-5 bg-white">
         <div className="mb-4">
-          <svg className="w-16 h-16 text-[#E762A9] animate-spin" fill="none" viewBox="0 0 24 24">
+          <svg className="w-16 h-16 text-[#FEE500] animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
         </div>
         <Typography variant="h6" className="text-gray-700 mb-2">
-          구글 로그인 처리 중...
+          카카오 로그인 처리 중...
         </Typography>
         <Typography variant="body2" className="text-gray-500 text-center mb-4">
           서버와 통신하여 인증을 완료하고 있습니다.
@@ -243,12 +235,12 @@ export default function GoogleCallback() {
           </svg>
         </div>
         <Typography variant="h5" className="text-green-600 mb-2 font-semibold">
-          구글 로그인 성공!
+          카카오 로그인 성공!
         </Typography>
         <Typography variant="body1" className="text-gray-600 mb-4">
           환영합니다! 잠시 후 메인 페이지로 이동합니다...
         </Typography>
-        <CircularProgress size={24} sx={{ color: '#E762A9' }} />
+        <CircularProgress size={24} sx={{ color: '#FEE500' }} />
       </Box>
     );
   }
@@ -256,7 +248,7 @@ export default function GoogleCallback() {
   return (
     <Box className="flex flex-col items-center justify-center min-h-screen p-5 bg-white">
       <Typography variant="h6" className="text-red-600 mb-2">
-        ❌ 구글 로그인 실패
+        ❌ 카카오 로그인 실패
       </Typography>
       <Typography variant="body2" className="text-gray-600 mb-4 text-center">
         {errorMessage}
@@ -267,7 +259,7 @@ export default function GoogleCallback() {
       <Stack spacing={2} className="w-full max-w-sm">
         <button
           onClick={() => navigate('/login')}
-          className="px-4 py-2 bg-[#E762A9] text-white rounded hover:bg-[#D55A9A] transition-colors"
+          className="px-4 py-2 bg-[#FEE500] text-black rounded hover:bg-[#FDD835] transition-colors"
         >
           로그인 페이지로 돌아가기
         </button>

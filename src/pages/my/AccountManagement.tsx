@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, Typography, Stack, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from '@mui/material';
+import { Box, Button, Typography, Stack, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ const AccountManagement: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [isSavingArea, setIsSavingArea] = useState(false);
 
   const handleLogout = () => {
@@ -28,20 +29,57 @@ const AccountManagement: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
+    // 확인 텍스트 검증
+    if (deleteConfirmation !== '탈퇴하겠습니다') {
+      setDeleteError('정확한 확인 텍스트를 입력해주세요.');
+      return;
+    }
+
     try {
       setIsDeleting(true);
       setDeleteError(null);
       
+      console.log('🗑️ 계정 탈퇴 요청 시작');
+      
       // API 호출로 계정 삭제
-      await api.users.deleteAccount();
+      const response = await api.users.deleteAccount();
+      
+      console.log('✅ 계정 탈퇴 성공:', response);
       
       // 성공 시 로그아웃 처리
       logout();
-      navigate('/');
-      alert('계정이 성공적으로 삭제되었습니다.');
+      
+      // 로컬 스토리지 정리
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('appliedPosts');
+      localStorage.removeItem('cancelledPosts');
+      localStorage.removeItem('deletedPosts');
+      
+      // 성공 메시지와 함께 홈으로 이동
+      alert('계정이 성공적으로 삭제되었습니다. 이용해주셔서 감사합니다.');
+      navigate('/', { replace: true });
+      
     } catch (error: any) {
-      setDeleteError(error.response?.data?.message || '계정 삭제 중 오류가 발생했습니다.');
-      console.error('Account deletion error:', error);
+      console.error('❌ 계정 삭제 실패:', error);
+      
+      // 에러 메시지 처리
+      let errorMessage = '계정 삭제 중 오류가 발생했습니다.';
+      
+      if (error.response?.status === 401) {
+        errorMessage = '로그인이 필요합니다. 다시 로그인해주세요.';
+      } else if (error.response?.status === 403) {
+        errorMessage = '계정 삭제 권한이 없습니다.';
+      } else if (error.response?.status === 404) {
+        errorMessage = '사용자 정보를 찾을 수 없습니다.';
+      } else if (error.response?.status === 500) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setDeleteError(errorMessage);
     } finally {
       setIsDeleting(false);
     }
@@ -211,7 +249,13 @@ const AccountManagement: React.FC = () => {
       {/* 계정 탈퇴 확인 다이얼로그 */}
       <Dialog 
         open={showDeleteDialog} 
-        onClose={() => !isDeleting && setShowDeleteDialog(false)}
+        onClose={() => {
+          if (!isDeleting) {
+            setShowDeleteDialog(false);
+            setDeleteConfirmation('');
+            setDeleteError(null);
+          }
+        }}
         maxWidth="sm"
         fullWidth
       >
@@ -235,10 +279,27 @@ const AccountManagement: React.FC = () => {
           <Typography variant="body2" sx={{ mb: 2 }}>
             • 탈퇴 후 데이터 복구가 불가능합니다
           </Typography>
-          <Typography variant="body2" color="error" fontWeight={600}>
+          <Typography variant="body2" color="error" fontWeight={600} sx={{ mb: 2 }}>
             정말로 계정을 탈퇴하시겠습니까?
           </Typography>
-          {deleteError && (
+          
+          <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+            계정 탈퇴를 확인하려면 아래에 <strong>"탈퇴하겠습니다"</strong>를 정확히 입력해주세요.
+          </Typography>
+          
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="탈퇴하겠습니다"
+            value={deleteConfirmation}
+            onChange={(e) => setDeleteConfirmation(e.target.value)}
+            disabled={isDeleting}
+            sx={{ mb: 2 }}
+            error={deleteError && deleteConfirmation !== '탈퇴하겠습니다'}
+            helperText={deleteError && deleteConfirmation !== '탈퇴하겠습니다' ? deleteError : ''}
+          />
+          
+          {deleteError && deleteConfirmation === '탈퇴하겠습니다' && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {deleteError}
             </Alert>
@@ -246,7 +307,11 @@ const AccountManagement: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button 
-            onClick={() => setShowDeleteDialog(false)} 
+            onClick={() => {
+              setShowDeleteDialog(false);
+              setDeleteConfirmation('');
+              setDeleteError(null);
+            }} 
             disabled={isDeleting}
             color="inherit"
           >
@@ -254,7 +319,7 @@ const AccountManagement: React.FC = () => {
           </Button>
           <Button 
             onClick={handleDeleteAccount} 
-            disabled={isDeleting}
+            disabled={isDeleting || deleteConfirmation !== '탈퇴하겠습니다'}
             color="error"
             variant="contained"
             startIcon={isDeleting ? <WarningIcon /> : <WarningIcon />}

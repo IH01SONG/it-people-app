@@ -231,8 +231,16 @@ export default function MapPicker({
       try {
         const initializeMapWithLocation = (
           lat: number,
+<<<<<<< HEAD
+          lng: number
+=======
           lng: number,
+<<<<<<< HEAD
           _isCurrentLocation: boolean
+=======
+          // isCurrentLocation: boolean
+>>>>>>> feature/mypage
+>>>>>>> develop
         ) => {
           const mapOption = {
             center: new window.kakao.maps.LatLng(lat, lng),
@@ -286,18 +294,18 @@ export default function MapPicker({
           navigator.geolocation.getCurrentPosition(
             (position) => {
               const { latitude, longitude } = position.coords;
-              initializeMapWithLocation(latitude, longitude, true);
+              initializeMapWithLocation(latitude, longitude);
             },
             () => {
               const defaultLat = 37.5665;
               const defaultLng = 126.978;
-              initializeMapWithLocation(defaultLat, defaultLng, false);
+              initializeMapWithLocation(defaultLat, defaultLng);
             }
           );
         } else {
           const defaultLat = 37.5665;
           const defaultLng = 126.978;
-          initializeMapWithLocation(defaultLat, defaultLng, false);
+          initializeMapWithLocation(defaultLat, defaultLng);
         }
       } catch (error) {
         console.error("지도 초기화 오류:", error);

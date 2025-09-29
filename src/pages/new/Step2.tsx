@@ -19,7 +19,7 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import MapPicker from "../../components/MapPicker";
-import { getDefaultImageByCategory } from "../../utils/defaultImages";
+// import { getDefaultImageByCategory } from "../../utils/defaultImages";
 
 interface FormData {
   title: string;
@@ -37,7 +37,10 @@ type Coords = { lat: number; lng: number };
 export default function Step2() {
   const navigate = useNavigate();
   const location = useLocation();
+<<<<<<< HEAD
   // const _fileInputRef = useRef<HTMLInputElement | null>(null); // 추후 확장 계획이면 언더스코어
+=======
+>>>>>>> develop
 
   // Step1에서 넘어온 값: { categoryId, categoryName } 를 기대
   const [selectedCategoryName, setSelectedCategoryName] = useState<string>("");
@@ -206,8 +209,16 @@ export default function Step2() {
     }
 
     try {
+<<<<<<< HEAD
       // 좌표/주소 보완
       let finalCoords = coords ?? currentLocationCoords;
+=======
+      // 이미지가 없으면 카테고리에 맞는 기본 이미지를 자동으로 추가
+      const finalImages: string[] = [];
+
+      // 위치 정보 설정 (필수) - 위치가 입력되지 않으면 현재 위치 사용
+      let finalCoords = coords;
+>>>>>>> feature/mypage
       let displayLocation = locationInput?.trim() || formData.location?.trim();
 
       if (!finalCoords) {
@@ -235,6 +246,7 @@ export default function Step2() {
       const finalImageUrls = getDefaultImages();
 
       const postPayload = {
+<<<<<<< HEAD
         title: formData.title.trim(),
         content: formData.content.trim(),
         tags: formData.tags,
@@ -242,12 +254,28 @@ export default function Step2() {
         ...(locationData && { location: locationData }), // 백엔드가 필수라면 항상 포함으로 변경 가능
         categoryId: selectedCategoryId || formData.categoryId, // 반드시 ID로 전송
         ...(formData.venue.trim() && { venue: formData.venue.trim() }),
+=======
+        title: formData.title,
+        content: formData.content.trim(), // 필수 필드로 변경
+        tags: formData.tags,
+        maxParticipants: formData.maxParticipants,
+        location: locationData, // 위치 정보는 항상 포함 (필수)
+        ...(formData.category && { category: formData.category }),
+        ...(formData.venue?.trim() && { venue: formData.venue.trim() }),
+>>>>>>> feature/mypage
         ...(formData.meetingDate && {
           meetingDate: new Date(formData.meetingDate).toISOString(),
         }),
+<<<<<<< HEAD
         ...(finalImageUrls.length > 0 && {
           imageUrls: finalImageUrls,
           images: finalImageUrls, // 백엔드 호환
+=======
+        // 이미지 필드 - 백엔드 호환성을 위해 둘 다 전송
+        ...(finalImages.length > 0 && {
+          imageUrls: finalImages,
+          images: finalImages // 백엔드 호환성을 위해 추가
+>>>>>>> feature/mypage
         }),
       };
 
@@ -387,7 +415,95 @@ export default function Step2() {
           />
         </Box>
 
+<<<<<<< HEAD
         {/* 소개글 */}
+=======
+        {/* 이미지 업로드 */}
+        <Box mb={3}>
+          <Typography variant="subtitle2" fontWeight={600} mb={1} color="#333">
+            사진 첨부
+          </Typography>
+          <Box display="flex" gap={2}>
+            {[].map((img, idx) => (
+              <Box key={idx} sx={{ position: "relative" }}>
+                <Box
+                  component="img"
+                  src={img}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    objectFit: "cover",
+                    borderRadius: 2,
+                    border: "1px solid #e0e0e0",
+                  }}
+                />
+                <IconButton
+                  onClick={() =>
+                    console.log('이미지 삭제 기능 비활성화')
+                  }
+                  size="small"
+                  sx={{
+                    position: "absolute",
+                    top: -8,
+                    right: -8,
+                    bgcolor: "white",
+                    color: "#666",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                    "&:hover": { bgcolor: "#f5f5f5" },
+                  }}
+                >
+                  ×
+                </IconButton>
+              </Box>
+            ))}
+            {false && (
+              <Box
+                onClick={() => console.log('이미지 업로드 기능 비활성화')}
+                sx={{
+                  width: 80,
+                  height: 80,
+                  border: "2px dashed #E762A9",
+                  borderRadius: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  bgcolor: "rgba(231, 98, 169, 0.02)",
+                  "&:hover": {
+                    bgcolor: "rgba(231, 98, 169, 0.05)",
+                    borderColor: "#D554A0",
+                  },
+                  transition: "all 0.2s ease",
+                }}
+              >
+                {/* <PhotoCameraIcon sx={{ fontSize: 24, color: "#E762A9", mb: 0.5 }} /> */}
+                <Typography
+                  variant="caption"
+                  color="#E762A9"
+                  textAlign="center"
+                >
+                  0/3
+                  <br />
+                  (선택)
+                </Typography>
+              </Box>
+            )}
+            {/* 모바일/데스크탑 파일 선택 인풋 (숨김) */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              capture="environment"
+              onChange={() => console.log('파일 변경 기능 비활성화')}
+              style={{ display: "none" }}
+            />
+          </Box>
+        </Box>
+
+        {/* 소개글 입력 */}
+>>>>>>> feature/mypage
         <Box mb={3}>
           <TextField
             fullWidth
@@ -416,7 +532,7 @@ export default function Step2() {
         </Box>
 
         {/* 만날 위치 및 시간 */}
-        <Box mb={3}>
+        <Box mb={3} key="meeting-location-time">
           <Typography variant="subtitle2" fontWeight={600} mb={2} color="#333">
             만날 위치 및 시간
           </Typography>
@@ -432,18 +548,18 @@ export default function Step2() {
             }}
           >
             <Box display="flex" alignItems="center" gap={1} mb={1}>
-              <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} />
+              {/* <LocationOnIcon sx={{ fontSize: 16, color: "#E762A9" }} /> */}
               <Typography
                 variant="body2"
                 fontWeight={600}
                 sx={{
                   color:
-                    getDisplayLocation() === "위치를 선택해주세요"
+                    "위치를 선택해주세요" === "위치를 선택해주세요"
                       ? "#999"
                       : "#333",
                 }}
               >
-                {getDisplayLocation()}
+                위치를 선택해주세요
               </Typography>
             </Box>
             <Typography variant="body2" color="text.secondary">
@@ -555,7 +671,67 @@ export default function Step2() {
               }}
               variant="outlined"
               size="small"
+<<<<<<< HEAD
               sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+=======
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Box>
+          {/* 날짜/시간 설정 */}
+          <Box display="flex" gap={2} mb={2}>
+            <TextField
+              fullWidth
+              type="date"
+              value={
+                formData.meetingDate ? formData.meetingDate.split("T")[0] : ""
+              }
+              onChange={(e) => {
+                const date = e.target.value;
+                const time = formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00";
+                setFormData({
+                  ...formData,
+                  meetingDate: date ? `${date}T${time}` : "",
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              type="time"
+              value={
+                formData.meetingDate
+                  ? formData.meetingDate.split("T")[1]
+                  : "18:00"
+              }
+              onChange={(e) => {
+                const date = formData.meetingDate
+                  ? formData.meetingDate.split("T")[0]
+                  : new Date().toISOString().split("T")[0];
+                setFormData({
+                  ...formData,
+                  meetingDate: `${date}T${e.target.value}`,
+                });
+              }}
+              variant="outlined"
+              size="small"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+>>>>>>> feature/mypage
             />
           </Box>
 

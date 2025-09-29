@@ -9,6 +9,13 @@ import {
   Card,
   Typography,
   Box,
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+  // Button,
+>>>>>>> feature/mypage
+>>>>>>> develop
   Menu,
   MenuItem,
   ListItemIcon,
@@ -199,7 +206,16 @@ export default function PostCard({
               images = [post.image];
             } else {
               // 기본 이미지는 첫 번째 이미지만 사용 (스와이핑 없음)
+<<<<<<< HEAD
               const categoryName = getCategoryName(post.category);
+=======
+              let categoryName = '기타';
+              if (typeof post.category === 'object' && post.category !== null) {
+                categoryName = (post.category as any).name || (post.category as any)._id || '기타';
+              } else if (typeof post.category === 'string') {
+                categoryName = post.category;
+              }
+>>>>>>> feature/mypage
               const defaultImages = getDefaultImages(categoryName);
               images = [defaultImages[0]]; // 첫 번째 이미지만 사용
             }
@@ -351,7 +367,19 @@ export default function PostCard({
             <span
               className={`text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700`}
             >
+<<<<<<< HEAD
               {getCategoryDisplay(post.category)}
+=======
+              {(() => {
+                if (typeof post.category === 'object' && post.category !== null) {
+                  return (post.category as any).name || (post.category as any)._id || '기타';
+                } else if (typeof post.category === 'string') {
+                  return post.category;
+                } else {
+                  return '기타';
+                }
+              })()}
+>>>>>>> feature/mypage
             </span>
             {post.status === 'full' && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">

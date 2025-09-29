@@ -51,7 +51,18 @@ export function useMyActivities() {
       const deletedPosts = postStorage.getDeletedPosts();
       const cancelledPosts = joinRequestStorage.getCancelledPosts();
 
+<<<<<<< HEAD
       // 내가 쓴 글 → 활동 변환
+=======
+      // 현재 참여 중인 게시글 ID 목록 가져오기 (참여 취소하지 않은 것들)
+      // const appliedPosts = JSON.parse(localStorage.getItem('appliedPosts') || '[]');
+
+      // 참여 취소한 게시글 ID 목록 가져오기
+      const cancelledPosts = JSON.parse(localStorage.getItem('cancelledPosts') || '[]');
+      console.log('🚫 취소된 게시글 목록:', cancelledPosts);
+
+      // 내가 쓴 글을 활동으로 변환
+>>>>>>> feature/mypage
       const myPosts = myPostsResponse?.posts || myPostsResponse || [];
       if (Array.isArray(myPosts)) {
         myPosts.forEach((post: any) => {

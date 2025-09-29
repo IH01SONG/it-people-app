@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
+<<<<<<< HEAD
 import io from 'socket.io-client';
+=======
+// import { Socket } from 'socket.io-client';
+>>>>>>> develop
 import { createSocket } from '../lib/socket';
 import type { Notification } from '../types/home.types';
 
 type SocketType = ReturnType<typeof io>;
 
 export function useSocket() {
+<<<<<<< HEAD
   const socketRef = useRef<SocketType | null>(null);
+=======
+  const socketRef = useRef<any | null>(null);
+>>>>>>> develop
   const [isConnected, setIsConnected] = useState(false);
   const [newNotification, setNewNotification] = useState<Notification | null>(null);
 
@@ -40,8 +48,13 @@ export function useSocket() {
       setIsConnected(false);
     });
 
+<<<<<<< HEAD
     socket.on('connect_error', (error: unknown) => {
       console.error('[useSocket] 연결 오류:', error);
+=======
+    socket.on('connect_error', (error: any) => {
+      console.error('[useSocket] 연결 오류:', error.message);
+>>>>>>> develop
       setIsConnected(false);
     });
 

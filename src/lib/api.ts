@@ -2,15 +2,59 @@
 import axios from './axios';
 import { extractCategoryId } from '../utils/category';
 
+// 공용 토큰 키
+const TOKEN_KEY = 'access_token';
+
+// 토큰 헬퍼 함수들
+export function setAuthToken(token?: string) {
+  if (token && token !== 'null' && token !== 'undefined') {
+    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+    localStorage.setItem(TOKEN_KEY, token);
+    console.log('🔑 토큰 설정 완료:', token.substring(0, 20) + '...');
+  } else {
+    clearAuthToken();
+  }
+}
+
+export function clearAuthToken() {
+  delete axios.defaults.headers.common.Authorization;
+  localStorage.removeItem(TOKEN_KEY);
+  console.log('🔑 토큰 제거 완료');
+}
+
+// 앱 부팅 시 자동 토큰 복원
+const savedToken = localStorage.getItem(TOKEN_KEY);
+if (savedToken && savedToken !== 'null' && savedToken !== 'undefined') {
+  setAuthToken(savedToken);
+  console.log('🔄 저장된 토큰 자동 복원 완료');
+}
+
 // 인증 상태 확인 헬퍼 함수
 const checkAuth = () => {
-  const token = localStorage.getItem('access_token');
-  if (!token) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token || token === 'null' || token === 'undefined') {
     console.warn('⚠️ 인증 토큰이 없습니다. 로그인이 필요합니다.');
     return false;
   }
   return true;
 };
+
+// 요청 인터셉터: Authorization 헤더 자동 주입
+axios.interceptors.request.use(
+  (config) => {
+    // Authorization 헤더가 비어있으면 localStorage에서 토큰을 읽어 자동 주입
+    if (!config.headers.Authorization) {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (token && token !== 'null' && token !== 'undefined') {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const api = {
   // 서버 상태 확인
@@ -34,7 +78,13 @@ export const api = {
 
   login: (email: string, password: string) =>
     axios.post('/auth/login', { email, password })
-         .then(r => r.data as { token: string }),
+         .then(r => {
+           const { token } = r.data as { token: string };
+           if (token) {
+             setAuthToken(token); // 로그인 성공 시 토큰 자동 저장/세팅
+           }
+           return r.data;
+         }),
 
   getMe: () => axios.get('/auth/me').then(r => r.data),
 
@@ -58,6 +108,12 @@ export const api = {
       googleAuth: () => {
         console.log('🔗 구글 OAuth 로그인 페이지로 이동');
         window.location.href = '/api/auth/google';
+      },
+
+      // 카카오 OAuth 관련 API
+      kakaoAuth: () => {
+        console.log('🔗 카카오 OAuth 로그인 페이지로 이동');
+        window.location.href = '/api/auth/kakao';
       },
 
       // 사용자 정보 조회 (JWT 토큰 사용)

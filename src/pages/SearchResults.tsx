@@ -25,8 +25,13 @@ export default function SearchResults() {
   const [searchQuery, setSearchQuery] = useState(query);
   const [searchResults, setSearchResults] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+<<<<<<< HEAD
   const [selectedFilter, setSelectedFilter] = useState<string>("전체");
   const [, setCurrentUserId] = useState<string | null>(null); // 값은 읽지 않음
+=======
+  const [selectedFilter, setSelectedFilter] = useState<string>('전체');
+  // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+>>>>>>> develop
 
   const filters = [
     "전체",
@@ -205,12 +210,24 @@ export default function SearchResults() {
       let filteredResults = normalizedResults;
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase();
+<<<<<<< HEAD
         filteredResults = normalizedResults.filter(
           (post: any) =>
             post.title?.toLowerCase().includes(searchLower) ||
             post.content?.toLowerCase().includes(searchLower) ||
             post.category?.toLowerCase().includes(searchLower) ||
             post.location?.address?.toLowerCase().includes(searchLower)
+=======
+<<<<<<< HEAD
+        filteredResults = normalizedResults.filter((post: Post) =>
+=======
+        filteredResults = normalizedResults.filter((post: any) =>
+>>>>>>> feature/mypage
+          post.title?.toLowerCase().includes(searchLower) ||
+          post.content?.toLowerCase().includes(searchLower) ||
+          post.category?.toLowerCase().includes(searchLower) ||
+          post.location?.address?.toLowerCase().includes(searchLower)
+>>>>>>> develop
         );
       }
 
@@ -227,8 +244,8 @@ export default function SearchResults() {
   useEffect(() => {
     const loadCurrentUser = async () => {
       try {
-        const userInfo = await api.getMe();
-        setCurrentUserId(userInfo.id || userInfo._id);
+        // const userInfo = await api.getMe();
+        // setCurrentUserId(userInfo.id || userInfo._id);
       } catch (error) {
         console.error("사용자 정보 로드 실패:", error);
       }
@@ -428,11 +445,19 @@ export default function SearchResults() {
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {searchResults.map((post, index) => (
                   <PostCard
+<<<<<<< HEAD
                     key={
                       (post as any).id ||
                       (post as any)._id ||
                       `search-result-${index}`
                     }
+=======
+<<<<<<< HEAD
+                    key={post.id || `search-result-${index}`}
+=======
+                    key={post.id || (post as any)._id || `search-result-${index}`}
+>>>>>>> feature/mypage
+>>>>>>> develop
                     post={post}
                   />
                 ))}

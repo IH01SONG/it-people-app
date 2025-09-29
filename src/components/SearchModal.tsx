@@ -1,6 +1,13 @@
 // MUI 아이콘
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+// import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+>>>>>>> feature/mypage
+>>>>>>> develop
 import HistoryIcon from "@mui/icons-material/History";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 
@@ -13,6 +20,12 @@ import {
   TextField,
   Chip,
   InputAdornment,
+<<<<<<< HEAD
+=======
+  // Card,
+  // CircularProgress,
+  // Button
+>>>>>>> develop
 } from "@mui/material";
 
 // React Router
@@ -29,6 +42,11 @@ interface SearchModalProps {
   onClose: () => void; // 모달 닫기 콜백
 }
 
+<<<<<<< HEAD
+=======
+// import type { Post } from "../types/home.types";
+// import { api } from "../lib/api";
+>>>>>>> develop
 
 // 오른쪽에서 나타나는 모달 스타일
 const rightModalStyle = {

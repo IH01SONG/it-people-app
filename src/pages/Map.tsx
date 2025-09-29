@@ -49,12 +49,21 @@ export default function Map() {
     posts,
     loading: postsLoading,
     loadPosts,
+<<<<<<< HEAD
+=======
+    // handleJoinRequest,
+    // appliedPosts
+>>>>>>> develop
   } = usePosts();
 
   const {
     currentLocation: locationName,
     currentCoords,
     getCurrentLocation: getLocation,
+<<<<<<< HEAD
+=======
+    // locationLoading,
+>>>>>>> develop
   } = useLocationHook();
 
   const [center, setCenter] = useState({
@@ -106,8 +115,13 @@ export default function Map() {
     try {
       const response = await api.posts.getAll({ limit: 100 }); // 많은 게시글을 가져와서 카테고리 추출
       const allPosts = Array.isArray(response) ? response : response.posts || [];
+<<<<<<< HEAD
       const uniqueCategories = [...new Set(allPosts.map((post: any) => post.category).filter(Boolean))] as string[];
       setCategories(uniqueCategories);
+=======
+      const uniqueCategories = [...new Set(allPosts.map((post: any) => post.category).filter(Boolean))];
+      setCategories(uniqueCategories as string[]);
+>>>>>>> develop
     } catch (error) {
       console.error("카테고리 로드 실패:", error);
       // 기본 카테고리 사용
@@ -744,7 +758,11 @@ export default function Map() {
                 variant="contained"
                 size="large"
                 onClick={() => {
+<<<<<<< HEAD
                   navigate(`/post/${selectedPost.id}`);
+=======
+                  console.log('참여 요청 기능 비활성화:', selectedPost.id);
+>>>>>>> develop
                 }}
                 disabled={selectedPost.status === 'full' || selectedPost.status === 'completed'}
                 sx={{
@@ -779,7 +797,12 @@ export default function Map() {
                 }
               >
                 {selectedPost.status === 'full' ? '마감됨' :
+<<<<<<< HEAD
                  selectedPost.status === 'completed' ? '종료됨' : '상세보기'}
+=======
+                 selectedPost.status === 'completed' ? '종료됨' :
+                  '잇플'}
+>>>>>>> develop
               </Button>
             </Box>
           </Box>
