@@ -109,6 +109,12 @@ export const api = {
         window.location.href = '/api/auth/google';
       },
 
+      // 카카오 OAuth 관련 API
+      kakaoAuth: () => {
+        console.log('🔗 카카오 OAuth 로그인 페이지로 이동');
+        window.location.href = '/api/auth/kakao';
+      },
+
       // 사용자 정보 조회 (JWT 토큰 사용)
       fetchUserInfo: async (token: string) => {
         try {

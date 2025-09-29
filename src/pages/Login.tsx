@@ -44,6 +44,12 @@ export default function Login() {
     api.googleAuth();
   };
 
+  const handleKakaoLogin = () => {
+    console.log('🔗 카카오 로그인 시작');
+    // 카카오 OAuth 로그인 페이지로 리다이렉트
+    api.kakaoAuth();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleLogin();
@@ -106,6 +112,25 @@ export default function Login() {
             }}
           >
             Google로 로그인
+          </Button>
+          
+          <Button
+            variant="contained"
+            className="bg-[#FEE500] text-black hover:bg-[#FDD835] py-3 text-lg font-medium"
+            onClick={handleKakaoLogin}
+            startIcon={
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12 3c5.799 0 10.5 3.664 10.5 8.185 0 4.52-4.701 8.184-10.5 8.184a13.5 13.5 0 0 1-1.727-.11L6.5 21.5c-1.5-1.5-1.5-3.5 0-5l3.773-3.773A13.5 13.5 0 0 1 12 3z"/>
+              </svg>
+            }
+            sx={{
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4,
+              },
+            }}
+          >
+            카카오로 로그인
           </Button>
         </Stack>
       </Box>
