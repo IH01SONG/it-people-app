@@ -231,7 +231,12 @@ export default function MapPicker({
       try {
         const initializeMapWithLocation = (
           lat: number,
+<<<<<<< HEAD
           lng: number
+=======
+          lng: number,
+          // isCurrentLocation: boolean
+>>>>>>> feature/mypage
         ) => {
           const mapOption = {
             center: new window.kakao.maps.LatLng(lat, lng),

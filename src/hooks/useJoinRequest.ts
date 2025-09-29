@@ -72,6 +72,7 @@ export function useJoinRequest(postId?: string) {
       console.log('📋 [JoinRequest] 보낸 요청 개수:', list.length);
       console.log('🔍 [JoinRequest] 보낸 요청 목록 상세:', list);
 
+<<<<<<< HEAD
       // 요청 검색 로직 상세 로깅
       console.log('🔍 [JoinRequest] 요청 검색 조건:', {
         "찾는_postId": pid,
@@ -81,6 +82,13 @@ export function useJoinRequest(postId?: string) {
 
       // 새로운 통합 매칭 함수 사용
       const mine = findMyPendingRequest(list, pid, uid);
+=======
+      const mine = list.find(r =>
+        (r.post?._id === pid || (r.post as any) === pid) &&
+        (r.requester?._id === uid || r.requester === uid) &&
+        (r.status === 'pending')
+      ) ?? null;
+>>>>>>> feature/mypage
 
       setMyPendingRequest(mine);
       if (mine) {

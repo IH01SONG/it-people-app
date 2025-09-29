@@ -26,7 +26,7 @@ export default function SearchResults() {
   const [searchResults, setSearchResults] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string>('전체');
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const filters = [
     '전체',
@@ -144,7 +144,11 @@ export default function SearchResults() {
       let filteredResults = normalizedResults;
       if (searchTerm.trim()) {
         const searchLower = searchTerm.toLowerCase();
+<<<<<<< HEAD
         filteredResults = normalizedResults.filter((post: Post) =>
+=======
+        filteredResults = normalizedResults.filter((post: any) =>
+>>>>>>> feature/mypage
           post.title?.toLowerCase().includes(searchLower) ||
           post.content?.toLowerCase().includes(searchLower) ||
           post.category?.toLowerCase().includes(searchLower) ||
@@ -165,8 +169,8 @@ export default function SearchResults() {
   useEffect(() => {
     const loadCurrentUser = async () => {
       try {
-        const userInfo = await api.getMe();
-        setCurrentUserId(userInfo.id || userInfo._id);
+        // const userInfo = await api.getMe();
+        // setCurrentUserId(userInfo.id || userInfo._id);
       } catch (error) {
         console.error('사용자 정보 로드 실패:', error);
       }
@@ -355,7 +359,11 @@ export default function SearchResults() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {searchResults.map((post, index) => (
                   <PostCard
+<<<<<<< HEAD
                     key={post.id || `search-result-${index}`}
+=======
+                    key={post.id || (post as any)._id || `search-result-${index}`}
+>>>>>>> feature/mypage
                     post={post}
                   />
                 ))}
